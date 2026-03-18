@@ -44,13 +44,17 @@ const props = defineProps<{
   actorsById: Record<string, ActorProfile>;
 }>();
 
+const isActorProfile = (
+  actor: ActorProfile | undefined,
+): actor is ActorProfile => Boolean(actor);
+
 const primaryAuthor = computed(() => props.actorsById[props.post.primaryAuthorId]);
 const coAuthors = computed(() =>
-  props.post.coAuthorIds.map((id) => props.actorsById[id]).filter(Boolean),
+  props.post.coAuthorIds.map((id) => props.actorsById[id]).filter(isActorProfile),
 );
 
 const authors = computed(() => {
-  const allAuthors = [primaryAuthor.value, ...coAuthors.value].filter(Boolean);
+  const allAuthors = [primaryAuthor.value, ...coAuthors.value].filter(isActorProfile);
 
   return allAuthors.map((author) => ({
     name: author.nickname,
@@ -62,7 +66,7 @@ const authors = computed(() => {
       alt: author.nickname,
       text: author.nickname.slice(0, 1),
       ui: {
-        wrapper:
+        root:
           author.type === "BOT"
             ? "bg-gradient-to-br from-clawme-500 to-amber-300"
             : "bg-gradient-to-br from-sky-500 to-cyan-400",
@@ -71,41 +75,26 @@ const authors = computed(() => {
   }));
 });
 
+const badgeColor = computed<"info" | "neutral">(() =>
+  primaryAuthor.value?.type === "BOT" ? "info" : "neutral",
+);
+
 const badge = computed(() => ({
-  label: post.context,
-  color: primaryAuthor.value?.type === "BOT" ? "info" : "neutral",
+  label: props.post.context,
+  color: badgeColor.value,
   variant: "subtle" as const,
 }));
 
 const heroImage = computed(() => {
   const attachment = props.post.attachments[0];
-  const title = encodeURIComponent(attachment?.title || props.post.title || "Clawme");
-  const subtitle = encodeURIComponent(attachment?.subtitle || props.post.context);
-  const toneA = attachment?.kind === "IMAGE" ? "#eec27b" : "#e05d44";
-  const toneB = attachment?.kind === "IMAGE" ? "#f7ede1" : "#ffd8cb";
-  const icon = attachment?.kind === "IMAGE" ? "Preview" : "Document";
 
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
-      <defs>
-        <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stop-color="${toneA}" />
-          <stop offset="100%" stop-color="${toneB}" />
-        </linearGradient>
-      </defs>
-      <rect width="1200" height="900" rx="48" fill="url(#g)" />
-      <circle cx="980" cy="180" r="150" fill="rgba(255,255,255,0.35)" />
-      <circle cx="150" cy="740" r="210" fill="rgba(255,255,255,0.2)" />
-      <rect x="96" y="120" width="1008" height="660" rx="36" fill="rgba(255,255,255,0.72)" />
-      <text x="150" y="270" font-size="48" font-family="ui-sans-serif, system-ui" fill="#6d2b20">${icon}</text>
-      <text x="150" y="380" font-size="72" font-weight="700" font-family="ui-sans-serif, system-ui" fill="#231815">${title}</text>
-      <text x="150" y="470" font-size="34" font-family="ui-sans-serif, system-ui" fill="#6b5f5b">${subtitle}</text>
-    </svg>
-  `.trim();
+  if (!attachment?.url) {
+    return undefined;
+  }
 
   return {
-    src: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    alt: props.post.title || props.post.context,
+    src: attachment.url,
+    alt: props.post.title || attachment.title || props.post.context,
   };
 });
 </script>
