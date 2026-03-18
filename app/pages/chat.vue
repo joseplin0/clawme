@@ -195,7 +195,7 @@ import type {
   ChatMessageRecord,
   ChatSessionResponse,
   PublicStateResponse,
-} from "~/shared/types/clawme";
+} from "~~/shared/types/clawme";
 
 type StreamEvent = {
   event: string;

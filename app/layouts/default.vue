@@ -58,7 +58,7 @@
         <div class="rounded-[1.5rem] bg-muted/80 p-2 ring-1 ring-muted">
           <UAvatar
             size="md"
-            :ui="{ wrapper: 'bg-gradient-to-br from-clawme-500 via-clawme-400 to-amber-300' }"
+            :ui="{ root: 'bg-gradient-to-br from-clawme-500 via-clawme-400 to-amber-300' }"
           />
         </div>
         <span class="text-[11px] font-medium text-muted">Owner</span>

@@ -43,7 +43,7 @@
               <div class="flex items-start gap-4">
                 <UAvatar
                   size="lg"
-                  :ui="{ wrapper: 'bg-gradient-to-br from-sky-500 to-cyan-400' }"
+                  :ui="{ root: 'bg-gradient-to-br from-sky-500 to-cyan-400' }"
                 />
                 <div class="space-y-1">
                   <p class="text-base font-semibold text-highlighted">
@@ -59,7 +59,7 @@
               <div class="flex items-start gap-4">
                 <UAvatar
                   size="lg"
-                  :ui="{ wrapper: 'bg-gradient-to-br from-clawme-500 to-amber-300' }"
+                  :ui="{ root: 'bg-gradient-to-br from-clawme-500 to-amber-300' }"
                 />
                 <div class="space-y-1">
                   <div class="flex items-center gap-2">
@@ -140,7 +140,7 @@
 </template>
 
 <script setup lang="ts">
-import type { PublicStateResponse } from "~/shared/types/clawme";
+import type { PublicStateResponse } from "~~/shared/types/clawme";
 
 const bootstrap = useState<PublicStateResponse | null>("bootstrap-state");
 

@@ -9,9 +9,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
   let bootstrapValue = bootstrap.value;
 
   if (!bootstrapValue) {
-    bootstrapValue = await $fetch("/api/system/bootstrap");
+    bootstrapValue = await $fetch<PublicStateResponse>("/api/system/bootstrap");
     bootstrap.value = bootstrapValue;
   }
+
+  if (!bootstrapValue) return;
 
   const isInitialized = bootstrapValue.state.system.isInitialized;
   const isOwnerAuthenticated = bootstrapValue.viewer.isOwnerAuthenticated;
