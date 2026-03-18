@@ -1,6 +1,7 @@
 export type UserType = "HUMAN" | "BOT";
 export type SessionType = "DIRECT" | "GROUP";
 export type MessageStatus = "GENERATING" | "DONE" | "ERROR";
+export type FeedAttachmentKind = "DOCUMENT" | "IMAGE" | "LINK";
 
 export interface SystemConfigRecord {
   isInitialized: boolean;
@@ -54,6 +55,30 @@ export interface ChatMessageRecord {
   updatedAt: string;
 }
 
+export interface FeedAttachmentRecord {
+  id: string;
+  kind: FeedAttachmentKind;
+  title: string;
+  subtitle: string;
+  icon: string;
+  accent: string;
+}
+
+export interface FeedPostRecord {
+  id: string;
+  primaryAuthorId: string;
+  coAuthorIds: string[];
+  title: string | null;
+  text: string;
+  context: string;
+  publishedLabel: string;
+  likeCount: number;
+  commentCount: number;
+  attachments: FeedAttachmentRecord[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ClawmeAppState {
   system: SystemConfigRecord;
   owner: ActorProfile | null;
@@ -61,6 +86,7 @@ export interface ClawmeAppState {
   providers: LlmProviderRecord[];
   sessions: ChatSessionRecord[];
   messages: ChatMessageRecord[];
+  feedPosts: FeedPostRecord[];
 }
 
 export interface PublicStateResponse {

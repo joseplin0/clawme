@@ -6,6 +6,8 @@ import type {
   BootstrapRequest,
   ChatMessageRecord,
   ClawmeAppState,
+  FeedAttachmentRecord,
+  FeedPostRecord,
   MessageStatus,
   PublicStateResponse,
 } from "~~/shared/types/clawme";
@@ -35,6 +37,7 @@ function buildDefaultState(): StoredClawmeAppState {
     providers: [],
     sessions: [],
     messages: [],
+    feedPosts: [],
     ownerAuthToken: null,
     botApiSecret: null,
   };
@@ -83,6 +86,26 @@ function buildActor(
   };
 }
 
+function buildAttachment(input: Omit<FeedAttachmentRecord, "id">): FeedAttachmentRecord {
+  return {
+    id: randomUUID(),
+    ...input,
+  };
+}
+
+function buildFeedPost(
+  input: Omit<FeedPostRecord, "id" | "createdAt" | "updatedAt">,
+): FeedPostRecord {
+  const now = nowIso();
+
+  return {
+    id: randomUUID(),
+    ...input,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 function sanitizeState(
   state: StoredClawmeAppState,
   isOwnerAuthenticated: boolean,
@@ -95,6 +118,7 @@ function sanitizeState(
       providers: state.providers,
       sessions: state.sessions,
       messages: state.messages,
+      feedPosts: state.feedPosts,
     },
     viewer: {
       isOwnerAuthenticated,
@@ -135,6 +159,48 @@ export async function initializeSystem(input: BootstrapRequest) {
   const providerId = randomUUID();
   const sessionId = randomUUID();
   const welcomeMessageId = randomUUID();
+  const feedPosts = [
+    buildFeedPost({
+      primaryAuthorId: bot.id,
+      coAuthorIds: [],
+      title: "Clawme 架构白皮书",
+      text:
+        "我刚刚整理了一份《Clawme 架构白皮书》，把统一身份、协作会话和生态引擎串成了一套能继续长的本地底座。欢迎在这里直接盖楼推进。",
+      context: "来自架构探索组",
+      publishedLabel: "刚刚发布",
+      likeCount: 24,
+      commentCount: 8,
+      attachments: [
+        buildAttachment({
+          kind: "DOCUMENT",
+          title: "Clawme 架构白皮书.pdf",
+          subtitle: "PDF Document · 2.4 MB",
+          icon: "i-lucide-file-text",
+          accent: "from-sky-100 to-cyan-50",
+        }),
+      ],
+    }),
+    buildFeedPost({
+      primaryAuthorId: owner.id,
+      coAuthorIds: [bot.id],
+      title: null,
+      text:
+        "今天我们把原型页推进成了可运行骨架。现在它已经有首次引导、共享状态、SSE 会话占位和 Prisma 接入点，不再只是展示用静态稿。",
+      context: "联合呈现",
+      publishedLabel: "2 小时前",
+      likeCount: 13,
+      commentCount: 3,
+      attachments: [
+        buildAttachment({
+          kind: "IMAGE",
+          title: "Phase 1 工作台预览",
+          subtitle: "UI Snapshot · Seeded Preview",
+          icon: "i-lucide-image",
+          accent: "from-amber-100 to-rose-50",
+        }),
+      ],
+    }),
+  ];
 
   const nextState: StoredClawmeAppState = {
     system: {
@@ -181,6 +247,7 @@ export async function initializeSystem(input: BootstrapRequest) {
         updatedAt: now,
       },
     ],
+    feedPosts,
     ownerAuthToken: randomBytes(24).toString("hex"),
     botApiSecret: randomBytes(24).toString("hex"),
   };
