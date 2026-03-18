@@ -1,18 +1,13 @@
 <template>
-  <div class="flex items-center justify-center h-full">
-    <div class="animate-pulse text-gray-500">Redirecting to Feed...</div>
+  <div class="flex min-h-screen items-center justify-center bg-transparent">
+    <div class="text-sm font-medium text-muted">Clawme 正在准备工作台...</div>
   </div>
 </template>
 
-<script setup>
-import { navigateTo } from '#app'
-
-// Use middleware or inline to redirect
+<script setup lang="ts">
 definePageMeta({
-  middleware: [
-    function (to, from) {
-      return navigateTo('/feed')
-    }
-  ]
-})
+  layout: false,
+});
+
+await navigateTo("/feed");
 </script>

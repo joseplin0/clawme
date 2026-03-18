@@ -4,20 +4,25 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@prisma/client": "^6.6.0",
     "@iconify-json/lucide": "^1.2.97",
     "@nuxt/ui": "^4.5.1",
     "@tailwindcss/postcss": "^4.2.1",
     "nuxt": "^4.4.2",
+    "tailwindcss": "^4.2.1",
     "vue": "^3.5.30",
-    "vue-router": "^5.0.3"
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "@nuxtjs/tailwindcss": "^6.14.0"
+    "prisma": "^6.6.0"
   }
 }

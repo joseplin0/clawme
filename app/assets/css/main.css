@@ -1,0 +1,36 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@theme static {
+  --color-clawme-50: #fff5f2;
+  --color-clawme-100: #ffe6de;
+  --color-clawme-200: #ffcbbd;
+  --color-clawme-300: #ffab92;
+  --color-clawme-400: #f98363;
+  --color-clawme-500: #e05d44;
+  --color-clawme-600: #c9462d;
+  --color-clawme-700: #a83724;
+  --color-clawme-800: #873021;
+  --color-clawme-900: #6d2b20;
+  --color-clawme-950: #3b120c;
+}
+
+:root {
+  --ui-primary: var(--ui-color-primary-600);
+  --ui-radius: 1.125rem;
+  --ui-container: 90rem;
+  color-scheme: light;
+  background:
+    radial-gradient(circle at top, rgba(224, 93, 68, 0.12), transparent 38%),
+    linear-gradient(180deg, #fff8f5 0%, #fffdfc 24%, #fff 100%);
+}
+
+body {
+  min-height: 100vh;
+  background: transparent;
+  color: #1f1917;
+}
+
+#__nuxt {
+  min-height: 100vh;
+}

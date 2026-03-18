@@ -1,8 +1,21 @@
 <template>
-  <div class="flex h-screen bg-[#F3F4F6] flex-col md:flex-row font-sans text-gray-900 antialiased selection:bg-blue-200">
-    <!-- Sidebar for md and up -->
-    <nav class="hidden md:flex flex-col w-[72px] bg-white border-r border-gray-200/60 justify-between items-center py-6 flex-shrink-0 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)] z-20">
-      <div class="flex flex-col gap-8 w-full items-center">
+  <div class="flex min-h-screen flex-col bg-transparent text-default antialiased md:flex-row">
+    <nav
+      class="hidden w-[88px] shrink-0 flex-col justify-between border-r border-muted/70 bg-white/80 px-4 py-6 shadow-[0_30px_90px_-48px_rgba(100,50,32,0.35)] backdrop-blur md:flex"
+    >
+      <div class="flex flex-col items-center gap-8">
+        <NuxtLink
+          to="/feed"
+          class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12 text-primary ring-1 ring-primary/20 transition-transform duration-300 hover:-translate-y-0.5"
+        >
+          <UIcon name="i-lucide-shell" class="size-6" />
+        </NuxtLink>
+        <span class="text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
+          Clawme
+        </span>
+      </div>
+
+      <div class="flex flex-col gap-5">
         <UTooltip text="探索动态" :content="{ side: 'right' }">
           <UButton
             to="/feed"
@@ -10,9 +23,9 @@
             variant="ghost"
             color="neutral"
             size="lg"
-            class="rounded-2xl"
+            class="rounded-2xl text-toned transition-transform duration-300 hover:-translate-y-0.5"
             :active="route.path === '/feed'"
-            active-class="text-blue-600 bg-blue-50"
+            active-class="bg-primary/10 text-primary"
           />
         </UTooltip>
         <UTooltip text="会话沟通" :content="{ side: 'right' }">
@@ -22,9 +35,9 @@
             variant="ghost"
             color="neutral"
             size="lg"
-            class="rounded-2xl"
+            class="rounded-2xl text-toned transition-transform duration-300 hover:-translate-y-0.5"
             :active="route.path === '/chat'"
-            active-class="text-blue-600 bg-blue-50"
+            active-class="bg-primary/10 text-primary"
           />
         </UTooltip>
         <UTooltip text="系统设置" :content="{ side: 'right' }">
@@ -34,35 +47,40 @@
             variant="ghost"
             color="neutral"
             size="lg"
-            class="rounded-2xl"
+            class="rounded-2xl text-toned transition-transform duration-300 hover:-translate-y-0.5"
             :active="route.path === '/settings'"
-            active-class="text-blue-600 bg-blue-50"
+            active-class="bg-primary/10 text-primary"
           />
         </UTooltip>
       </div>
-      <div class="mb-2">
-        <button class="relative hover:scale-105 transition-transform duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-          <UAvatar :ui="{ wrapper: 'bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500' }" />
-        </button>
+
+      <div class="flex flex-col items-center gap-3">
+        <div class="rounded-[1.5rem] bg-muted/80 p-2 ring-1 ring-muted">
+          <UAvatar
+            size="md"
+            :ui="{ wrapper: 'bg-gradient-to-br from-clawme-500 via-clawme-400 to-amber-300' }"
+          />
+        </div>
+        <span class="text-[11px] font-medium text-muted">Owner</span>
       </div>
     </nav>
 
-    <!-- Main Content Area -->
-    <main class="flex-1 overflow-hidden relative shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)] bg-[#FAFAFA]">
+    <main class="relative flex-1 overflow-hidden bg-transparent">
       <slot />
     </main>
 
-    <!-- Bottom Tab Navigation for sm and below -->
-    <nav class="md:hidden flex h-16 bg-white/90 backdrop-blur-md border-t border-gray-200/80 justify-around items-center flex-shrink-0 z-50 pb-safe shadow-[0_-4px_24px_-12px_rgba(0,0,0,0.1)]">
+    <nav
+      class="flex h-16 shrink-0 items-center justify-around border-t border-muted/70 bg-white/90 pb-safe shadow-[0_-16px_48px_-36px_rgba(100,50,32,0.35)] backdrop-blur md:hidden"
+    >
       <UButton
         to="/feed"
         icon="i-lucide-layout-grid"
         variant="ghost"
         color="neutral"
         size="xl"
-        class="rounded-xl p-2 w-full justify-center"
+        class="w-full justify-center rounded-xl p-2 text-toned"
         :active="route.path === '/feed'"
-        active-class="text-blue-600"
+        active-class="text-primary"
       />
       <UButton
         to="/chat"
@@ -70,9 +88,9 @@
         variant="ghost"
         color="neutral"
         size="xl"
-        class="rounded-xl p-2 w-full justify-center"
+        class="w-full justify-center rounded-xl p-2 text-toned"
         :active="route.path === '/chat'"
-        active-class="text-blue-600"
+        active-class="text-primary"
       />
       <UButton
         to="/settings"
@@ -80,9 +98,9 @@
         variant="ghost"
         color="neutral"
         size="xl"
-        class="rounded-xl p-2 w-full justify-center"
+        class="w-full justify-center rounded-xl p-2 text-toned"
         :active="route.path === '/settings'"
-        active-class="text-blue-600"
+        active-class="text-primary"
       />
     </nav>
   </div>

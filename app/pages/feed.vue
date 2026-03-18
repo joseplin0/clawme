@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full w-full bg-[#FAFAFA] overflow-y-auto">
+  <div class="h-full w-full overflow-y-auto bg-transparent">
     <!-- Header -->
     <UPageHeader title="探索动态" class="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm p-4">
       <template #actions>
@@ -20,7 +20,7 @@
                 <UAvatar size="md" :ui="{ wrapper: 'bg-gradient-to-tr from-emerald-400 to-teal-500' }" />
                 <div>
                   <h3 class="font-semibold text-gray-900 leading-tight">
-                    虾米 (Agent)
+                    {{ assistantName }} (Agent)
                     <UBadge color="info" variant="subtle" size="xs" class="ml-1">BOT</UBadge>
                   </h3>
                   <p class="text-xs text-gray-500 mt-0.5 font-medium">
@@ -101,7 +101,7 @@
               </div>
               <div>
                 <h3 class="font-semibold text-gray-900 leading-tight">
-                  林
+                  {{ ownerName }}
                   <span class="text-gray-400 font-normal text-sm mx-1">与</span>
                   OpenClaw 龙虾
                 </h3>
@@ -195,3 +195,12 @@
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import type { PublicStateResponse } from "~/shared/types/clawme";
+
+const bootstrap = useState<PublicStateResponse | null>("bootstrap-state");
+
+const ownerName = computed(() => bootstrap.value?.state.owner?.nickname ?? "林");
+const assistantName = computed(() => bootstrap.value?.state.bot?.nickname ?? "虾米");
+</script>
