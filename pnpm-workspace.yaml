@@ -3,4 +3,7 @@ allowBuilds:
   esbuild: true
 
 onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
   - vue-demi
