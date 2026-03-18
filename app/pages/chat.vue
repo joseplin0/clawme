@@ -32,7 +32,7 @@
           <div class="flex items-center gap-3">
             <UAvatar
               size="md"
-              :ui="{ wrapper: 'bg-gradient-to-br from-clawme-500 to-amber-300' }"
+              :ui="{ root: 'bg-gradient-to-br from-clawme-500 to-amber-300' }"
             />
             <div class="min-w-0 flex-1">
               <div class="flex items-center justify-between gap-3">
@@ -67,12 +67,14 @@
             <UIcon name="i-lucide-message-circle" class="size-8 text-muted" />
           </div>
           <p class="text-base font-medium text-highlighted">选择一条会话开始协作</p>
-          <p class="text-sm text-muted">SSE 占位链路已经接好，下一条消息会走真实流式界面。</p>
+          <p class="text-sm text-muted">Nuxt UI Chat 组件已接入，下一条消息会走真实流式界面。</p>
         </div>
       </div>
 
       <template v-else>
-        <header class="flex h-[76px] items-center justify-between border-b border-muted/70 bg-white/85 px-4 backdrop-blur">
+        <header
+          class="flex h-[76px] items-center justify-between border-b border-muted/70 bg-white/85 px-4 backdrop-blur"
+        >
           <div class="flex items-center gap-3">
             <UButton
               icon="i-lucide-arrow-left"
@@ -93,7 +95,7 @@
           </UButton>
         </header>
 
-        <div class="flex-1 space-y-4 overflow-y-auto px-4 py-5 md:px-6">
+        <div class="flex-1 overflow-y-auto px-4 py-5 md:px-6">
           <div class="mx-auto max-w-3xl space-y-4">
             <div class="flex justify-center">
               <UBadge color="neutral" variant="subtle">
@@ -101,78 +103,86 @@
               </UBadge>
             </div>
 
-            <div
-              v-for="message in displayedMessages"
-              :key="message.id"
-              :class="isOwnerMessage(message) ? 'flex justify-end' : 'flex justify-start'"
+            <UChatMessages
+              :messages="chatMessages"
+              :status="chatStatus"
+              should-auto-scroll
+              :spacing-offset="80"
+              :assistant="assistantMessageProps"
+              :user="userMessageProps"
+              class="space-y-4"
             >
-              <div
-                :class="
-                  isOwnerMessage(message)
-                    ? 'max-w-xl rounded-[1.6rem] rounded-tr-sm bg-primary px-4 py-3 text-sm leading-7 text-inverted shadow-[0_20px_40px_-28px_rgba(201,70,45,0.9)]'
-                    : 'max-w-2xl rounded-[1.6rem] rounded-bl-sm border border-muted/70 bg-white px-4 py-3 text-sm leading-7 text-default shadow-[0_18px_40px_-34px_rgba(40,32,28,0.45)]'
-                "
-              >
-                <div class="mb-1 flex items-center gap-2 text-xs">
-                  <span :class="isOwnerMessage(message) ? 'text-white/80' : 'text-muted'">
-                    {{ isOwnerMessage(message) ? ownerName : assistantName }}
-                  </span>
-                  <span
-                    v-if="message.status === 'GENERATING'"
-                    :class="isOwnerMessage(message) ? 'text-white/70' : 'text-primary'"
-                  >
-                    正在生成...
-                  </span>
-                </div>
-
-                <p class="whitespace-pre-wrap">
-                  {{ message.content || (message.status === 'GENERATING' ? '正在整理回复...' : '') }}
-                </p>
-
-                <details
-                  v-if="message.thinkingContent && !isOwnerMessage(message)"
-                  class="mt-3 rounded-2xl bg-muted/45 p-3 text-xs text-toned"
-                >
-                  <summary class="cursor-pointer font-medium text-highlighted">思考面板</summary>
-                  <p class="mt-2 whitespace-pre-wrap leading-6">
-                    {{ message.thinkingContent }}
+              <template #content="{ message }">
+                <div class="space-y-2">
+                  <p class="whitespace-pre-wrap text-sm leading-7">
+                    {{ getRenderableMessage(getUiMessageId(message)) }}
                   </p>
-                </details>
-              </div>
-            </div>
+
+                  <p v-if="isGeneratingMessage(getUiMessageId(message))" class="text-xs text-primary">
+                    正在生成...
+                  </p>
+
+                  <details
+                    v-if="getUiMessageRole(message) === 'assistant' && getThinkingContent(getUiMessageId(message))"
+                    class="rounded-2xl bg-muted/45 p-3 text-xs text-toned"
+                  >
+                    <summary class="cursor-pointer font-medium text-highlighted">思考面板</summary>
+                    <p class="mt-2 whitespace-pre-wrap leading-6">
+                      {{ getThinkingContent(getUiMessageId(message)) }}
+                    </p>
+                  </details>
+                </div>
+              </template>
+            </UChatMessages>
           </div>
         </div>
 
         <div class="border-t border-muted/70 bg-white/88 px-4 py-4 backdrop-blur">
           <div class="mx-auto max-w-3xl">
-            <div class="rounded-[1.75rem] border border-muted/70 bg-white p-2 shadow-[0_24px_56px_-40px_rgba(40,32,28,0.5)]">
-              <div class="flex items-end gap-2">
-                <UTextarea
-                  v-model="inputMessage"
-                  autoresize
-                  :rows="1"
-                  :maxrows="6"
-                  class="flex-1"
-                  :ui="{
-                    base: 'min-h-[48px] resize-none border-none bg-transparent px-3 py-2 text-sm leading-7 text-default shadow-none focus:ring-0',
-                    wrapper: 'flex-1',
-                  }"
-                  placeholder="告诉虾米接下来该先做什么..."
-                  @keydown.enter.exact.prevent="sendMessage"
-                />
-                <UButton
-                  icon="i-lucide-send-horizontal"
-                  size="lg"
-                  class="shrink-0"
-                  :loading="isStreaming"
-                  :disabled="!trimmedInput"
-                  @click="sendMessage"
-                />
-              </div>
+            <UChatPrompt
+              v-model="inputMessage"
+              :rows="1"
+              :maxrows="6"
+              autoresize
+              :disabled="!activeSessionId"
+              :placeholder="activeSessionId ? '告诉虾米接下来该先做什么...' : '请先选择会话...'"
+              :ui="{
+                root: 'rounded-[1.75rem] border border-muted/70 bg-white shadow-[0_24px_56px_-40px_rgba(40,32,28,0.5)]',
+                body: 'px-4 pt-3 pb-2 text-sm leading-7',
+                footer: 'border-t border-muted/60 px-3 py-2',
+              }"
+              @submit="handlePromptSubmit"
+            >
+              <template #footer>
+                <div class="flex items-center justify-between gap-3">
+                  <p class="text-xs text-muted">
+                    这条输入会走 Phase 1 的 SSE 占位链路：先预创建消息，再流式返回内容，最后收尾落盘。
+                  </p>
+                  <UChatPromptSubmit
+                    :status="chatStatus"
+                    size="lg"
+                    class="shrink-0"
+                    :disabled="submitButtonDisabled"
+                    @stop="stopStreaming"
+                    @reload="retryLastPrompt"
+                  />
+                </div>
+              </template>
+            </UChatPrompt>
+            <div class="mt-2 px-1">
+              <p
+                v-if="chatStatus === 'error'"
+                class="text-xs text-error"
+              >
+                上一次请求失败，可直接点右侧重试按钮。
+              </p>
+              <p v-else-if="chatStatus === 'streaming'" class="text-xs text-muted">
+                正在接收流式回复，可点击右侧按钮中断。
+              </p>
+              <p v-else class="text-xs text-muted">
+                使用 Nuxt UI Chat 组件驱动消息渲染与输入。
+              </p>
             </div>
-            <p class="mt-3 text-xs text-muted">
-              这条输入会走 Phase 1 的 SSE 占位链路：先预创建消息，再流式返回内容，最后收尾落盘。
-            </p>
           </div>
         </div>
       </template>
@@ -192,12 +202,23 @@ type StreamEvent = {
   data: string;
 };
 
+type ChatPromptStatus = "ready" | "submitted" | "streaming" | "error";
+
+type ChatUiMessage = {
+  id: string;
+  role: "user" | "assistant";
+  parts: Array<{ type: "text"; text: string }>;
+};
+
 const bootstrap = useState<PublicStateResponse | null>("bootstrap-state");
 const toast = useToast();
 const inputMessage = ref("");
 const isStreaming = ref(false);
+const chatStatus = ref<ChatPromptStatus>("ready");
 const streamDraft = ref<ChatMessageRecord | null>(null);
 const optimisticMessages = ref<ChatMessageRecord[]>([]);
+const streamController = ref<AbortController | null>(null);
+const lastSubmittedPrompt = ref("");
 
 const { data: sessionData, refresh } = await useFetch<ChatSessionResponse>("/api/chat/session");
 
@@ -213,6 +234,17 @@ watch(
   { immediate: true },
 );
 
+watch(activeSessionId, () => {
+  if (streamController.value) {
+    streamController.value.abort();
+  }
+
+  streamDraft.value = null;
+  optimisticMessages.value = [];
+  isStreaming.value = false;
+  chatStatus.value = "ready";
+});
+
 const state = computed(() => sessionData.value?.state);
 const sessions = computed(() => state.value?.sessions ?? []);
 const selectedSession = computed(() =>
@@ -224,6 +256,27 @@ const ownerName = computed(() => owner.value?.nickname ?? "林");
 const assistantName = computed(() => bot.value?.nickname ?? "虾米");
 const trimmedInput = computed(() => inputMessage.value.trim());
 
+const userMessageProps = computed(() => ({
+  side: "right" as const,
+  variant: "soft" as const,
+  avatar: {
+    src: owner.value?.avatar ?? undefined,
+    alt: ownerName.value,
+    icon: owner.value?.avatar ? undefined : "i-lucide-user-round",
+  },
+}));
+
+const assistantMessageProps = computed(() => ({
+  side: "left" as const,
+  variant: "naked" as const,
+  avatar: {
+    src: bot.value?.avatar ?? undefined,
+    alt: assistantName.value,
+    icon: bot.value?.avatar ? undefined : "i-lucide-shell",
+    ui: { root: "bg-gradient-to-br from-clawme-500 to-amber-300" },
+  },
+}));
+
 const persistedMessages = computed(() =>
   (state.value?.messages ?? [])
     .filter((message) => message.sessionId === activeSessionId.value)
@@ -231,7 +284,10 @@ const persistedMessages = computed(() =>
 );
 
 const displayedMessages = computed(() => {
-  const items = [...persistedMessages.value, ...optimisticMessages.value];
+  const items = [
+    ...persistedMessages.value,
+    ...optimisticMessages.value.filter((message) => message.sessionId === activeSessionId.value),
+  ];
 
   if (streamDraft.value?.sessionId === activeSessionId.value) {
     const existingIndex = items.findIndex((message) => message.id === streamDraft.value?.id);
@@ -246,8 +302,87 @@ const displayedMessages = computed(() => {
   return items.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 });
 
+const messageMap = computed(
+  () =>
+    new Map(
+      displayedMessages.value.map((message) => [message.id, message] as const),
+    ),
+);
+
+const chatMessages = computed<ChatUiMessage[]>(() =>
+  displayedMessages.value.map((message) => ({
+    id: message.id,
+    role: isOwnerMessage(message) ? "user" : "assistant",
+    parts: message.content ? [{ type: "text", text: message.content }] : [],
+  })),
+);
+
+const submitButtonDisabled = computed(() => {
+  if (!activeSessionId.value) {
+    return true;
+  }
+
+  if (chatStatus.value === "ready") {
+    return !trimmedInput.value;
+  }
+
+  if (chatStatus.value === "error") {
+    return !lastSubmittedPrompt.value;
+  }
+
+  return false;
+});
+
 function isOwnerMessage(message: ChatMessageRecord) {
   return message.senderId === owner.value?.id;
+}
+
+function getMessageById(id: string) {
+  return messageMap.value.get(id) ?? null;
+}
+
+function getUiMessageId(message: unknown) {
+  if (typeof message !== "object" || message === null || !("id" in message)) {
+    return "";
+  }
+
+  const id = (message as { id?: unknown }).id;
+  return typeof id === "string" ? id : "";
+}
+
+function getUiMessageRole(message: unknown) {
+  if (typeof message !== "object" || message === null || !("role" in message)) {
+    return "";
+  }
+
+  const role = (message as { role?: unknown }).role;
+  return typeof role === "string" ? role : "";
+}
+
+function getRenderableMessage(id: string) {
+  const message = getMessageById(id);
+
+  if (!message) {
+    return "";
+  }
+
+  if (message.content) {
+    return message.content;
+  }
+
+  if (message.status === "GENERATING") {
+    return "正在整理回复...";
+  }
+
+  return "";
+}
+
+function isGeneratingMessage(id: string) {
+  return getMessageById(id)?.status === "GENERATING";
+}
+
+function getThinkingContent(id: string) {
+  return getMessageById(id)?.thinkingContent ?? "";
 }
 
 function getLastMessage(sessionId: string) {
@@ -326,15 +461,42 @@ function buildOptimisticUserMessage(prompt: string): ChatMessageRecord {
   };
 }
 
-async function sendMessage() {
-  if (!trimmedInput.value || !activeSessionId.value || isStreaming.value) {
+function handlePromptSubmit() {
+  void sendMessage();
+}
+
+function stopStreaming() {
+  if (!isStreaming.value || !streamController.value) {
     return;
   }
 
-  const prompt = trimmedInput.value;
+  streamController.value.abort();
+}
+
+function retryLastPrompt() {
+  if (!lastSubmittedPrompt.value || isStreaming.value) {
+    return;
+  }
+
+  inputMessage.value = lastSubmittedPrompt.value;
+  void sendMessage(lastSubmittedPrompt.value);
+}
+
+async function sendMessage(overridePrompt?: string) {
+  const prompt = (overridePrompt ?? trimmedInput.value).trim();
+
+  if (!prompt || !activeSessionId.value || isStreaming.value) {
+    return;
+  }
+
   optimisticMessages.value.push(buildOptimisticUserMessage(prompt));
   inputMessage.value = "";
   isStreaming.value = true;
+  chatStatus.value = "submitted";
+  lastSubmittedPrompt.value = prompt;
+
+  const controller = new AbortController();
+  streamController.value = controller;
 
   try {
     const response = await fetch("/api/chat/stream", {
@@ -346,6 +508,7 @@ async function sendMessage() {
         prompt,
         sessionId: activeSessionId.value,
       }),
+      signal: controller.signal,
     });
 
     if (!response.ok || !response.body) {
@@ -378,6 +541,7 @@ async function sendMessage() {
 
         if (parsed.event === "placeholder") {
           streamDraft.value = payload.message;
+          chatStatus.value = "streaming";
         }
 
         if (parsed.event === "delta" && streamDraft.value) {
@@ -385,10 +549,12 @@ async function sendMessage() {
             ...streamDraft.value,
             content: `${streamDraft.value.content}${payload.chunk}`,
           };
+          chatStatus.value = "streaming";
         }
 
         if (parsed.event === "done") {
           streamDraft.value = payload.message;
+          chatStatus.value = "ready";
         }
 
         if (parsed.event === "error") {
@@ -400,7 +566,18 @@ async function sendMessage() {
     await refresh();
     optimisticMessages.value = [];
     streamDraft.value = null;
+    chatStatus.value = "ready";
   } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      await refresh();
+      optimisticMessages.value = [];
+      streamDraft.value = null;
+      chatStatus.value = "ready";
+      return;
+    }
+
+    chatStatus.value = "error";
+
     toast.add({
       title: "消息发送失败",
       description: error instanceof Error ? error.message : "未知错误",
@@ -409,6 +586,7 @@ async function sendMessage() {
     });
   } finally {
     isStreaming.value = false;
+    streamController.value = null;
   }
 }
 </script>

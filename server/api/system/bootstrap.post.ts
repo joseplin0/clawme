@@ -13,6 +13,7 @@ export default defineEventHandler(async (event) => {
   const payload: BootstrapRequest = {
     ownerNickname: clean(body.ownerNickname, "主理人"),
     ownerUsername: clean(body.ownerUsername, "owner").toLowerCase(),
+    ownerPassword: clean(body.ownerPassword),
     assistantNickname: clean(body.assistantNickname, "虾米"),
     assistantRole: clean(body.assistantRole, "本地助理"),
     assistantBio: clean(
@@ -28,6 +29,13 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 400,
       statusMessage: "ownerUsername must be 3-24 chars of a-z, 0-9, _ or -.",
+    });
+  }
+
+  if (payload.ownerPassword.length < 6) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "ownerPassword must be at least 6 characters.",
     });
   }
 

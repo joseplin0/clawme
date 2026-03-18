@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type {
@@ -14,6 +14,7 @@ import type {
 
 interface StoredClawmeAppState extends ClawmeAppState {
   ownerAuthToken: string | null;
+  ownerPasswordHash: string | null;
   botApiSecret: string | null;
 }
 
@@ -21,6 +22,10 @@ const STATE_FILE = resolve(process.cwd(), ".data", "clawme-state.json");
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+export function hashPassword(password: string) {
+  return createHash("sha256").update(password).digest("hex");
 }
 
 function buildDefaultState(): StoredClawmeAppState {
@@ -39,6 +44,7 @@ function buildDefaultState(): StoredClawmeAppState {
     messages: [],
     feedPosts: [],
     ownerAuthToken: null,
+    ownerPasswordHash: null,
     botApiSecret: null,
   };
 }
@@ -173,6 +179,7 @@ export async function initializeSystem(input: BootstrapRequest) {
       attachments: [
         buildAttachment({
           kind: "DOCUMENT",
+          url: null,
           title: "Clawme 架构白皮书.pdf",
           subtitle: "PDF Document · 2.4 MB",
           icon: "i-lucide-file-text",
@@ -193,6 +200,7 @@ export async function initializeSystem(input: BootstrapRequest) {
       attachments: [
         buildAttachment({
           kind: "IMAGE",
+          url: null,
           title: "Phase 1 工作台预览",
           subtitle: "UI Snapshot · Seeded Preview",
           icon: "i-lucide-image",
@@ -249,6 +257,7 @@ export async function initializeSystem(input: BootstrapRequest) {
     ],
     feedPosts,
     ownerAuthToken: randomBytes(24).toString("hex"),
+    ownerPasswordHash: hashPassword(input.ownerPassword),
     botApiSecret: randomBytes(24).toString("hex"),
   };
 

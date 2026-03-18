@@ -1,4 +1,4 @@
-import type { PublicStateResponse } from "~/shared/types/clawme";
+import type { PublicStateResponse } from "~~/shared/types/clawme";
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const bootstrap = useState<PublicStateResponse | null>(
@@ -6,17 +6,25 @@ export default defineNuxtRouteMiddleware(async (to) => {
     () => null,
   );
 
-  if (!bootstrap.value) {
-    bootstrap.value = await $fetch("/api/system/bootstrap");
+  let bootstrapValue = bootstrap.value;
+
+  if (!bootstrapValue) {
+    bootstrapValue = await $fetch("/api/system/bootstrap");
+    bootstrap.value = bootstrapValue;
   }
 
-  const isInitialized = bootstrap.value.state.system.isInitialized;
+  const isInitialized = bootstrapValue.state.system.isInitialized;
+  const isOwnerAuthenticated = bootstrapValue.viewer.isOwnerAuthenticated;
 
   if (!isInitialized && to.path !== "/setup") {
     return navigateTo("/setup");
   }
 
-  if (isInitialized && to.path === "/setup") {
+  if (isInitialized && !isOwnerAuthenticated && to.path !== "/login") {
+    return navigateTo("/login");
+  }
+
+  if (isInitialized && isOwnerAuthenticated && (to.path === "/setup" || to.path === "/login")) {
     return navigateTo("/feed");
   }
 });

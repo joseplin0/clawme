@@ -58,6 +58,7 @@ export interface ChatMessageRecord {
 export interface FeedAttachmentRecord {
   id: string;
   kind: FeedAttachmentKind;
+  url?: string | null;
   title: string;
   subtitle: string;
   icon: string;
@@ -100,6 +101,7 @@ export interface PublicStateResponse {
 export interface BootstrapRequest {
   ownerNickname: string;
   ownerUsername: string;
+  ownerPassword: string;
   assistantNickname: string;
   assistantRole: string;
   assistantBio: string;

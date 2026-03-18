@@ -11,8 +11,8 @@
 
 ## Next Queue
 
-- [ ] Refactor feed and settings views to read from the shared app-state API instead of static literals.
-- [ ] Wrap Feed and Chat UI into dedicated business components such as `FeedPostCard` and `ChatMessageBubble`.
+- [x] Refactor feed and settings views to read from the shared app-state API instead of static literals.
+- [x] Wrap Feed and Chat UI into dedicated business components such as `FeedPostCard` and `ChatMessageBubble`.
 - [ ] Add importer groundwork for ChatGPT and Gemini export parsing.
 - [ ] Introduce bearer-token channel APIs for external agent writes.
 

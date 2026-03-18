@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen px-4 py-6 md:px-6 md:py-10">
+  <div class="px-4 py-6 md:px-6 md:py-10">
     <div class="mx-auto max-w-3xl">
       <UCard>
         <template #header>
@@ -20,7 +20,7 @@
               <div class="space-y-4">
                 <UFormField
                   name="ownerNickname"
-                  label="主理人昵称"
+                  label="昵称"
                   required
                 >
                   <UInput
@@ -33,13 +33,27 @@
 
                 <UFormField
                   name="ownerUsername"
-                  label="主理人用户名"
+                  label="用户名"
                   required
                 >
                   <UInput
                     v-model="form.ownerUsername"
                     class="w-full"
                     placeholder="例如：linqiang"
+                    required
+                  />
+                </UFormField>
+
+                <UFormField
+                  name="ownerPassword"
+                  label="密码"
+                  required
+                >
+                  <UInput
+                    v-model="form.ownerPassword"
+                    class="w-full"
+                    type="password"
+                    placeholder="至少 6 位"
                     required
                   />
                 </UFormField>
@@ -183,7 +197,7 @@
 import type { BootstrapRequest, PublicStateResponse } from "~~/shared/types/clawme";
 
 definePageMeta({
-  layout: false,
+  layout: "auth",
 });
 
 type StepValue = "owner" | "assistant" | "provider";
@@ -198,8 +212,8 @@ const statusMessage = ref("按顺序填写 3 个步骤，最后提交即可。")
 const stepItems = [
   {
     value: "owner",
-    title: "主理人",
-    description: "设置 owner 身份。",
+    title: "管理员",
+    description: "设置管理员身份。",
     icon: "i-lucide-user-round-cog",
     slot: "owner",
   },
@@ -227,6 +241,7 @@ const isLastStep = computed(() => stepIndex.value === stepItems.length - 1);
 const form = reactive<BootstrapRequest>({
   ownerNickname: "林",
   ownerUsername: "lin",
+  ownerPassword: "",
   assistantNickname: "虾米",
   assistantRole: "本地助理",
   assistantBio:
