@@ -1,155 +1,257 @@
 <template>
-  <div class="min-h-screen bg-transparent px-4 py-6 md:px-8 md:py-10">
-    <div class="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-      <section class="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-white/85 p-8 shadow-[0_48px_120px_-72px_rgba(137,48,33,0.65)] backdrop-blur">
-        <div class="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top_left,rgba(224,93,68,0.22),transparent_62%)]" />
-        <div class="relative space-y-6">
-          <div class="space-y-3">
-            <UBadge color="primary" variant="subtle" size="sm">First Run Setup</UBadge>
-            <h1 class="max-w-xl text-4xl font-semibold tracking-tight text-highlighted">
-              把 Clawme 点亮成你的本地协作场域
-            </h1>
-            <p class="max-w-2xl text-sm leading-7 text-toned">
-              这一步会创建主理人、默认助理“虾米”、本地模型入口和第一条直连会话。后面的 Feed、Chat、Importer
-              和生态引擎都会沿着这套统一身份骨架继续长出来。
-            </p>
-          </div>
-
-          <div class="grid gap-4 md:grid-cols-3">
-            <div class="rounded-2xl border border-muted/70 bg-muted/35 p-4">
-              <UIcon name="i-lucide-user-round-cog" class="size-5 text-primary" />
-              <p class="mt-3 text-sm font-semibold text-highlighted">主理人初始化</p>
-              <p class="mt-1 text-sm leading-6 text-muted">创建 OWNER 身份与工作台入口。</p>
-            </div>
-            <div class="rounded-2xl border border-muted/70 bg-muted/35 p-4">
-              <UIcon name="i-lucide-bot" class="size-5 text-primary" />
-              <p class="mt-3 text-sm font-semibold text-highlighted">默认助理落盘</p>
-              <p class="mt-1 text-sm leading-6 text-muted">生成默认 BOT 与初始直连会话。</p>
-            </div>
-            <div class="rounded-2xl border border-muted/70 bg-muted/35 p-4">
-              <UIcon name="i-lucide-server" class="size-5 text-primary" />
-              <p class="mt-3 text-sm font-semibold text-highlighted">模型网关挂载</p>
-              <p class="mt-1 text-sm leading-6 text-muted">为后续 SSE 与工作流预留 provider 边界。</p>
-            </div>
-          </div>
-
-          <div class="rounded-3xl border border-primary/15 bg-primary/5 p-5">
-            <p class="text-sm font-medium text-highlighted">当前推荐默认值</p>
-            <p class="mt-2 text-sm leading-7 text-toned">
-              本轮先按 `oMLX + OpenAI Compatible API` 落地，后续可以无痛替换为 Ollama、LM
-              Studio 或其他本地网关。
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section class="rounded-[2rem] border border-muted/70 bg-white/90 p-6 shadow-[0_48px_120px_-72px_rgba(40,32,28,0.55)] backdrop-blur md:p-8">
-        <form class="space-y-5" @submit.prevent="submit">
+  <div class="min-h-screen px-4 py-6 md:px-6 md:py-10">
+    <div class="mx-auto max-w-3xl">
+      <UCard>
+        <template #header>
           <div class="space-y-1">
-            <h2 class="text-2xl font-semibold text-highlighted">首次引导</h2>
-            <p class="text-sm text-muted">这一页会把 Phase 1 最小可运行环境直接写入本地状态仓储。</p>
+            <h1>首次设置</h1>
+            <p>按步骤填写必要信息后即可启动 Clawme。</p>
           </div>
+        </template>
 
-          <div class="grid gap-4 md:grid-cols-2">
-            <div class="space-y-2">
-              <label class="text-sm font-medium text-toned" for="ownerNickname">主理人昵称</label>
-              <UInput id="ownerNickname" v-model="form.ownerNickname" size="xl" />
+        <UForm :state="form" class="space-y-6" @submit="handleSubmit">
+          <UStepper
+            ref="stepper"
+            v-model="currentStep"
+            :items="stepItems"
+            class="gap-6"
+          >
+            <template #owner>
+              <div class="space-y-4">
+                <UFormField
+                  name="ownerNickname"
+                  label="主理人昵称"
+                  required
+                >
+                  <UInput
+                    v-model="form.ownerNickname"
+                    class="w-full"
+                    placeholder="例如：林"
+                    required
+                  />
+                </UFormField>
+
+                <UFormField
+                  name="ownerUsername"
+                  label="主理人用户名"
+                  required
+                >
+                  <UInput
+                    v-model="form.ownerUsername"
+                    class="w-full"
+                    placeholder="例如：linqiang"
+                    required
+                  />
+                </UFormField>
+              </div>
+            </template>
+
+            <template #assistant>
+              <div class="space-y-4">
+                <UFormField
+                  name="assistantNickname"
+                  label="默认助理昵称"
+                  required
+                >
+                  <UInput
+                    v-model="form.assistantNickname"
+                    class="w-full"
+                    placeholder="例如：虾米"
+                    required
+                  />
+                </UFormField>
+
+                <UFormField
+                  name="assistantRole"
+                  label="默认助理角色"
+                  required
+                >
+                  <UInput
+                    v-model="form.assistantRole"
+                    class="w-full"
+                    placeholder="例如：本地助理"
+                    required
+                  />
+                </UFormField>
+
+                <UFormField
+                  name="assistantBio"
+                  label="助理 System Prompt"
+                  required
+                >
+                  <UTextarea
+                    v-model="form.assistantBio"
+                    class="w-full"
+                    :rows="5"
+                    :maxrows="8"
+                    autoresize
+                    required
+                  />
+                </UFormField>
+              </div>
+            </template>
+
+            <template #provider>
+              <div class="space-y-4">
+                <UFormField
+                  name="providerName"
+                  label="Provider"
+                  required
+                >
+                  <UInput
+                    v-model="form.providerName"
+                    class="w-full"
+                    placeholder="例如：oMLX"
+                    required
+                  />
+                </UFormField>
+
+                <UFormField
+                  name="providerBaseUrl"
+                  label="Base URL"
+                  required
+                >
+                  <UInput
+                    v-model="form.providerBaseUrl"
+                    class="w-full"
+                    placeholder="http://localhost:8000/v1"
+                    required
+                  />
+                </UFormField>
+
+                <UFormField
+                  name="modelId"
+                  label="Model ID"
+                  required
+                >
+                  <UInput
+                    v-model="form.modelId"
+                    class="w-full"
+                    placeholder="例如：qwen3.5-8b-instruct"
+                    required
+                  />
+                </UFormField>
+              </div>
+            </template>
+          </UStepper>
+
+          <USeparator />
+
+          <div class="space-y-4">
+            <div class="flex items-center justify-between gap-4">
+              <p>{{ statusMessage }}</p>
+              <p class="shrink-0">步骤 {{ stepIndex + 1 }} / {{ stepItems.length }}</p>
             </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium text-toned" for="ownerUsername">主理人用户名</label>
-              <UInput id="ownerUsername" v-model="form.ownerUsername" size="xl" />
+
+            <div class="flex justify-center gap-3">
+              <UButton
+                type="button"
+                icon="i-lucide-arrow-left"
+                :disabled="stepIndex === 0 || submitting"
+                @click="prevStep"
+              >
+                上一步
+              </UButton>
+
+              <UButton
+                v-if="!isLastStep"
+                type="button"
+                trailing-icon="i-lucide-arrow-right"
+                :disabled="submitting"
+                @click="nextStep"
+              >
+                下一步
+              </UButton>
+
+              <UButton
+                v-else
+                type="submit"
+                icon="i-lucide-rocket"
+                :loading="submitting"
+              >
+                启动 Clawme
+              </UButton>
             </div>
           </div>
-
-          <div class="grid gap-4 md:grid-cols-2">
-            <div class="space-y-2">
-              <label class="text-sm font-medium text-toned" for="assistantNickname">默认助理昵称</label>
-              <UInput id="assistantNickname" v-model="form.assistantNickname" size="xl" />
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium text-toned" for="assistantRole">默认助理角色</label>
-              <UInput id="assistantRole" v-model="form.assistantRole" size="xl" />
-            </div>
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium text-toned" for="assistantBio">助理 System Prompt 基线</label>
-            <UTextarea
-              id="assistantBio"
-              v-model="form.assistantBio"
-              :rows="4"
-              :maxrows="8"
-              autoresize
-            />
-          </div>
-
-          <div class="grid gap-4 md:grid-cols-3">
-            <div class="space-y-2">
-              <label class="text-sm font-medium text-toned" for="providerName">Provider</label>
-              <UInput id="providerName" v-model="form.providerName" size="xl" />
-            </div>
-            <div class="space-y-2 md:col-span-2">
-              <label class="text-sm font-medium text-toned" for="providerBaseUrl">Base URL</label>
-              <UInput id="providerBaseUrl" v-model="form.providerBaseUrl" size="xl" />
-            </div>
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium text-toned" for="modelId">Model ID</label>
-            <UInput id="modelId" v-model="form.modelId" size="xl" />
-          </div>
-
-          <div class="rounded-2xl border border-muted/70 bg-muted/35 p-4 text-sm text-toned">
-            初始化完成后会自动写入 owner session cookie，并生成一条默认欢迎消息，方便后面继续打通聊天链路。
-          </div>
-
-          <div class="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
-            <UButton
-              type="submit"
-              size="xl"
-              class="justify-center"
-              :loading="submitting"
-              icon="i-lucide-rocket"
-            >
-              启动 Clawme
-            </UButton>
-            <p class="text-sm text-muted">
-              {{ statusMessage }}
-            </p>
-          </div>
-        </form>
-      </section>
+        </UForm>
+      </UCard>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { BootstrapRequest, PublicStateResponse } from "~/shared/types/clawme";
+import type { BootstrapRequest, PublicStateResponse } from "~~/shared/types/clawme";
 
 definePageMeta({
   layout: false,
 });
 
+type StepValue = "owner" | "assistant" | "provider";
+
 const bootstrap = useState<PublicStateResponse | null>("bootstrap-state");
 const toast = useToast();
+const stepper = useTemplateRef("stepper");
 const submitting = ref(false);
-const statusMessage = ref("建议先保持默认值，后续可以在设置页继续扩展。");
+const currentStep = ref<StepValue>("owner");
+const statusMessage = ref("按顺序填写 3 个步骤，最后提交即可。");
+
+const stepItems = [
+  {
+    value: "owner",
+    title: "主理人",
+    description: "设置 owner 身份。",
+    icon: "i-lucide-user-round-cog",
+    slot: "owner",
+  },
+  {
+    value: "assistant",
+    title: "默认助理",
+    description: "设置名称、角色和提示词。",
+    icon: "i-lucide-bot",
+    slot: "assistant",
+  },
+  {
+    value: "provider",
+    title: "模型网关",
+    description: "填写 provider、地址和模型。",
+    icon: "i-lucide-server",
+    slot: "provider",
+  },
+];
+
+const stepIndex = computed(() =>
+  stepItems.findIndex((item) => item.value === currentStep.value),
+);
+const isLastStep = computed(() => stepIndex.value === stepItems.length - 1);
 
 const form = reactive<BootstrapRequest>({
   ownerNickname: "林",
-  ownerUsername: "linqiang",
+  ownerUsername: "lin",
   assistantNickname: "虾米",
   assistantRole: "本地助理",
   assistantBio:
     "你是 Clawme 的默认本地助理，擅长把复杂想法拆成可执行任务，并优先稳住系统底座与协作流。",
   providerName: "oMLX",
   providerBaseUrl: "http://localhost:8000/v1",
-  modelId: "qwen3.5-8b-instruct",
+  modelId: "qwen3-4b-instruct",
 });
 
-async function submit() {
+function nextStep() {
+  stepper.value?.next();
+}
+
+function prevStep() {
+  stepper.value?.prev();
+}
+
+async function handleSubmit() {
+  if (!isLastStep.value) {
+    nextStep();
+    return;
+  }
+
   submitting.value = true;
-  statusMessage.value = "正在写入系统状态与默认会话...";
+  statusMessage.value = "正在写入系统状态、默认会话与初始动态...";
 
   try {
     const response = await $fetch<PublicStateResponse>("/api/system/bootstrap", {
