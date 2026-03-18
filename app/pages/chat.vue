@@ -1,8 +1,8 @@
 <template>
-  <div class="relative flex h-full w-full overflow-hidden bg-white/75">
+  <div class="relative flex h-full w-full overflow-hidden bg-white/75 dark:bg-[#140e0c]/75">
     <aside
       :class="[
-        'absolute z-10 flex h-full w-full shrink-0 flex-col border-r border-muted/70 bg-white/92 backdrop-blur transition-transform duration-300 md:relative md:w-80',
+        'absolute z-10 flex h-full w-full shrink-0 flex-col border-r border-muted/70 bg-white/92 dark:bg-[#140e0c]/92 backdrop-blur transition-transform duration-300 md:relative md:w-80',
         activeSessionId ? '-translate-x-full md:translate-x-0' : 'translate-x-0',
       ]"
     >
@@ -25,7 +25,7 @@
           :class="
             activeSessionId === session.id
               ? 'border-primary/30 bg-primary/8 shadow-[0_18px_48px_-36px_rgba(201,70,45,0.7)]'
-              : 'border-transparent bg-muted/30 hover:border-muted hover:bg-white'
+              : 'border-transparent bg-muted/30 hover:border-muted hover:bg-white dark:hover:bg-[#1a1310]'
           "
           @click="activeSessionId = session.id"
         >
@@ -73,7 +73,7 @@
 
       <template v-else>
         <header
-          class="flex h-[76px] items-center justify-between border-b border-muted/70 bg-white/85 px-4 backdrop-blur"
+          class="flex h-[76px] items-center justify-between border-b border-muted/70 bg-white/85 dark:bg-[#140e0c]/85 px-4 backdrop-blur"
         >
           <div class="flex items-center gap-3">
             <UButton
@@ -137,7 +137,7 @@
           </div>
         </div>
 
-        <div class="border-t border-muted/70 bg-white/88 px-4 py-4 backdrop-blur">
+        <div class="border-t border-muted/70 bg-white/88 dark:bg-[#140e0c]/88 px-4 py-4 backdrop-blur">
           <div class="mx-auto max-w-3xl">
             <UChatPrompt
               v-model="inputMessage"
@@ -147,7 +147,7 @@
               :disabled="!activeSessionId"
               :placeholder="activeSessionId ? '告诉虾米接下来该先做什么...' : '请先选择会话...'"
               :ui="{
-                root: 'rounded-[1.75rem] border border-muted/70 bg-white shadow-[0_24px_56px_-40px_rgba(40,32,28,0.5)]',
+                root: 'rounded-[1.75rem] border border-muted/70 bg-white dark:bg-neutral-900 shadow-[0_24px_56px_-40px_rgba(40,32,28,0.5)] dark:shadow-none',
                 body: 'px-4 pt-3 pb-2 text-sm leading-7',
                 footer: 'border-t border-muted/60 px-3 py-2',
               }"

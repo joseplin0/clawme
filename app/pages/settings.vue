@@ -18,7 +18,7 @@
 
       <div
         v-if="!state.system.isInitialized"
-        class="rounded-3xl border border-dashed border-primary/40 bg-white/70 p-8 text-center"
+        class="rounded-3xl border border-dashed border-primary/40 bg-white/70 dark:bg-neutral-900/70 p-8 text-center"
       >
         <p class="text-base font-medium text-highlighted">系统还没有完成首次引导。</p>
         <p class="mt-2 text-sm text-muted">
@@ -27,7 +27,7 @@
       </div>
 
       <section v-else class="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
-        <UCard class="border border-muted/70 bg-white/80">
+        <UCard class="border border-muted/70 bg-white/80 dark:bg-neutral-900/80">
           <template #header>
             <div class="flex items-center justify-between">
               <div>
@@ -80,7 +80,7 @@
         </UCard>
 
         <div class="space-y-6">
-          <UCard class="border border-muted/70 bg-white/80">
+          <UCard class="border border-muted/70 bg-white/80 dark:bg-neutral-900/80">
             <template #header>
               <h2 class="text-lg font-semibold text-highlighted">模型网关</h2>
             </template>
@@ -91,11 +91,11 @@
                 <p class="mt-1 text-base font-semibold text-highlighted">{{ provider.name }}</p>
               </div>
               <div class="grid gap-3">
-                <div class="rounded-2xl border border-muted/70 bg-white p-4">
+                <div class="rounded-2xl border border-muted/70 bg-white dark:bg-neutral-950 p-4">
                   <p class="text-sm text-muted">Model</p>
                   <p class="mt-1 font-medium text-highlighted">{{ provider.modelId }}</p>
                 </div>
-                <div class="rounded-2xl border border-muted/70 bg-white p-4">
+                <div class="rounded-2xl border border-muted/70 bg-white dark:bg-neutral-950 p-4">
                   <p class="text-sm text-muted">Base URL</p>
                   <p class="mt-1 break-all text-sm text-default">{{ provider.baseUrl }}</p>
                 </div>
@@ -105,7 +105,7 @@
             <p v-else class="text-sm text-muted">尚未创建模型网关配置。</p>
           </UCard>
 
-          <UCard class="border border-muted/70 bg-white/80">
+          <UCard class="border border-muted/70 bg-white/80 dark:bg-neutral-900/80">
             <template #header>
               <h2 class="text-lg font-semibold text-highlighted">系统脉搏</h2>
             </template>

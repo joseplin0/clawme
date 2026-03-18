@@ -1,389 +1,326 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>响应式瀑布流社区 - 常驻窄边栏</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      // 配置 Tailwind 自定义主题色：柔和的橙红色 (Terracotta/Soft Orange-Red)
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              brand: {
-                50: "#fef2f0",
-                100: "#fde4df",
-                500: "#e56b58",
-                600: "#e05a47", // 主色调：柔和橙红
-                700: "#c24534",
-              },
-            },
-          },
-        },
-      };
-    </script>
-    <style>
-      /* Waterfall core logic */
-      .masonry-grid {
-        column-gap: 1.25rem;
-      }
-      .masonry-item {
-        break-inside: avoid;
-        margin-bottom: 1.25rem;
-      }
 
-      /* Smooth transition for mobile only */
-      #sidebar {
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      }
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>响应式瀑布流社区 - 深色模式适配</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // 在页面渲染前判断主题，防止闪烁 (FOUC)
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
 
-      /* Nav link active states - 使用柔和橙红 */
-      .nav-link.active {
-        color: #e05a47;
-        background-color: #fef2f0;
+    // 配置 Tailwind 自定义主题色和深色模式
+    tailwind.config = {
+      darkMode: 'class', // 启用基于 class 的深色模式
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fef2f0',
+              100: '#fde4df',
+              500: '#e56b58',
+              600: '#e05a47',
+              700: '#c24534',
+            }
+          }
+        }
       }
+    }
+  </script>
+  <style>
+    /* Waterfall core logic */
+    .masonry-grid {
+      column-gap: 1.25rem;
+    }
 
-      /* Hide scrollbars */
-      .no-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
-      .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-    </style>
-  </head>
-  <body class="bg-gray-50 text-gray-900 overflow-x-hidden">
-    <!-- Mobile Overlay (only visible on small screens when sidebar is open) -->
-    <div
-      id="sidebar-overlay"
-      class="fixed inset-0 bg-black/40 z-40 hidden md:hidden"
-      onclick="toggleSidebar()"
-    ></div>
+    .masonry-item {
+      break-inside: avoid;
+      margin-bottom: 1.25rem;
+    }
 
-    <!-- Permanent Narrow Sidebar (md:translate-x-0 makes it always visible on desktop/tablets) -->
-    <aside
-      id="sidebar"
-      class="fixed top-0 left-0 h-screen w-20 bg-white border-r border-gray-100 z-50 -translate-x-full md:translate-x-0 flex flex-col items-center py-6 shadow-sm"
-    >
-      <!-- Logo -->
-      <div class="mb-10">
-        <div
-          class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-brand-100"
-        >
-          F
-        </div>
+    /* Smooth transition for mobile only */
+    #sidebar {
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s, border-color 0.3s;
+    }
+
+    /* Nav link active states - 明暗双色适配 */
+    .nav-link.active {
+      color: #e05a47;
+      background-color: #fef2f0;
+    }
+
+    .dark .nav-link.active {
+      color: #e56b58;
+      background-color: rgba(229, 107, 88, 0.15);
+    }
+
+    /* Hide scrollbars */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* 全局平滑过渡 */
+    body {
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 overflow-x-hidden">
+
+  <!-- Mobile Overlay -->
+  <div id="sidebar-overlay" class="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 hidden md:hidden transition-opacity"
+    onclick="toggleSidebar()"></div>
+
+  <!-- Permanent Narrow Sidebar -->
+  <aside id="sidebar"
+    class="fixed top-0 left-0 h-screen w-20 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 z-50 -translate-x-full md:translate-x-0 flex flex-col items-center py-6 shadow-sm dark:shadow-none">
+    <!-- Logo -->
+    <div class="mb-10">
+      <div
+        class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-brand-100 dark:shadow-brand-900/20">
+        F
       </div>
+    </div>
 
-      <!-- Navigation -->
-      <nav class="flex-1 w-full px-2 space-y-4">
-        <a
-          href="#"
-          class="nav-link active flex flex-col items-center gap-1 py-3 rounded-2xl transition-all duration-200 group"
-        >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a11 11 0 003 3h10a11 11 0 003-3V10M9 21V9i5h4v12"
-            ></path>
+    <!-- Navigation -->
+    <nav class="flex-1 w-full px-2 space-y-4">
+      <a href="#"
+        class="nav-link active flex flex-col items-center gap-1 py-3 rounded-2xl transition-all duration-200 group">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a11 11 0 003 3h10a11 11 0 003-3V10M9 21V9i5h4v12"></path>
+        </svg>
+        <span class="text-[10px] font-bold">首页</span>
+      </a>
+      <a href="#"
+        class="nav-link flex flex-col items-center gap-1 py-3 text-gray-400 dark:text-gray-500 rounded-2xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-brand-600 dark:hover:text-brand-500 group">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16"></path>
+        </svg>
+        <span class="text-[10px] font-bold">探索</span>
+      </a>
+      <a href="#"
+        class="nav-link flex flex-col items-center gap-1 py-3 text-gray-400 dark:text-gray-500 rounded-2xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-brand-600 dark:hover:text-brand-500 group">
+        <div class="relative">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+            </path>
           </svg>
-          <span class="text-[10px] font-bold">首页</span>
-        </a>
-        <a
-          href="#"
-          class="nav-link flex flex-col items-center gap-1 py-3 text-gray-400 rounded-2xl transition-all duration-200 hover:bg-gray-50 hover:text-brand-600 group"
-        >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 20l4-16m2 16l4-16"
-            ></path>
+          <span
+            class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white dark:ring-gray-900"></span>
+        </div>
+        <span class="text-[10px] font-bold">消息</span>
+      </a>
+      <a href="#"
+        class="nav-link flex flex-col items-center gap-1 py-3 text-gray-400 dark:text-gray-500 rounded-2xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-brand-600 dark:hover:text-brand-500 group">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+        </svg>
+        <span class="text-[10px] font-bold">我的</span>
+      </a>
+    </nav>
+
+    <!-- Profile -->
+    <div class="mt-auto pb-6">
+      <div
+        class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-white dark:border-gray-800 shadow-sm overflow-hidden cursor-pointer hover:ring-2 hover:ring-brand-100 dark:hover:ring-brand-900/50 transition-all">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="avatar">
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area: Offset by sidebar width on desktop -->
+  <main class="md:pl-20 min-h-screen transition-all">
+
+    <!-- Header -->
+    <header
+      class="sticky top-0 bg-white/70 dark:bg-gray-950/70 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800/60 z-30 transition-colors duration-300">
+      <div class="max-w-[1800px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-between gap-4 sm:gap-6">
+        <!-- Mobile Menu Button -->
+        <button onclick="toggleSidebar()"
+          class="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-400 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
           </svg>
-          <span class="text-[10px] font-bold">探索</span>
-        </a>
-        <a
-          href="#"
-          class="nav-link flex flex-col items-center gap-1 py-3 text-gray-400 rounded-2xl transition-all duration-200 hover:bg-gray-50 hover:text-brand-600 group"
-        >
-          <div class="relative">
-            <svg
-              class="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-              ></path>
+        </button>
+
+        <!-- Search Bar -->
+        <div class="flex-1 max-w-2xl relative group">
+          <span
+            class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-brand-500 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
-            <span
-              class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"
-            ></span>
-          </div>
-          <span class="text-[10px] font-bold">消息</span>
-        </a>
-        <a
-          href="#"
-          class="nav-link flex flex-col items-center gap-1 py-3 text-gray-400 rounded-2xl transition-all duration-200 hover:bg-gray-50 hover:text-brand-600 group"
-        >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-            ></path>
-          </svg>
-          <span class="text-[10px] font-bold">我的</span>
-        </a>
-      </nav>
-
-      <!-- Profile -->
-      <div class="mt-auto pb-6">
-        <div
-          class="w-10 h-10 rounded-full bg-gray-100 border-2 border-white shadow-sm overflow-hidden cursor-pointer hover:ring-2 hover:ring-brand-100 transition-all"
-        >
-          <img
-            src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-            alt="avatar"
-          />
+          </span>
+          <input type="text" placeholder="探索灵感..."
+            class="w-full bg-gray-100/80 dark:bg-gray-900 border-none rounded-2xl py-2.5 pl-12 pr-4 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/50 focus:bg-white dark:focus:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all outline-none text-sm font-medium">
         </div>
-      </div>
-    </aside>
 
-    <!-- Main Content Area: Offset by sidebar width on desktop -->
-    <main class="md:pl-20 min-h-screen transition-all">
-      <!-- Header -->
-      <header
-        class="sticky top-0 bg-white/70 backdrop-blur-xl border-b border-gray-100 z-30"
-      >
-        <div
-          class="max-w-[1800px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-between gap-6"
-        >
-          <!-- Mobile Menu Button (Only visible on mobile) -->
-          <button
-            onclick="toggleSidebar()"
-            class="md:hidden p-2 hover:bg-gray-100 rounded-lg text-gray-500"
-          >
-            <svg
-              class="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 6h16M4 12h16M4 18h16"
-              ></path>
+        <!-- Right Actions -->
+        <div class="flex items-center gap-2 sm:gap-4">
+          <!-- Theme Toggle Button -->
+          <button onclick="toggleTheme()"
+            class="p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            title="切换深色/浅色模式">
+            <!-- Sun icon for dark mode -->
+            <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+              </path>
+            </svg>
+            <!-- Moon icon for light mode -->
+            <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
             </svg>
           </button>
 
-          <!-- Search Bar -->
-          <div class="flex-1 max-w-2xl relative group">
-            <span
-              class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-500 transition-colors"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                ></path>
-              </svg>
-            </span>
-            <input
-              type="text"
-              placeholder="探索灵感..."
-              class="w-full bg-gray-100/80 border-none rounded-2xl py-2.5 pl-12 pr-4 focus:ring-2 focus:ring-brand-100 focus:bg-white transition-all outline-none text-sm font-medium"
-            />
-          </div>
-
           <!-- Desktop Action -->
           <button
-            class="hidden sm:flex items-center gap-2 bg-brand-600 text-white px-6 py-2.5 rounded-2xl text-sm font-bold hover:bg-brand-700 hover:shadow-lg hover:shadow-brand-100 transition-all active:scale-95"
-          >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              ></path>
+            class="hidden sm:flex items-center gap-2 bg-brand-600 text-white px-5 sm:px-6 py-2.5 rounded-2xl text-sm font-bold hover:bg-brand-700 hover:shadow-lg hover:shadow-brand-100 dark:hover:shadow-none transition-all active:scale-95">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>
             新贴
           </button>
         </div>
-      </header>
+      </div>
+    </header>
 
-      <!-- Waterfall Content -->
-      <div class="max-w-[1800px] mx-auto p-4 sm:p-8">
-        <!-- Columns auto-adjust based on screen size:
-                 Mobile: 1 column (Feed)
-                 Tablets: 2-3 columns
-                 Desktop: 4-6 columns
-            -->
-        <div
-          id="masonry-container"
-          class="masonry-grid columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6 gap-6"
-        >
-          <!-- Cards injected via JS -->
-        </div>
+    <!-- Waterfall Content -->
+    <div class="max-w-[1800px] mx-auto p-4 sm:p-8">
+      <div id="masonry-container"
+        class="masonry-grid columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6 gap-6">
+        <!-- Cards injected via JS -->
+      </div>
 
-        <!-- Loading indicator -->
+      <!-- Loading indicator -->
+      <div id="loading" class="flex flex-col items-center justify-center py-20 gap-3">
         <div
-          id="loading"
-          class="flex flex-col items-center justify-center py-20 gap-3"
-        >
-          <div
-            class="w-8 h-8 border-4 border-brand-600/10 border-t-brand-600 rounded-full animate-spin"
-          ></div>
+          class="w-8 h-8 border-4 border-brand-600/20 dark:border-brand-500/20 border-t-brand-600 dark:border-t-brand-500 rounded-full animate-spin">
         </div>
       </div>
-    </main>
+    </div>
+  </main>
 
-    <script>
-      // Sidebar Toggle for Mobile View
-      const sidebar = document.getElementById("sidebar");
-      const overlay = document.getElementById("sidebar-overlay");
-
-      function toggleSidebar() {
-        const isHidden = sidebar.classList.contains("-translate-x-full");
-        if (isHidden) {
-          sidebar.classList.remove("-translate-x-full");
-          overlay.classList.remove("hidden");
-        } else {
-          sidebar.classList.add("-translate-x-full");
-          overlay.classList.add("hidden");
-        }
+  <script>
+    // Theme Toggle Logic
+    function toggleTheme() {
+      if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.theme = 'light';
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.theme = 'dark';
       }
+    }
 
-      // Mock Content Data
-      const feedTitles = [
-        "山野间的极致宁静",
-        "现代办公空间的美学",
-        "代码背后的逻辑之美",
-        "2024年秋季摄影作品集",
-        "关于未来城市的10个猜想",
-        "UI设计的极简主义",
-        "街头艺术的色彩冲撞",
-        "今日份咖啡拉花",
-        "旅行的意义在于探索",
-        "复古相机的独特质感",
-      ];
+    // Sidebar Toggle for Mobile View
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
 
-      function createContentCards(count) {
-        const container = document.getElementById("masonry-container");
-        const fragment = document.createDocumentFragment();
+    function toggleSidebar() {
+      const isHidden = sidebar.classList.contains('-translate-x-full');
+      if (isHidden) {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+      }
+    }
 
-        for (let i = 0; i < count; i++) {
-          const randomHeight =
-            Math.floor(Math.random() * (500 - 250 + 1)) + 250;
-          const randomId = Math.floor(Math.random() * 5000);
-          const title =
-            feedTitles[Math.floor(Math.random() * feedTitles.length)];
+    // Mock Content Data
+    const feedTitles = [
+      "山野间的极致宁静", "现代办公空间的美学", "代码背后的逻辑之美",
+      "2024年秋季摄影作品集", "关于未来城市的10个猜想", "UI设计的极简主义",
+      "街头艺术的色彩冲撞", "今日份咖啡拉花", "旅行的意义在于探索", "复古相机的独特质感"
+    ];
 
-          const card = document.createElement("div");
-          card.className =
-            "masonry-item group animate-in slide-in-from-bottom-4 duration-500";
+    function createContentCards(count) {
+      const container = document.getElementById('masonry-container');
+      const fragment = document.createDocumentFragment();
 
-          card.innerHTML = `
-                    <div class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 border border-gray-100">
-                        <div class="relative overflow-hidden bg-gray-100" style="height: ${randomHeight}px">
+      for (let i = 0; i < count; i++) {
+        const randomHeight = Math.floor(Math.random() * (500 - 250 + 1)) + 250;
+        const randomId = Math.floor(Math.random() * 5000);
+        const title = feedTitles[Math.floor(Math.random() * feedTitles.length)];
+
+        const card = document.createElement('div');
+        card.className = 'masonry-item group animate-in slide-in-from-bottom-4 duration-500';
+
+        // 新增了 dark 模式下相关的背景、边框、文字颜色的类名
+        card.innerHTML = `
+                    <div class="bg-white dark:bg-gray-900 rounded-xl overflow-hidden shadow-sm hover:shadow-2xl dark:shadow-none dark:hover:shadow-2xl dark:hover:shadow-black/50 hover:-translate-y-1 transition-all duration-500 border border-gray-100 dark:border-gray-800">
+                        <div class="relative overflow-hidden bg-gray-100 dark:bg-gray-800" style="height: ${randomHeight}px">
                             <img 
                                 src="https://picsum.photos/seed/${randomId}/600/${randomHeight}" 
                                 alt="content" 
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
                                 loading="lazy"
                             >
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-5">
-                                <button class="w-full bg-white/95 backdrop-blur-sm text-gray-900 py-3 rounded-lg text-xs font-black shadow-xl tracking-widest transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-5">
+                                <button class="w-full bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm text-gray-900 dark:text-gray-100 py-3 rounded-lg text-xs font-black shadow-xl tracking-widest transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:bg-white dark:hover:bg-gray-700">
                                     收藏灵感
                                 </button>
                             </div>
                         </div>
                         <div class="p-5">
-                            <h3 class="font-bold text-sm leading-relaxed line-clamp-2 mb-4 text-gray-800">${title}</h3>
+                            <h3 class="font-bold text-sm leading-relaxed line-clamp-2 mb-4 text-gray-800 dark:text-gray-200">${title}</h3>
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
-                                    <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=${randomId}" class="w-6 h-6 rounded-full ring-2 ring-gray-50 shadow-sm">
-                                    <span class="text-[11px] text-gray-500 font-bold uppercase tracking-tighter">User_${randomId % 99}</span>
+                                    <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=${randomId}" class="w-6 h-6 rounded-full ring-2 ring-gray-50 dark:ring-gray-800 shadow-sm">
+                                    <span class="text-[11px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-tighter">User_${randomId % 99}</span>
                                 </div>
-                                <button class="text-gray-400 hover:text-red-500 transition-colors">
+                                <button class="text-gray-400 dark:text-gray-500 hover:text-brand-500 dark:hover:text-brand-400 transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                                 </button>
                             </div>
                         </div>
                     </div>
                 `;
-          fragment.appendChild(card);
-        }
-        container.appendChild(fragment);
+        fragment.appendChild(card);
       }
+      container.appendChild(fragment);
+    }
 
-      // Initial Load
-      window.onload = () => {
-        createContentCards(24);
-        setTimeout(
-          () => document.getElementById("loading").classList.add("hidden"),
-          500,
-        );
-      };
+    // Initial Load
+    window.onload = () => {
+      createContentCards(24);
+      setTimeout(() => document.getElementById('loading').classList.add('hidden'), 500);
+    };
 
-      // Infinite Scroll Logic
-      let loadingMore = false;
-      window.onscroll = () => {
-        if (loadingMore) return;
-        if (
-          window.innerHeight + window.scrollY >=
-          document.body.offsetHeight - 900
-        ) {
-          loadingMore = true;
-          const loading = document.getElementById("loading");
-          loading.classList.remove("hidden");
+    // Infinite Scroll Logic
+    let loadingMore = false;
+    window.onscroll = () => {
+      if (loadingMore) return;
+      if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 900) {
+        loadingMore = true;
+        const loading = document.getElementById('loading');
+        loading.classList.remove('hidden');
 
-          setTimeout(() => {
-            createContentCards(12);
-            loading.classList.add("hidden");
-            loadingMore = false;
-          }, 1000);
-        }
-      };
-    </script>
-  </body>
+        setTimeout(() => {
+          createContentCards(12);
+          loading.classList.add('hidden');
+          loadingMore = false;
+        }, 1000);
+      }
+    };
+  </script>
+</body>
+
 </html>

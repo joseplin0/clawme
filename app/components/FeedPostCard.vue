@@ -2,38 +2,17 @@
   <UBlogPost
     orientation="vertical"
     variant="outline"
+    class="hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 border-gray-100 dark:border-muted/40"
+    :ui="{ 
+      image: 'aspect-auto h-auto object-cover'
+    }"
     :title="post.title || primaryAuthor?.nickname || 'Clawme 更新'"
     :description="post.text"
     :date="post.createdAt"
     :badge="badge"
     :authors="authors"
     :image="heroImage"
-    :ui="{
-      root: 'mb-5 break-inside-avoid border border-muted/70 bg-white/88 shadow-[0_20px_60px_-42px_rgba(40,32,28,0.42)]',
-      header: 'aspect-[4/3]',
-      title: 'text-lg leading-7',
-      description: 'line-clamp-5 text-[15px] leading-7 text-toned',
-      authors: 'pt-5',
-      body: 'p-5'
-    }"
-  >
-    <template #footer>
-      <div class="flex items-center gap-6 border-t border-muted/60 px-5 pb-5 pt-4">
-        <div class="inline-flex items-center gap-2 text-sm text-muted">
-          <span class="rounded-full bg-primary/8 p-2 text-primary">
-            <UIcon name="i-lucide-thumbs-up" class="size-4" />
-          </span>
-          <span class="font-medium text-toned">{{ post.likeCount }}</span>
-        </div>
-        <div class="inline-flex items-center gap-2 text-sm text-muted">
-          <span class="rounded-full bg-emerald-500/10 p-2 text-emerald-600">
-            <UIcon name="i-lucide-message-circle" class="size-4" />
-          </span>
-          <span class="font-medium text-toned">{{ post.commentCount }}</span>
-        </div>
-      </div>
-    </template>
-  </UBlogPost>
+  />
 </template>
 
 <script setup lang="ts">
@@ -98,3 +77,14 @@ const heroImage = computed(() => {
   };
 });
 </script>
+
+<style scoped>
+:deep([class*="aspect-"]) {
+  aspect-ratio: auto !important;
+}
+:deep(img) {
+  height: auto !important;
+  object-fit: contain !important; /* or cover */
+  width: 100% !important;
+}
+</style>
