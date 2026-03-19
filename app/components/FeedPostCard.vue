@@ -2,7 +2,7 @@
   <UBlogPost
     orientation="vertical"
     variant="outline"
-    class="hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 border-gray-100 dark:border-muted/40"
+    class="hover:shadow-xl hover:-translate-y-1 transition-all duration-500 border-muted"
     :ui="{ 
       image: 'aspect-auto h-auto object-cover'
     }"

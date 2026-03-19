@@ -28,8 +28,8 @@
 .dark {
   color-scheme: dark;
   --ui-primary: var(--ui-color-primary-500);
-  --app-bg: radial-gradient(circle at top, rgba(224, 93, 68, 0.15), transparent 45%), linear-gradient(180deg, #1c1512 0%, #140e0c 24%, #0a0706 100%);
-  --app-text: #f5f0ef;
+  --app-bg: #111827;
+  --app-text: #f9fafb;
   background: var(--app-bg);
 }
 

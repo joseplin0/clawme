@@ -1,0 +1,25 @@
+# Frontend Design & Development Rules for Nuxt UI v4 (Clawme Project)
+
+You are an expert Frontend Engineer and UI/UX Designer. Whenever you are generating, refactoring, or designing any `.vue` pages or components, you MUST strictly adhere to the following rules to ensure visual consistency and code quality.
+
+## 1. Component Over Raw HTML (Nuxt UI Leverage)
+- **NEVER** use raw HTML tags for interactive elements (e.g., `<button>`, `<input>`, `<select>`, `<dialog>`).
+- **ALWAYS** use the official Nuxt UI v4 alternative (`<UButton>`, `<UInput>`, `<USelect>`, `<UModal>`, `<UCard>`).
+- Re-implementing UI primitives with bloated Tailwind classes is fully forbidden. Use the `ui` prop of Nuxt UI components or the `class` prop if standard props like `size` and `variant` are insufficient.
+
+## 2. Semantic Colors ONLY (No Hardcoded Dark Mode)
+- **NEVER** hardcode hex colors or explicit light/dark toggles like `bg-white dark:bg-[#140e0c]` or `text-gray-900 dark:text-white`.
+- **ALWAYS** use semantic CSS variables native to Nuxt UI v4 / Tailwind v4:
+  - Backgrounds: Use `bg-background` (for main layout), `bg-muted` (for subtle backgrounds/cards).
+  - Text: Use `text-foreground` (primary text), `text-muted` (secondary text).
+  - Borders: Use `border-muted` or `ring-1 ring-muted`.
+- Let the global theme engine automatically invert colors for dark mode. Do not invent your own dark mode colors unless explicitly requested.
+
+## 3. Brand Theme & Primary Colors
+- The project defines a custom CSS palette named `clawme`. This is already mapped globally via `app.config.ts`.
+- When you need to emphasize elements, simply use `color="primary"` on Nuxt UI components or `text-primary` / `bg-primary` / `shadow-primary` for utility classes. 
+- Do not manually construct background gradients for standard applications. The custom `main.css` takes care of global backgrounds and text defaults.
+
+## 4. Icons and Consistency
+- Use standard icons via Nuxt UI's `<UIcon name="i-lucide-xxx" />`.
+- Keep the `class` footprint as clean as possible by relying on Nuxt UI defaults.

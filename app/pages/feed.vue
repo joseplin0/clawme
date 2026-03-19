@@ -1,22 +1,24 @@
 <template>
-  <div class="min-h-screen w-full transition-all bg-gray-50 dark:bg-transparent">
+  <div class="min-h-screen w-full transition-all">
     <!-- Header -->
-    <header class="sticky top-0 bg-white/70 backdrop-blur-xl border-b border-gray-100 z-30 dark:bg-[#140e0c]/70 dark:border-muted/70">
+    <header class="sticky top-0 bg-background/70 backdrop-blur-xl border-b border-muted z-30">
       <div class="max-w-[1800px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-end gap-6 md:justify-between">
-        <div class="flex-1 max-w-2xl relative group hidden sm:block">
-          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">
-            <UIcon name="i-lucide-search" class="w-5 h-5" />
-          </span>
-          <input
-            type="text"
+        <div class="flex-1 max-w-2xl hidden sm:block">
+          <UInput
+            icon="i-lucide-search"
             placeholder="探索灵感..."
-            class="w-full bg-gray-100/80 border-none rounded-2xl py-2.5 pl-12 pr-4 outline-none text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all dark:bg-muted/50 dark:focus:bg-[#140e0c]"
+            variant="soft"
+            size="xl"
+            class="w-full"
+            :ui="{ base: 'rounded-2xl transition-all' }"
           />
         </div>
-        <button class="hidden sm:flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-2xl text-sm font-bold shadow-sm shadow-primary/20 hover:bg-primary/90 hover:shadow-lg transition-all active:scale-95">
-          <UIcon name="i-lucide-plus" class="w-4 h-4" />
-          新贴
-        </button>
+        <UButton
+          icon="i-lucide-plus"
+          label="新贴"
+          size="lg"
+          class="hidden sm:flex rounded-2xl font-bold shadow-sm shadow-primary/20 hover:shadow-lg transition-all active:scale-95"
+        />
       </div>
     </header>
 
@@ -26,14 +28,16 @@
         <div class="w-24 h-24 mb-6 rounded-3xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
           <UIcon name="i-lucide-sparkles" class="w-10 h-10" />
         </div>
-        <h2 class="text-2xl font-black text-gray-900 dark:text-white mb-3">这里还是一片荒野</h2>
+        <h2 class="text-2xl font-black text-foreground mb-3">这里还是一片荒野</h2>
         <p class="text-gray-500 dark:text-gray-400 max-w-sm mb-8 leading-relaxed">
           当系统刚点亮时，瀑布流总是干涸的。你可以在这里留下你的第一个想法，建立你的超级大脑和数字领地。
         </p>
-        <button class="flex items-center gap-2 bg-primary text-white px-8 py-3.5 rounded-2xl text-base font-bold shadow-lg shadow-primary/30 hover:bg-primary/90 hover:-translate-y-1 transition-all active:scale-95">
-          <UIcon name="i-lucide-pen-line" class="w-5 h-5" />
-          发布第一条灵感
-        </button>
+        <UButton
+          icon="i-lucide-pen-line"
+          label="发布第一条灵感"
+          size="xl"
+          class="flex rounded-2xl font-bold shadow-lg shadow-primary/30 hover:-translate-y-1 transition-all active:scale-95"
+        />
       </div>
 
       <!-- 有数据：瀑布流与补充占位符 -->
@@ -48,8 +52,8 @@
         
         <!-- 数据不足时：常驻的“补充灵感”输入卡片 -->
         <div v-if="feedPosts.length > 0 && feedPosts.length < 5" class="break-inside-avoid mb-5 sm:mb-6">
-          <div class="group flex flex-col items-center justify-center p-8 h-64 border-2 border-dashed border-gray-200 dark:border-muted/50 rounded-2xl bg-gray-50/50 dark:bg-[#140e0c]/50 text-gray-400 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 cursor-pointer text-center">
-            <div class="w-12 h-12 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <div class="group flex flex-col items-center justify-center p-8 h-64 border-2 border-dashed border-muted rounded-2xl bg-muted/30 text-gray-400 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 cursor-pointer text-center">
+            <div class="w-12 h-12 rounded-full bg-background shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <UIcon name="i-lucide-plus" class="w-6 h-6" />
             </div>
             <span class="font-bold text-sm text-gray-600 dark:text-gray-300 group-hover:text-primary transition-colors">继续填充灵感</span>
