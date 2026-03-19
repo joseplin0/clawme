@@ -11,4 +11,5 @@ onlyBuiltDependencies:
   - '@prisma/client'
   - '@prisma/engines'
   - prisma
+  - sharp
   - vue-demi

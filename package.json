@@ -13,15 +13,21 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^3.0.66",
+    "@ai-sdk/openai": "^3.0.41",
+    "@ai-sdk/vue": "^3.0.116",
     "@iconify-json/lucide": "^1.2.97",
     "@nuxt/image": "2.0.0",
     "@nuxt/ui": "https://pkg.pr.new/@nuxt/ui@ba34a0b",
+    "@nuxtjs/mdc": "^0.20.2",
     "@prisma/client": "^6.6.0",
     "@tailwindcss/postcss": "^4.2.1",
+    "ai": "^6.0.116",
     "nuxt": "^4.4.2",
     "tailwindcss": "^4.2.1",
     "vue": "^3.5.30",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

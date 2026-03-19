@@ -1,7 +1,29 @@
 export type UserType = "HUMAN" | "BOT";
 export type SessionType = "DIRECT" | "GROUP";
+export type MessageRole = "USER" | "ASSISTANT" | "SYSTEM";
 export type MessageStatus = "GENERATING" | "DONE" | "ERROR";
 export type FeedAttachmentKind = "DOCUMENT" | "IMAGE" | "LINK";
+
+// AI SDK compatible message part types
+export type TextPart = { type: "text"; text: string };
+export type ReasoningPart = { type: "reasoning"; text: string };
+export type ToolCallPart = {
+  type: "tool-call";
+  toolCallId: string;
+  toolName: string;
+  args: Record<string, unknown>;
+};
+export type ToolResultPart = {
+  type: "tool-result";
+  toolCallId: string;
+  toolName: string;
+  result: unknown;
+};
+export type MessagePart =
+  | TextPart
+  | ReasoningPart
+  | ToolCallPart
+  | ToolResultPart;
 
 export interface SystemConfigRecord {
   isInitialized: boolean;
@@ -44,15 +66,10 @@ export interface ChatSessionRecord {
 export interface ChatMessageRecord {
   id: string;
   sessionId: string;
-  senderId: string;
-  content: string;
+  role: MessageRole;
+  parts: MessagePart[];
   status: MessageStatus;
-  thinkingContent: string | null;
-  replyToId: string | null;
-  isImported: boolean;
-  externalSource: string | null;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface FeedAttachmentRecord {
@@ -117,7 +134,22 @@ export interface ChatSessionResponse {
   activeSessionId: string | null;
 }
 
+export interface ChatSessionDetailResponse {
+  id: string;
+  title: string;
+  messages: Array<{
+    id: string;
+    role: "user" | "assistant";
+    parts: unknown[];
+    createdAt: string;
+  }>;
+}
+
 export interface ChatStreamRequest {
-  prompt: string;
-  sessionId?: string;
+  messages: Array<{
+    id: string;
+    role: MessageRole;
+    parts: MessagePart[];
+  }>;
+  model?: string;
 }

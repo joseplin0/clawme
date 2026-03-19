@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import type {
   ActorProfile,
   BootstrapRequest,
@@ -6,10 +6,13 @@ import type {
   ClawmeAppState,
   FeedAttachmentRecord,
   FeedPostRecord,
+  MessagePart,
+  MessageRole,
   MessageStatus,
   PublicStateResponse,
 } from "~~/shared/types/clawme";
 import { prisma } from "~~/server/utils/db";
+import type { Prisma } from "@prisma/client";
 
 interface StoredClawmeAppState extends ClawmeAppState {
   ownerAuthToken: string | null;
@@ -19,10 +22,6 @@ interface StoredClawmeAppState extends ClawmeAppState {
 
 export function hashPassword(password: string) {
   return createHash("sha256").update(password).digest("hex");
-}
-
-function nowIso() {
-  return new Date().toISOString();
 }
 
 export async function readStoredState(): Promise<StoredClawmeAppState> {
@@ -92,15 +91,10 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
   const mappedMessages: ChatMessageRecord[] = messages.map(m => ({
     id: m.id,
     sessionId: m.sessionId,
-    senderId: m.senderId,
-    content: m.content,
+    role: m.role as MessageRole,
+    parts: (m.parts as MessagePart[]) ?? [],
     status: m.status as MessageStatus,
-    thinkingContent: m.thinkingContent,
-    replyToId: m.replyToId,
-    isImported: m.isImported,
-    externalSource: m.externalSource,
     createdAt: m.createdAt.toISOString(),
-    updatedAt: m.createdAt.toISOString(),
   }));
 
   const mappedFeedPosts: FeedPostRecord[] = feedPosts.map(f => ({
@@ -114,17 +108,17 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
     likeCount: f.likeCount,
     commentCount: 0,
     attachments: f.attachments.map(a => {
-        const meta = (a.meta as any) || {};
+        const meta = (a.meta as Record<string, unknown>) || {};
         return {
             id: a.id,
             kind: a.type as "DOCUMENT" | "IMAGE" | "LINK",
             url: a.url,
-            width: meta.width,
-            height: meta.height,
-            title: meta.title || "",
-            subtitle: meta.subtitle || "",
-            icon: meta.icon || "",
-            accent: meta.accent || "",
+            width: meta.width as number | undefined,
+            height: meta.height as number | undefined,
+            title: (meta.title as string) || "",
+            subtitle: (meta.subtitle as string) || "",
+            icon: (meta.icon as string) || "",
+            accent: (meta.accent as string) || "",
         };
     }),
     createdAt: f.createdAt.toISOString(),
@@ -149,7 +143,7 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
   };
 }
 
-export async function writeStoredState(state: StoredClawmeAppState) {
+export async function writeStoredState(_state: StoredClawmeAppState) {
   console.warn("writeStoredState is deprecated. Database mutations must use Prisma clients directly.");
 }
 
@@ -217,7 +211,7 @@ export async function initializeSystem(input: BootstrapRequest) {
     });
 
     // 4. Chat Session
-    const session = await tx.chatSession.create({
+    await tx.chatSession.create({
       data: {
         type: "DIRECT",
         title: `${owner.nickname} x ${bot.nickname}`,
@@ -228,14 +222,17 @@ export async function initializeSystem(input: BootstrapRequest) {
     });
 
     // 5. Welcome Message
-    await tx.chatMessage.create({
-      data: {
-        sessionId: session.id,
-        senderId: bot.id,
-        content: "系统已经点亮。我们先从 Phase 1 的底座开始，把引导、对话链路和数据边界稳稳立住。",
-        status: "DONE",
-      }
-    });
+    const session = await tx.chatSession.findFirst();
+    if (session) {
+      await tx.chatMessage.create({
+        data: {
+          sessionId: session.id,
+          role: "ASSISTANT",
+          parts: [{ type: "text", text: "系统已经点亮。我们先从 Phase 1 的底座开始，把引导、对话链路和数据边界稳稳立住。" }],
+          status: "DONE",
+        }
+      });
+    }
 
     // 6. First Posts
     await tx.feedPost.create({
@@ -255,8 +252,7 @@ export async function initializeSystem(input: BootstrapRequest) {
         }
       }
     });
-    
-    // Create more seed posts...
+
     await tx.feedPost.create({
       data: {
         title: "极简工作台的第一次迭代",
@@ -288,7 +284,7 @@ export function toPublicStateResponse(
   feedPostsLimit?: number,
 ): PublicStateResponse {
   let initialFeedPosts = state.feedPosts;
-  
+
   if (feedPostsLimit !== undefined) {
     initialFeedPosts = initialFeedPosts.slice(0, feedPostsLimit);
   }
@@ -312,46 +308,36 @@ export function toPublicStateResponse(
 
 export async function createMessage(input: {
   sessionId: string;
-  senderId: string;
-  content: string;
+  role: MessageRole;
+  parts: MessagePart[];
   status?: MessageStatus;
-  thinkingContent?: string | null;
 }) {
   const message = await prisma.chatMessage.create({
     data: {
       sessionId: input.sessionId,
-      senderId: input.senderId,
-      content: input.content,
+      role: input.role,
+      parts: input.parts as Prisma.InputJsonValue,
       status: input.status ?? "DONE",
-      thinkingContent: input.thinkingContent ?? null,
     }
   });
 
   return {
     id: message.id,
     sessionId: message.sessionId,
-    senderId: message.senderId,
-    content: message.content,
+    role: message.role as MessageRole,
+    parts: (message.parts as MessagePart[]) ?? [],
     status: message.status as MessageStatus,
-    thinkingContent: message.thinkingContent,
-    replyToId: message.replyToId,
-    isImported: message.isImported,
-    externalSource: message.externalSource,
     createdAt: message.createdAt.toISOString(),
-    updatedAt: message.createdAt.toISOString(),
   };
 }
 
 export async function updateMessage(
   messageId: string,
-  updates: Partial<
-    Pick<ChatMessageRecord, "content" | "status" | "thinkingContent" | "updatedAt">
-  >,
+  updates: Partial<Pick<ChatMessageRecord, "parts" | "status">>,
 ) {
-  const updateData: any = {};
-  if (updates.content !== undefined) updateData.content = updates.content;
+  const updateData: Record<string, unknown> = {};
+  if (updates.parts !== undefined) updateData.parts = updates.parts;
   if (updates.status !== undefined) updateData.status = updates.status;
-  if (updates.thinkingContent !== undefined) updateData.thinkingContent = updates.thinkingContent;
 
   const message = await prisma.chatMessage.update({
     where: { id: messageId },
@@ -361,15 +347,10 @@ export async function updateMessage(
   return {
     id: message.id,
     sessionId: message.sessionId,
-    senderId: message.senderId,
-    content: message.content,
+    role: message.role as MessageRole,
+    parts: (message.parts as MessagePart[]) ?? [],
     status: message.status as MessageStatus,
-    thinkingContent: message.thinkingContent,
-    replyToId: message.replyToId,
-    isImported: message.isImported,
-    externalSource: message.externalSource,
     createdAt: message.createdAt.toISOString(),
-    updatedAt: message.createdAt.toISOString(),
   };
 }
 
@@ -421,17 +402,17 @@ export async function getPaginatedFeedPosts(page: number, limit: number) {
     likeCount: f.likeCount,
     commentCount: 0,
     attachments: f.attachments.map(a => {
-        const meta = (a.meta as any) || {};
+        const meta = (a.meta as Record<string, unknown>) || {};
         return {
             id: a.id,
             kind: a.type as "DOCUMENT" | "IMAGE" | "LINK",
             url: a.url,
-            width: meta.width,
-            height: meta.height,
-            title: meta.title || "",
-            subtitle: meta.subtitle || "",
-            icon: meta.icon || "",
-            accent: meta.accent || "",
+            width: meta.width as number | undefined,
+            height: meta.height as number | undefined,
+            title: (meta.title as string) || "",
+            subtitle: (meta.subtitle as string) || "",
+            icon: (meta.icon as string) || "",
+            accent: (meta.accent as string) || "",
         };
     }),
     createdAt: f.createdAt.toISOString(),

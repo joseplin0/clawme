@@ -36,7 +36,6 @@ model User {
   mcpConnections BotMcpConnection[]
   ownedWorkflows Workflow[]           @relation("WorkflowOwner")
   participations SessionParticipant[]
-  messages       ChatMessage[]        @relation("MessageSender")
   authoredPosts  FeedPost[]           @relation("PostAuthor")
   coAuthored     FeedPost[]           @relation("PostCoAuthors")
   comments       Comment[]            @relation("CommentAuthor")
@@ -196,22 +195,21 @@ enum ParticipantRole {
 }
 
 model ChatMessage {
-  id              String        @id @default(uuid())
-  sessionId       String
-  session         ChatSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  senderId        String
-  sender          User          @relation("MessageSender", fields: [senderId], references: [id])
-  content         String
-  status          MessageStatus @default(DONE)
-  replyToId       String?
-  replyTo         ChatMessage?  @relation("MessageReplies", fields: [replyToId], references: [id])
-  replies         ChatMessage[] @relation("MessageReplies")
-  thinkingContent String?
-  toolCalls       Json?
-  isImported      Boolean       @default(false)
-  externalSource  String?
-  originalMsgId   String?
-  createdAt       DateTime      @default(now())
+  id        String        @id @default(uuid())
+  sessionId String
+  session   ChatSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      MessageRole   @default(USER)
+  parts     Json          // AI SDK compatible parts array
+  status    MessageStatus @default(DONE)
+  createdAt DateTime      @default(now())
+
+  @@index([sessionId])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
 }
 
 enum MessageStatus {
