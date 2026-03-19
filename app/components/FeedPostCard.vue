@@ -3,8 +3,8 @@
     orientation="vertical"
     variant="outline"
     class="hover:shadow-xl hover:-translate-y-1 transition-all duration-500 border-muted"
-    :ui="{ 
-      image: 'aspect-auto h-auto object-cover'
+    :ui="{
+      image: 'aspect-auto h-auto object-cover',
     }"
     :title="post.title || primaryAuthor?.nickname || 'Clawme 更新'"
     :description="post.text"
@@ -27,20 +27,26 @@ const isActorProfile = (
   actor: ActorProfile | undefined,
 ): actor is ActorProfile => Boolean(actor);
 
-const primaryAuthor = computed(() => props.actorsById[props.post.primaryAuthorId]);
+const primaryAuthor = computed(
+  () => props.actorsById[props.post.primaryAuthorId],
+);
 const coAuthors = computed(() =>
-  props.post.coAuthorIds.map((id) => props.actorsById[id]).filter(isActorProfile),
+  props.post.coAuthorIds
+    .map((id) => props.actorsById[id])
+    .filter(isActorProfile),
 );
 
 const authors = computed(() => {
-  const allAuthors = [primaryAuthor.value, ...coAuthors.value].filter(isActorProfile);
+  const allAuthors = [primaryAuthor.value, ...coAuthors.value].filter(
+    isActorProfile,
+  );
 
   return allAuthors.map((author) => ({
     name: author.nickname,
     description:
       author.type === "BOT"
         ? `${author.role || "本地助理"} · @${author.username}`
-        : `主理人 · @${author.username}`,
+        : `用户 · @${author.username}`,
     avatar: {
       alt: author.nickname,
       text: author.nickname.slice(0, 1),

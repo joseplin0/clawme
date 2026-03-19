@@ -1,6 +1,10 @@
 import type { PublicStateResponse } from "~~/shared/types/clawme";
 
 export default defineNuxtRouteMiddleware(async (to) => {
+  // Use nuxt-auth-utils session
+  const { loggedIn } = useUserSession();
+
+  // Fetch system bootstrap state for initialization check
   const bootstrap = useState<PublicStateResponse | null>(
     "bootstrap-state",
     () => null,
@@ -16,7 +20,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (!bootstrapValue) return;
 
   const isInitialized = bootstrapValue.state.system.isInitialized;
-  const isOwnerAuthenticated = bootstrapValue.viewer.isOwnerAuthenticated;
+  const isOwnerAuthenticated = loggedIn.value;
 
   if (!isInitialized && to.path !== "/setup") {
     return navigateTo("/setup");

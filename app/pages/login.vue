@@ -4,7 +4,7 @@
       <UAuthForm
         icon="i-lucide-log-in"
         title="登录"
-        description="请输入主理人用户名和密码。"
+        description="请输入用户名和密码。"
         :fields="fields"
         :submit="{ label: '登录', icon: 'i-lucide-arrow-right' }"
         :loading="submitting"
@@ -15,21 +15,21 @@
 </template>
 
 <script setup lang="ts">
-import type { PublicStateResponse } from "~~/shared/types/clawme";
-
 definePageMeta({
   layout: "auth",
 });
 
 const toast = useToast();
 const submitting = ref(false);
-const bootstrap = useState<PublicStateResponse | null>("bootstrap-state", () => null);
+
+// Use nuxt-auth-utils session
+const { fetch: refreshSession } = useUserSession();
 
 const fields = [
   {
     name: "username",
     type: "text",
-    label: "主理人用户名",
+    label: "用户名",
     placeholder: "例如：linqiang",
     required: true,
     defaultValue: "",
@@ -55,14 +55,16 @@ function resolveErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "登录失败，请稍后重试。";
 }
 
-async function handleSubmit(event: { data: { username?: string; password?: string } }) {
+async function handleSubmit(event: {
+  data: { username?: string; password?: string };
+}) {
   const username = event.data.username?.trim().toLowerCase();
   const password = event.data.password?.trim();
 
   if (!username || !password) {
     toast.add({
       title: "请完整填写登录信息",
-      description: "主理人用户名和密码不能为空。",
+      description: "用户名和密码不能为空。",
       color: "warning",
       icon: "i-lucide-circle-alert",
     });
@@ -80,7 +82,8 @@ async function handleSubmit(event: { data: { username?: string; password?: strin
       },
     });
 
-    bootstrap.value = await $fetch("/api/system/bootstrap");
+    // Refresh session state from server
+    await refreshSession();
 
     toast.add({
       title: "登录成功",

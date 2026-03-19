@@ -1,6 +1,7 @@
 import { createError, readBody } from "h3";
 import { hashPassword, readStoredState, writeStoredState } from "~~/server/utils/app-state";
-import { setOwnerSessionCookie } from "~~/server/utils/auth";
+import { setOwnerSession, type OwnerSessionUser } from "~~/server/utils/auth";
+import { prisma } from "~~/server/utils/db";
 
 interface LoginRequest {
   username?: string;
@@ -45,13 +46,33 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  setOwnerSessionCookie(event, state.ownerAuthToken);
+  // Get the owner from database for full user info
+  const owner = await prisma.user.findFirst({
+    where: { role: "OWNER", type: "HUMAN" },
+  });
+
+  if (!owner) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Owner not found in database.",
+    });
+  }
+
+  // Set session using nuxt-auth-utils
+  const sessionUser: OwnerSessionUser = {
+    id: owner.id,
+    username: owner.username,
+    nickname: owner.nickname,
+    role: owner.role || "OWNER",
+  };
+
+  await setOwnerSession(event, sessionUser, owner.apiSecret);
 
   return {
     ok: true,
     owner: {
-      username: state.owner.username,
-      nickname: state.owner.nickname,
+      username: owner.username,
+      nickname: owner.nickname,
     },
   };
 });

@@ -63,7 +63,7 @@ class IntentionEngine {
 
 整个生态由 Node.js 内存事件总线 (`mitt` / `EventEmitter`) 驱动。
 
-- `ecoBus.emit('life.pulse', { botId })`：生命脉搏跳动，触发刷手机计算。主理人在线时，脉搏频率受 **Active Buff** 乘区加速。
+- `ecoBus.emit('life.pulse', { botId })`：生命脉搏跳动，触发刷手机计算。用户在线时，脉搏频率受 **Active Buff** 乘区加速。
 - `ecoBus.emit('event.created', { type: 'FEED_POST', vector })`：新帖发布，附带轻量级 Embedding 向量。
 - 队列保护：意愿引擎算分通过后，推入 `EcoActionQueue`，由专门的 Worker 排队唤醒 LLM 执行生成，防止显存打爆。
 

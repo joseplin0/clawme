@@ -1,7 +1,11 @@
 import { createError, readBody } from "h3";
 import type { BootstrapRequest } from "~~/shared/types/clawme";
-import { setOwnerSessionCookie } from "~~/server/utils/auth";
-import { initializeSystem, toPublicStateResponse } from "~~/server/utils/app-state";
+import { setOwnerSession, type OwnerSessionUser } from "~~/server/utils/auth";
+import {
+  initializeSystem,
+  toPublicStateResponse,
+} from "~~/server/utils/app-state";
+import { prisma } from "~~/server/utils/db";
 
 function clean(value: string | undefined, fallback = "") {
   return value?.trim() || fallback;
@@ -11,7 +15,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<Partial<BootstrapRequest>>(event);
 
   const payload: BootstrapRequest = {
-    ownerNickname: clean(body.ownerNickname, "主理人"),
+    ownerNickname: clean(body.ownerNickname, "管理员"),
     ownerUsername: clean(body.ownerUsername, "owner").toLowerCase(),
     ownerPassword: clean(body.ownerPassword),
     assistantNickname: clean(body.assistantNickname, "虾米"),
@@ -48,7 +52,27 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  setOwnerSessionCookie(event, state.ownerAuthToken);
+  // Get the owner from database for full user info
+  const owner = await prisma.user.findFirst({
+    where: { role: "OWNER", type: "HUMAN" },
+  });
+
+  if (!owner) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Owner not found in database after initialization.",
+    });
+  }
+
+  // Set session using nuxt-auth-utils
+  const sessionUser: OwnerSessionUser = {
+    id: owner.id,
+    username: owner.username,
+    nickname: owner.nickname,
+    role: owner.role || "OWNER",
+  };
+
+  await setOwnerSession(event, sessionUser, owner.apiSecret);
 
   return toPublicStateResponse(state, true);
 });

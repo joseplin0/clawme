@@ -18,11 +18,7 @@
           >
             <template #owner>
               <div class="space-y-4">
-                <UFormField
-                  name="ownerNickname"
-                  label="昵称"
-                  required
-                >
+                <UFormField name="ownerNickname" label="昵称" required>
                   <UInput
                     v-model="form.ownerNickname"
                     class="w-full"
@@ -31,11 +27,7 @@
                   />
                 </UFormField>
 
-                <UFormField
-                  name="ownerUsername"
-                  label="用户名"
-                  required
-                >
+                <UFormField name="ownerUsername" label="用户名" required>
                   <UInput
                     v-model="form.ownerUsername"
                     class="w-full"
@@ -44,11 +36,7 @@
                   />
                 </UFormField>
 
-                <UFormField
-                  name="ownerPassword"
-                  label="密码"
-                  required
-                >
+                <UFormField name="ownerPassword" label="密码" required>
                   <UInput
                     v-model="form.ownerPassword"
                     class="w-full"
@@ -75,11 +63,7 @@
                   />
                 </UFormField>
 
-                <UFormField
-                  name="assistantRole"
-                  label="默认助理角色"
-                  required
-                >
+                <UFormField name="assistantRole" label="默认助理角色" required>
                   <UInput
                     v-model="form.assistantRole"
                     class="w-full"
@@ -107,11 +91,7 @@
 
             <template #provider>
               <div class="space-y-4">
-                <UFormField
-                  name="providerName"
-                  label="Provider"
-                  required
-                >
+                <UFormField name="providerName" label="Provider" required>
                   <UInput
                     v-model="form.providerName"
                     class="w-full"
@@ -120,11 +100,7 @@
                   />
                 </UFormField>
 
-                <UFormField
-                  name="providerBaseUrl"
-                  label="Base URL"
-                  required
-                >
+                <UFormField name="providerBaseUrl" label="Base URL" required>
                   <UInput
                     v-model="form.providerBaseUrl"
                     class="w-full"
@@ -133,11 +109,7 @@
                   />
                 </UFormField>
 
-                <UFormField
-                  name="modelId"
-                  label="Model ID"
-                  required
-                >
+                <UFormField name="modelId" label="Model ID" required>
                   <UInput
                     v-model="form.modelId"
                     class="w-full"
@@ -154,7 +126,9 @@
           <div class="space-y-4">
             <div class="flex items-center justify-between gap-4">
               <p>{{ statusMessage }}</p>
-              <p class="shrink-0">步骤 {{ stepIndex + 1 }} / {{ stepItems.length }}</p>
+              <p class="shrink-0">
+                步骤 {{ stepIndex + 1 }} / {{ stepItems.length }}
+              </p>
             </div>
 
             <div class="flex justify-center gap-3">
@@ -194,7 +168,10 @@
 </template>
 
 <script setup lang="ts">
-import type { BootstrapRequest, PublicStateResponse } from "~~/shared/types/clawme";
+import type {
+  BootstrapRequest,
+  PublicStateResponse,
+} from "~~/shared/types/clawme";
 
 definePageMeta({
   layout: "auth",
@@ -202,7 +179,8 @@ definePageMeta({
 
 type StepValue = "owner" | "assistant" | "provider";
 
-const bootstrap = useState<PublicStateResponse | null>("bootstrap-state");
+// Use nuxt-auth-utils session
+const { fetch: refreshSession } = useUserSession();
 const toast = useToast();
 const stepper = useTemplateRef("stepper");
 const submitting = ref(false);
@@ -269,16 +247,20 @@ async function handleSubmit() {
   statusMessage.value = "正在写入系统状态、默认会话与初始动态...";
 
   try {
-    const response = await $fetch<PublicStateResponse>("/api/system/bootstrap", {
-      method: "POST",
-      body: form,
-    });
+    const response = await $fetch<PublicStateResponse>(
+      "/api/system/bootstrap",
+      {
+        method: "POST",
+        body: form,
+      },
+    );
 
-    bootstrap.value = response;
+    // Refresh session state from server
+    await refreshSession();
     statusMessage.value = "初始化完成，正在跳转到 Feed。";
     toast.add({
       title: "Clawme 已点亮",
-      description: "默认主理人、助理和模型网关已经初始化。",
+      description: "默认管理员、助理和模型网关已经初始化。",
       color: "success",
       icon: "i-lucide-check",
     });
@@ -286,7 +268,9 @@ async function handleSubmit() {
     await navigateTo("/feed");
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "初始化失败，请检查表单或服务端日志。";
+      error instanceof Error
+        ? error.message
+        : "初始化失败，请检查表单或服务端日志。";
 
     statusMessage.value = message;
     toast.add({

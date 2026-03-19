@@ -25,14 +25,18 @@ export function hashPassword(password: string) {
 }
 
 export async function readStoredState(): Promise<StoredClawmeAppState> {
-  const [config, allUsers, providers, sessions, messages, feedPosts] = await Promise.all([
-    prisma.systemConfig.findUnique({ where: { id: "global" } }),
-    prisma.user.findMany({ where: { type: { in: ["HUMAN", "BOT"] } } }),
-    prisma.llmProvider.findMany(),
-    prisma.chatSession.findMany({ include: { participants: true } }),
-    prisma.chatMessage.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.feedPost.findMany({ include: { attachments: true }, orderBy: { createdAt: "desc" } }),
-  ]);
+  const [config, allUsers, providers, sessions, messages, feedPosts] =
+    await Promise.all([
+      prisma.systemConfig.findUnique({ where: { id: "global" } }),
+      prisma.user.findMany({ where: { type: { in: ["HUMAN", "BOT"] } } }),
+      prisma.llmProvider.findMany(),
+      prisma.chatSession.findMany({ include: { participants: true } }),
+      prisma.chatMessage.findMany({ orderBy: { createdAt: "asc" } }),
+      prisma.feedPost.findMany({
+        include: { attachments: true },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
   const existingConfig = config || {
     isInitialized: false,
@@ -40,36 +44,42 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
     updatedAt: new Date(),
   };
 
-  const ownerModel = allUsers.find((u) => u.type === "HUMAN" && u.role === "OWNER");
+  const ownerModel = allUsers.find(
+    (u) => u.type === "HUMAN" && u.role === "OWNER",
+  );
   const botModel = allUsers.find((u) => u.type === "BOT");
 
-  const owner: ActorProfile | null = ownerModel ? {
-    id: ownerModel.id,
-    type: ownerModel.type,
-    username: ownerModel.username,
-    nickname: ownerModel.nickname,
-    avatar: ownerModel.avatar,
-    bio: ownerModel.bio,
-    role: ownerModel.role,
-    catchphrase: ownerModel.catchphrase,
-    createdAt: ownerModel.createdAt.toISOString(),
-    updatedAt: ownerModel.updatedAt.toISOString(),
-  } : null;
+  const owner: ActorProfile | null = ownerModel
+    ? {
+        id: ownerModel.id,
+        type: ownerModel.type,
+        username: ownerModel.username,
+        nickname: ownerModel.nickname,
+        avatar: ownerModel.avatar,
+        bio: ownerModel.bio,
+        role: ownerModel.role,
+        catchphrase: ownerModel.catchphrase,
+        createdAt: ownerModel.createdAt.toISOString(),
+        updatedAt: ownerModel.updatedAt.toISOString(),
+      }
+    : null;
 
-  const bot: ActorProfile | null = botModel ? {
-    id: botModel.id,
-    type: botModel.type,
-    username: botModel.username,
-    nickname: botModel.nickname,
-    avatar: botModel.avatar,
-    bio: botModel.bio,
-    role: botModel.role,
-    catchphrase: botModel.catchphrase,
-    createdAt: botModel.createdAt.toISOString(),
-    updatedAt: botModel.updatedAt.toISOString(),
-  } : null;
+  const bot: ActorProfile | null = botModel
+    ? {
+        id: botModel.id,
+        type: botModel.type,
+        username: botModel.username,
+        nickname: botModel.nickname,
+        avatar: botModel.avatar,
+        bio: botModel.bio,
+        role: botModel.role,
+        catchphrase: botModel.catchphrase,
+        createdAt: botModel.createdAt.toISOString(),
+        updatedAt: botModel.updatedAt.toISOString(),
+      }
+    : null;
 
-  const mappedProviders = providers.map(p => ({
+  const mappedProviders = providers.map((p) => ({
     id: p.id,
     name: p.name,
     provider: p.provider,
@@ -78,17 +88,17 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
     createdAt: p.createdAt.toISOString(),
   }));
 
-  const mappedSessions = sessions.map(s => ({
+  const mappedSessions = sessions.map((s) => ({
     id: s.id,
     type: s.type,
     title: s.title || "",
-    participantIds: s.participants.map(p => p.userId),
+    participantIds: s.participants.map((p) => p.userId),
     isArchived: s.isArchived,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
   }));
 
-  const mappedMessages: ChatMessageRecord[] = messages.map(m => ({
+  const mappedMessages: ChatMessageRecord[] = messages.map((m) => ({
     id: m.id,
     sessionId: m.sessionId,
     role: m.role as MessageRole,
@@ -97,7 +107,7 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
     createdAt: m.createdAt.toISOString(),
   }));
 
-  const mappedFeedPosts: FeedPostRecord[] = feedPosts.map(f => ({
+  const mappedFeedPosts: FeedPostRecord[] = feedPosts.map((f) => ({
     id: f.id,
     primaryAuthorId: f.authorId,
     coAuthorIds: [],
@@ -107,19 +117,19 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
     publishedLabel: f.publishedLabel || "刚刚发布",
     likeCount: f.likeCount,
     commentCount: 0,
-    attachments: f.attachments.map(a => {
-        const meta = (a.meta as Record<string, unknown>) || {};
-        return {
-            id: a.id,
-            kind: a.type as "DOCUMENT" | "IMAGE" | "LINK",
-            url: a.url,
-            width: meta.width as number | undefined,
-            height: meta.height as number | undefined,
-            title: (meta.title as string) || "",
-            subtitle: (meta.subtitle as string) || "",
-            icon: (meta.icon as string) || "",
-            accent: (meta.accent as string) || "",
-        };
+    attachments: f.attachments.map((a) => {
+      const meta = (a.meta as Record<string, unknown>) || {};
+      return {
+        id: a.id,
+        kind: a.type as "DOCUMENT" | "IMAGE" | "LINK",
+        url: a.url,
+        width: meta.width as number | undefined,
+        height: meta.height as number | undefined,
+        title: (meta.title as string) || "",
+        subtitle: (meta.subtitle as string) || "",
+        icon: (meta.icon as string) || "",
+        accent: (meta.accent as string) || "",
+      };
     }),
     createdAt: f.createdAt.toISOString(),
     updatedAt: f.updatedAt.toISOString(),
@@ -144,11 +154,15 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
 }
 
 export async function writeStoredState(_state: StoredClawmeAppState) {
-  console.warn("writeStoredState is deprecated. Database mutations must use Prisma clients directly.");
+  console.warn(
+    "writeStoredState is deprecated. Database mutations must use Prisma clients directly.",
+  );
 }
 
 export async function initializeSystem(input: BootstrapRequest) {
-  const existing = await prisma.systemConfig.findUnique({ where: { id: "global" } });
+  const existing = await prisma.systemConfig.findUnique({
+    where: { id: "global" },
+  });
   if (existing?.isInitialized) {
     return await readStoredState();
   }
@@ -157,123 +171,151 @@ export async function initializeSystem(input: BootstrapRequest) {
   const ownerPasswordHash = hashPassword(input.ownerPassword);
   const botApiSecret = randomBytes(24).toString("hex");
 
-  await prisma.$transaction(async (tx) => {
-    // 0. Clean slate to prevent unique constraint deadlocks on retries
-    await tx.postAttachment.deleteMany();
-    await tx.comment.deleteMany();
-    await tx.feedPost.deleteMany();
-    await tx.chatMessage.deleteMany();
-    await tx.sessionParticipant.deleteMany();
-    await tx.chatSession.deleteMany();
-    await tx.llmProvider.deleteMany();
-    await tx.user.deleteMany();
-    await tx.systemConfig.deleteMany();
+  await prisma.$transaction(
+    async (tx) => {
+      // 0. Clean slate to prevent unique constraint deadlocks on retries
+      await tx.postAttachment.deleteMany();
+      await tx.comment.deleteMany();
+      await tx.feedPost.deleteMany();
+      await tx.chatMessage.deleteMany();
+      await tx.sessionParticipant.deleteMany();
+      await tx.chatSession.deleteMany();
+      await tx.llmProvider.deleteMany();
+      await tx.user.deleteMany();
+      await tx.systemConfig.deleteMany();
 
-    // 1. Config
-    await tx.systemConfig.create({
-      data: { id: "global", isInitialized: true },
-    });
-
-    // 2. Users (Owner + Bot)
-    const owner = await tx.user.create({
-      data: {
-        type: "HUMAN",
-        username: input.ownerUsername,
-        nickname: input.ownerNickname,
-        bio: "Clawme 主理人",
-        role: "OWNER",
-        passwordHash: ownerPasswordHash,
-        apiSecret: ownerApiSecret,
-        catchphrase: "把系统慢慢养活。",
-      }
-    });
-
-    const bot = await tx.user.create({
-      data: {
-        type: "BOT",
-        username: "clawme",
-        nickname: input.assistantNickname,
-        bio: input.assistantBio,
-        role: input.assistantRole,
-        apiSecret: botApiSecret,
-        catchphrase: `${input.assistantNickname} 先把骨架立住。`,
-      }
-    });
-
-    // 3. Provider
-    await tx.llmProvider.create({
-      data: {
-        name: input.providerName,
-        provider: "OPENAI_COMPATIBLE",
-        baseUrl: input.providerBaseUrl,
-        modelId: input.modelId,
-      }
-    });
-
-    // 4. Chat Session
-    await tx.chatSession.create({
-      data: {
-        type: "DIRECT",
-        title: `${owner.nickname} x ${bot.nickname}`,
-        participants: {
-          create: [{ userId: owner.id, role: "OWNER" }, { userId: bot.id, role: "MEMBER" }]
-        }
-      }
-    });
-
-    // 5. Welcome Message
-    const session = await tx.chatSession.findFirst();
-    if (session) {
-      await tx.chatMessage.create({
-        data: {
-          sessionId: session.id,
-          role: "ASSISTANT",
-          parts: [{ type: "text", text: "系统已经点亮。我们先从 Phase 1 的底座开始，把引导、对话链路和数据边界稳稳立住。" }],
-          status: "DONE",
-        }
+      // 1. Config
+      await tx.systemConfig.create({
+        data: { id: "global", isInitialized: true },
       });
-    }
 
-    // 6. First Posts
-    await tx.feedPost.create({
-      data: {
-        title: "Clawme 架构白皮书",
-        text: "我刚刚整理了一份《Clawme 架构白皮书》，把统一身份、协作会话和生态引擎串成了一套能继续长的本地底座。欢迎在这里直接盖楼推进。",
-        authorId: bot.id,
-        context: "来自架构探索组",
-        publishedLabel: "刚刚发布",
-        likeCount: 24,
-        attachments: {
-          create: [{
-            type: "DOCUMENT",
-            url: "https://picsum.photos/seed/docs/600/800",
-            meta: { width: 600, height: 800, title: "Clawme 架构白皮书.pdf", subtitle: "PDF Document · 2.4 MB", icon: "i-lucide-file-text", accent: "from-sky-100 to-cyan-50" }
-          }]
-        }
+      // 2. Users (Owner + Bot)
+      const owner = await tx.user.create({
+        data: {
+          type: "HUMAN",
+          username: input.ownerUsername,
+          nickname: input.ownerNickname,
+          bio: "Clawme 管理员",
+          role: "OWNER",
+          passwordHash: ownerPasswordHash,
+          apiSecret: ownerApiSecret,
+          catchphrase: "把系统慢慢养活。",
+        },
+      });
+
+      const bot = await tx.user.create({
+        data: {
+          type: "BOT",
+          username: "clawme",
+          nickname: input.assistantNickname,
+          bio: input.assistantBio,
+          role: input.assistantRole,
+          apiSecret: botApiSecret,
+          catchphrase: `${input.assistantNickname} 先把骨架立住。`,
+        },
+      });
+
+      // 3. Provider
+      await tx.llmProvider.create({
+        data: {
+          name: input.providerName,
+          provider: "OPENAI_COMPATIBLE",
+          baseUrl: input.providerBaseUrl,
+          modelId: input.modelId,
+        },
+      });
+
+      // 4. Chat Session
+      await tx.chatSession.create({
+        data: {
+          type: "DIRECT",
+          title: `${owner.nickname} x ${bot.nickname}`,
+          participants: {
+            create: [
+              { userId: owner.id, role: "OWNER" },
+              { userId: bot.id, role: "MEMBER" },
+            ],
+          },
+        },
+      });
+
+      // 5. Welcome Message
+      const session = await tx.chatSession.findFirst();
+      if (session) {
+        await tx.chatMessage.create({
+          data: {
+            sessionId: session.id,
+            role: "ASSISTANT",
+            parts: [
+              {
+                type: "text",
+                text: "系统已经点亮。我们先从 Phase 1 的底座开始，把引导、对话链路和数据边界稳稳立住。",
+              },
+            ],
+            status: "DONE",
+          },
+        });
       }
-    });
 
-    await tx.feedPost.create({
-      data: {
-        title: "极简工作台的第一次迭代",
-        text: "今天我们把原型页推进成了可运行骨架。现在它已经有首次引导、共享状态、SSE 会话占位和 Prisma 接入点，不再只是展示用静态稿。",
-        authorId: owner.id,
-        context: "联合呈现",
-        publishedLabel: "2 小时前",
-        likeCount: 13,
-        attachments: {
-          create: [{
-            type: "IMAGE",
-            url: "https://picsum.photos/seed/workbench/600/400",
-            meta: { width: 600, height: 400, title: "Phase 1 工作台预览", subtitle: "UI Snapshot · Seeded Preview", icon: "i-lucide-image", accent: "from-amber-100 to-rose-50" }
-          }]
-        }
-      }
-    });
+      // 6. First Posts
+      await tx.feedPost.create({
+        data: {
+          title: "Clawme 架构白皮书",
+          text: "我刚刚整理了一份《Clawme 架构白皮书》，把统一身份、协作会话和生态引擎串成了一套能继续长的本地底座。欢迎在这里直接盖楼推进。",
+          authorId: bot.id,
+          context: "来自架构探索组",
+          publishedLabel: "刚刚发布",
+          likeCount: 24,
+          attachments: {
+            create: [
+              {
+                type: "DOCUMENT",
+                url: "https://picsum.photos/seed/docs/600/800",
+                meta: {
+                  width: 600,
+                  height: 800,
+                  title: "Clawme 架构白皮书.pdf",
+                  subtitle: "PDF Document · 2.4 MB",
+                  icon: "i-lucide-file-text",
+                  accent: "from-sky-100 to-cyan-50",
+                },
+              },
+            ],
+          },
+        },
+      });
 
-  }, {
-    timeout: 120000,
-  });
+      await tx.feedPost.create({
+        data: {
+          title: "极简工作台的第一次迭代",
+          text: "今天我们把原型页推进成了可运行骨架。现在它已经有首次引导、共享状态、SSE 会话占位和 Prisma 接入点，不再只是展示用静态稿。",
+          authorId: owner.id,
+          context: "联合呈现",
+          publishedLabel: "2 小时前",
+          likeCount: 13,
+          attachments: {
+            create: [
+              {
+                type: "IMAGE",
+                url: "https://picsum.photos/seed/workbench/600/400",
+                meta: {
+                  width: 600,
+                  height: 400,
+                  title: "Phase 1 工作台预览",
+                  subtitle: "UI Snapshot · Seeded Preview",
+                  icon: "i-lucide-image",
+                  accent: "from-amber-100 to-rose-50",
+                },
+              },
+            ],
+          },
+        },
+      });
+    },
+    {
+      timeout: 120000,
+    },
+  );
 
   return await readStoredState();
 }
@@ -318,7 +360,7 @@ export async function createMessage(input: {
       role: input.role,
       parts: input.parts as Prisma.InputJsonValue,
       status: input.status ?? "DONE",
-    }
+    },
   });
 
   return {
@@ -341,7 +383,7 @@ export async function updateMessage(
 
   const message = await prisma.chatMessage.update({
     where: { id: messageId },
-    data: updateData
+    data: updateData,
   });
 
   return {
@@ -386,12 +428,12 @@ export async function getPaginatedFeedPosts(page: number, limit: number) {
       skip,
       take: limit,
       include: { attachments: true },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
     }),
-    prisma.feedPost.count()
+    prisma.feedPost.count(),
   ]);
 
-  const mappedFeedPosts: FeedPostRecord[] = posts.map(f => ({
+  const mappedFeedPosts: FeedPostRecord[] = posts.map((f) => ({
     id: f.id,
     primaryAuthorId: f.authorId,
     coAuthorIds: [],
@@ -401,19 +443,19 @@ export async function getPaginatedFeedPosts(page: number, limit: number) {
     publishedLabel: f.publishedLabel || "刚刚发布",
     likeCount: f.likeCount,
     commentCount: 0,
-    attachments: f.attachments.map(a => {
-        const meta = (a.meta as Record<string, unknown>) || {};
-        return {
-            id: a.id,
-            kind: a.type as "DOCUMENT" | "IMAGE" | "LINK",
-            url: a.url,
-            width: meta.width as number | undefined,
-            height: meta.height as number | undefined,
-            title: (meta.title as string) || "",
-            subtitle: (meta.subtitle as string) || "",
-            icon: (meta.icon as string) || "",
-            accent: (meta.accent as string) || "",
-        };
+    attachments: f.attachments.map((a) => {
+      const meta = (a.meta as Record<string, unknown>) || {};
+      return {
+        id: a.id,
+        kind: a.type as "DOCUMENT" | "IMAGE" | "LINK",
+        url: a.url,
+        width: meta.width as number | undefined,
+        height: meta.height as number | undefined,
+        title: (meta.title as string) || "",
+        subtitle: (meta.subtitle as string) || "",
+        icon: (meta.icon as string) || "",
+        accent: (meta.accent as string) || "",
+      };
     }),
     createdAt: f.createdAt.toISOString(),
     updatedAt: f.updatedAt.toISOString(),
