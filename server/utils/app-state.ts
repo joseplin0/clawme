@@ -115,7 +115,14 @@ function buildFeedPost(
 function sanitizeState(
   state: StoredClawmeAppState,
   isOwnerAuthenticated: boolean,
+  feedPostsLimit?: number,
 ): PublicStateResponse {
+  let initialFeedPosts = state.feedPosts.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  
+  if (feedPostsLimit !== undefined) {
+    initialFeedPosts = initialFeedPosts.slice(0, feedPostsLimit);
+  }
+
   return {
     state: {
       system: state.system,
@@ -124,7 +131,7 @@ function sanitizeState(
       providers: state.providers,
       sessions: state.sessions,
       messages: state.messages,
-      feedPosts: state.feedPosts,
+      feedPosts: initialFeedPosts,
     },
     viewer: {
       isOwnerAuthenticated,
@@ -136,8 +143,9 @@ function sanitizeState(
 export function toPublicStateResponse(
   state: StoredClawmeAppState,
   isOwnerAuthenticated: boolean,
+  feedPostsLimit?: number,
 ) {
-  return sanitizeState(state, isOwnerAuthenticated);
+  return sanitizeState(state, isOwnerAuthenticated, feedPostsLimit);
 }
 
 export async function initializeSystem(input: BootstrapRequest) {
@@ -180,6 +188,8 @@ export async function initializeSystem(input: BootstrapRequest) {
         buildAttachment({
           kind: "DOCUMENT",
           url: "https://picsum.photos/seed/docs/600/800",
+          width: 600,
+          height: 800,
           title: "Clawme 架构白皮书.pdf",
           subtitle: "PDF Document · 2.4 MB",
           icon: "i-lucide-file-text",
@@ -201,6 +211,8 @@ export async function initializeSystem(input: BootstrapRequest) {
         buildAttachment({
           kind: "IMAGE",
           url: "https://picsum.photos/seed/workbench/600/400",
+          width: 600,
+          height: 400,
           title: "Phase 1 工作台预览",
           subtitle: "UI Snapshot · Seeded Preview",
           icon: "i-lucide-image",
@@ -221,6 +233,8 @@ export async function initializeSystem(input: BootstrapRequest) {
         buildAttachment({
           kind: "IMAGE",
           url: "https://picsum.photos/seed/code/600/600",
+          width: 600,
+          height: 600,
           title: "逻辑重构",
           subtitle: "Snippet",
           icon: "i-lucide-image",
@@ -241,6 +255,8 @@ export async function initializeSystem(input: BootstrapRequest) {
         buildAttachment({
           kind: "IMAGE",
           url: "https://picsum.photos/seed/design/600/900",
+          width: 600,
+          height: 900,
           title: "极简草图",
           subtitle: "Sketch",
           icon: "i-lucide-image",
@@ -261,6 +277,8 @@ export async function initializeSystem(input: BootstrapRequest) {
         buildAttachment({
           kind: "IMAGE",
           url: "https://picsum.photos/seed/logs/600/500",
+          width: 600,
+          height: 500,
           title: "日志视图",
           subtitle: "Analytics",
           icon: "i-lucide-image",
@@ -281,6 +299,8 @@ export async function initializeSystem(input: BootstrapRequest) {
         buildAttachment({
           kind: "IMAGE",
           url: "https://picsum.photos/seed/future/600/700",
+          width: 600,
+          height: 700,
           title: "远景探讨",
           subtitle: "Vision",
           icon: "i-lucide-image",
@@ -420,4 +440,20 @@ export function createMockAssistantReply(
       ? `当前预留的模型网关是 ${provider.name} / ${provider.modelId}。等真实本地模型接上后，这条 SSE 链路可以直接替换生成器。`
       : "当前还没有模型网关配置，所以我先用可替换的 mock 生成器把服务链打通。",
   ].join("\n\n");
+}
+
+export async function getPaginatedFeedPosts(page: number, limit: number) {
+  const state = await readStoredState();
+  const sortedPosts = state.feedPosts.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  
+  const startIndex = (page - 1) * limit;
+  const paginatedPosts = sortedPosts.slice(startIndex, startIndex + limit);
+  const total = sortedPosts.length;
+  const hasMore = startIndex + limit < total;
+
+  return {
+    posts: paginatedPosts,
+    total,
+    hasMore,
+  };
 }

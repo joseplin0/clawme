@@ -59,6 +59,8 @@ export interface FeedAttachmentRecord {
   id: string;
   kind: FeedAttachmentKind;
   url?: string | null;
+  width?: number;
+  height?: number;
   title: string;
   subtitle: string;
   icon: string;

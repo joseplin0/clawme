@@ -74,6 +74,8 @@ const heroImage = computed(() => {
   return {
     src: attachment.url,
     alt: props.post.title || attachment.title || props.post.context,
+    width: attachment.width,
+    height: attachment.height,
   };
 });
 </script>
