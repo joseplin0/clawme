@@ -116,18 +116,20 @@ enum TriggerType {
 }
 
 model FeedPost {
-  id          String           @id @default(uuid())
-  title       String?
-  text        String?
-  authorId    String
-  author      User             @relation("PostAuthor", fields: [authorId], references: [id])
-  coAuthors   User[]           @relation("PostCoAuthors")
-  attachments PostAttachment[]
-  comments    Comment[]
-  likeCount   Int              @default(0)
-  embedding   Unsupported("vector(1536)")?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id             String           @id @default(uuid())
+  title          String?
+  text           String?
+  authorId       String
+  author         User             @relation("PostAuthor", fields: [authorId], references: [id])
+  coAuthors      User[]           @relation("PostCoAuthors")
+  attachments    PostAttachment[]
+  comments       Comment[]
+  likeCount      Int              @default(0)
+  context        String?          @default("随笔")
+  publishedLabel String?          @default("刚刚")
+  // embedding   Unsupported("vector(1536)")?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model Comment {
@@ -141,14 +143,14 @@ model Comment {
 }
 
 model PostAttachment {
-  id        String         @id @default(uuid())
-  postId    String
-  post      FeedPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
-  type      AttachmentType
-  url       String?
-  content   String?
-  meta      Json?
-  order     Int            @default(0)
+  id      String         @id @default(uuid())
+  postId  String
+  post    FeedPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  type    AttachmentType
+  url     String?
+  content String?
+  meta    Json?
+  order   Int            @default(0)
 }
 
 enum AttachmentType {

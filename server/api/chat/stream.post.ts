@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
 
   await createMessage({
     sessionId,
-    senderId: owner.id,
+    senderId: owner!.id,
     content: prompt,
     status: "DONE",
   });
