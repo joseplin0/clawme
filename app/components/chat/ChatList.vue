@@ -1,31 +1,39 @@
 <template>
   <aside
     :class="[
-      'absolute z-10 flex h-full w-full shrink-0 flex-col border-r bg-background/90 backdrop-blur transition-transform duration-300 md:relative md:w-80',
+      'absolute z-10 flex h-full w-full shrink-0 flex-col border-r border-default bg-elevated/30 backdrop-blur transition-transform duration-300 md:relative md:w-80',
       modelValue ? '-translate-x-full md:translate-x-0' : 'translate-x-0',
     ]"
   >
-    <div class="border-b px-4 py-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm font-medium text-muted">Chat Sessions</p>
-          <h1 class="text-xl font-semibold text-highlighted">协作会话</h1>
-        </div>
-        <UBadge color="primary" variant="subtle">SSE</UBadge>
+    <div
+      class="flex h-16 items-center border-b border-default bg-elevated/50 px-3"
+    >
+      <div class="flex w-full items-center gap-2">
+        <UInput
+          v-model="searchQuery"
+          icon="i-lucide-search"
+          placeholder="搜索会话..."
+          variant="none"
+          class="flex-1"
+        />
+        <UButton
+          icon="i-lucide-plus"
+          color="neutral"
+          variant="link"
+          @click="handleCreateSession"
+        />
       </div>
     </div>
 
-    <div class="flex-1 space-y-2 overflow-y-auto p-3">
+    <div class="flex-1 space-y-1 overflow-y-auto">
       <button
-        v-for="session in sessions"
+        v-for="session in filteredSessions"
         :key="session.id"
         type="button"
-        class="w-full border p-3 text-left transition-all duration-300"
-        :class="
-          modelValue === session.id
-            ? 'border-primary/30 bg-primary/10'
-            : 'border-transparent hover:border-primary/50'
-        "
+        :class="[
+          'w-full p-3 text-left transition-all duration-300 hover:bg-elevated/50',
+          modelValue === session.id ? 'bg-elevated' : '',
+        ]"
         @click="$emit('update:modelValue', session.id)"
       >
         <div class="flex items-center gap-3">
@@ -40,7 +48,10 @@
               </span>
             </div>
             <p class="mt-1 truncate text-sm text-muted">
-              {{ getMessageText(getLastMessage(session.id)) || "这条会话刚刚初始化。" }}
+              {{
+                getMessageText(getLastMessage(session.id)) ||
+                "这条会话刚刚初始化。"
+              }}
             </p>
           </div>
         </div>
@@ -50,7 +61,11 @@
 </template>
 
 <script setup lang="ts">
-import type { ChatSessionRecord, ChatMessageRecord } from "~~/shared/types/clawme";
+import { ref, computed } from "vue";
+import type {
+  ChatSessionRecord,
+  ChatMessageRecord,
+} from "~~/shared/types/clawme";
 
 const props = defineProps<{
   modelValue: string | null;
@@ -58,9 +73,22 @@ const props = defineProps<{
   messages: ChatMessageRecord[];
 }>();
 
-defineEmits<{
-  'update:modelValue': [value: string | null];
+const emit = defineEmits<{
+  "update:modelValue": [value: string | null];
+  create: [];
 }>();
+
+const searchQuery = ref("");
+
+const filteredSessions = computed(() => {
+  if (!searchQuery.value) return props.sessions;
+  const query = searchQuery.value.toLowerCase();
+  return props.sessions.filter((s) => s.title.toLowerCase().includes(query));
+});
+
+function handleCreateSession() {
+  emit("create");
+}
 
 function getLastMessage(sessionId: string) {
   return [...props.messages]

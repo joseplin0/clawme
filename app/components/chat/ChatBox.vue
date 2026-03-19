@@ -9,26 +9,28 @@
       v-if="!activeSessionId"
       class="hidden h-full items-center justify-center text-center md:flex"
     >
-      <div class="space-y-3">
+      <div class="space-y-4">
         <div
-          class="mx-auto flex size-16 items-center justify-center rounded-full border border-dashed"
+          class="mx-auto flex size-20 items-center justify-center rounded-full bg-elevated/50"
         >
-          <UIcon name="i-lucide-message-circle" class="size-8 text-muted" />
+          <UIcon name="i-lucide-message-circle" class="size-10 text-muted" />
         </div>
-        <p class="text-base font-medium text-highlighted">
-          选择一条会话开始协作
-        </p>
-        <p class="text-sm text-muted">
-          Nuxt UI Chat 组件已接入，下一条消息会走真实流式界面。
-        </p>
+        <div class="space-y-2">
+          <p class="text-lg font-medium text-highlighted">
+            选择或创建会话开始协作
+          </p>
+          <p class="text-sm text-muted">
+            从左侧列表选择会话，或点击 + 按钮创建新会话
+          </p>
+        </div>
       </div>
     </div>
 
     <template v-else>
       <header
-        class="flex h-[76px] items-center justify-between border-b bg-background/80 px-4 backdrop-blur"
+        class="flex h-16 items-center justify-between gap-4 border-b border-default px-4"
       >
-        <div class="flex items-center gap-3">
+        <div class="flex min-w-0 items-center gap-3">
           <UButton
             icon="i-lucide-arrow-left"
             variant="ghost"
@@ -36,14 +38,11 @@
             class="md:hidden"
             @click="activeSessionId = null"
           />
-          <div>
-            <p class="text-xs uppercase tracking-[0.18em] text-muted">
-              Direct Session
-            </p>
-            <h2 class="text-lg font-semibold text-highlighted">
-              {{ selectedSession?.title || "默认会话" }}
-            </h2>
-          </div>
+          <h2 class="truncate text-lg font-semibold text-highlighted">
+            {{ selectedSession?.title || "默认会话" }}
+          </h2>
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
           <UButton variant="outline" color="neutral" icon="i-lucide-shell">
             Feed Draft
           </UButton>
@@ -52,13 +51,6 @@
 
       <div v-if="chat" class="flex-1 overflow-y-auto px-4 py-5 md:px-6">
         <div class="mx-auto max-w-3xl space-y-4">
-          <div class="flex justify-center">
-            <UBadge color="neutral" variant="subtle">
-              {{ owner?.nickname ?? "用户" }} 与
-              {{ assistant?.nickname ?? "虾米" }} 的默认工作会话
-            </UBadge>
-          </div>
-
           <UChatMessages
             :messages="chat.messages"
             :status="chat.status"
@@ -114,13 +106,14 @@
         </div>
       </div>
 
-      <div class="border-t bg-background/80 px-4 py-4 backdrop-blur">
+      <div class="px-4 py-4">
         <div class="mx-auto max-w-3xl">
           <UChatPrompt
             v-model="inputMessage"
             :rows="1"
             :maxrows="6"
             autoresize
+            variant="subtle"
             :disabled="!activeSessionId || !chat"
             :placeholder="
               activeSessionId
@@ -128,41 +121,24 @@
                 : '请先选择会话...'
             "
             :ui="{
-              root: 'border bg-background',
-              body: 'px-4 pt-3 pb-2 text-sm leading-7',
-              footer: 'border-t px-3 py-2',
+              body: 'text-sm leading-7',
+              footer: ' px-3 py-2',
             }"
             @submit="handleSubmit"
           >
             <template #footer>
-              <div class="flex items-center justify-between gap-3">
-                <p class="text-xs text-muted">使用 AI SDK 流式接口，</p>
-                <UChatPromptSubmit
-                  v-if="chat"
-                  :status="chat.status"
-                  size="lg"
-                  class="shrink-0"
-                  :disabled="!inputMessage.trim()"
-                  @stop="chat.stop()"
-                  @reload="chat.regenerate()"
-                />
-              </div>
+              <p class="text-xs text-muted">使用 AI SDK 流式接口，</p>
+              <UChatPromptSubmit
+                v-if="chat"
+                :status="chat.status"
+                size="lg"
+                class="shrink-0"
+                :disabled="!inputMessage.trim()"
+                @stop="chat.stop()"
+                @reload="chat.regenerate()"
+              />
             </template>
           </UChatPrompt>
-          <div class="mt-2 px-1">
-            <p v-if="chat?.status === 'error'" class="text-xs text-error">
-              上一次请求失败，可直接点右侧重试按钮。
-            </p>
-            <p
-              v-else-if="chat?.status === 'streaming'"
-              class="text-xs text-muted"
-            >
-              正在接收流式回复，可点击右侧按钮中断。
-            </p>
-            <p v-else class="text-xs text-muted">
-              使用 AI SDK Chat 类管理聊天状态。
-            </p>
-          </div>
         </div>
       </div>
     </template>
