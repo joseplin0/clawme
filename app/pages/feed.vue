@@ -1,62 +1,47 @@
 <template>
   <div class="min-h-screen w-full transition-all">
     <!-- Header -->
-    <header class="sticky top-0 bg-background/70 backdrop-blur-xl border-b border-muted z-30">
+    <header class="sticky top-0 bg-background/70 backdrop-blur-xl  z-30">
       <div class="max-w-[1800px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-end gap-6 md:justify-between">
         <div class="flex-1 max-w-2xl hidden sm:block">
-          <UInput
-            icon="i-lucide-search"
-            placeholder="探索灵感..."
-            variant="soft"
-            size="xl"
-            class="w-full"
-            :ui="{ base: 'rounded-2xl transition-all' }"
-          />
+          <UInput icon="i-lucide-search" placeholder="探索灵感..." variant="soft" size="xl" class="w-full"
+            :ui="{ base: 'transition-all' }" />
         </div>
-        <UButton
-          icon="i-lucide-plus"
-          label="新贴"
-          size="lg"
-          class="hidden sm:flex rounded-2xl font-bold shadow-sm shadow-primary/20 hover:shadow-lg transition-all active:scale-95"
-        />
+        <UButton icon="i-lucide-plus" label="新贴" size="lg"
+          class="hidden sm:flex font-bold transition-all active:scale-95" />
       </div>
     </header>
 
     <div class="max-w-[1800px] mx-auto p-4 sm:p-8">
       <!-- 零数据：绝美全屏空状态 -->
-      <div v-if="feedPosts.length === 0" class="flex flex-col items-center justify-center py-32 px-4 text-center animate-in fade-in zoom-in duration-700">
-        <div class="w-24 h-24 mb-6 rounded-3xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+      <div v-if="feedPosts.length === 0"
+        class="flex flex-col items-center justify-center py-32 px-4 text-center animate-in fade-in zoom-in duration-700">
+        <div class="w-24 h-24 mb-6 bg-primary/10 flex items-center justify-center text-primary">
           <UIcon name="i-lucide-sparkles" class="w-10 h-10" />
         </div>
         <h2 class="text-2xl font-black text-foreground mb-3">这里还是一片荒野</h2>
         <p class="text-gray-500 dark:text-gray-400 max-w-sm mb-8 leading-relaxed">
           当系统刚点亮时，瀑布流总是干涸的。你可以在这里留下你的第一个想法，建立你的超级大脑和数字领地。
         </p>
-        <UButton
-          icon="i-lucide-pen-line"
-          label="发布第一条灵感"
-          size="xl"
-          class="flex rounded-2xl font-bold shadow-lg shadow-primary/30 hover:-translate-y-1 transition-all active:scale-95"
-        />
+        <UButton icon="i-lucide-pen-line" label="发布第一条灵感" size="xl"
+          class="flex font-bold hover:-translate-y-1 transition-all active:scale-95" />
       </div>
 
       <!-- 有数据：瀑布流与补充占位符 -->
       <div v-else :class="masonryClass">
-        <FeedPostCard
-          v-for="post in feedPosts"
-          :key="post.id"
-          :post="post"
-          :actors-by-id="actorsById"
-          class="break-inside-avoid mb-5 sm:mb-6"
-        />
-        
+        <FeedPostCard v-for="post in feedPosts" :key="post.id" :post="post" :actors-by-id="actorsById"
+          class="break-inside-avoid mb-5 sm:mb-6" />
+
         <!-- 数据不足时：常驻的“补充灵感”输入卡片 -->
         <div v-if="feedPosts.length > 0 && feedPosts.length < 5" class="break-inside-avoid mb-5 sm:mb-6">
-          <div class="group flex flex-col items-center justify-center p-8 h-64 border-2 border-dashed border-muted rounded-2xl bg-muted/30 text-gray-400 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 cursor-pointer text-center">
-            <div class="w-12 h-12 rounded-full bg-background shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <div
+            class="group flex flex-col items-center justify-center p-8 h-64 border-2 border-dashed transition-all duration-300 cursor-pointer text-center hover:border-primary/50 hover:text-primary">
+            <div
+              class="w-12 h-12 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <UIcon name="i-lucide-plus" class="w-6 h-6" />
             </div>
-            <span class="font-bold text-sm text-gray-600 dark:text-gray-300 group-hover:text-primary transition-colors">继续填充灵感</span>
+            <span
+              class="font-bold text-sm text-gray-600 dark:text-gray-300 group-hover:text-primary transition-colors">继续填充灵感</span>
             <span class="text-xs mt-2 opacity-60">丰富你的瀑布流视野</span>
           </div>
         </div>
@@ -101,18 +86,18 @@ const loadMore = async () => {
   if (isLoading.value || !hasMore.value) return;
   isLoading.value = true;
   page.value++;
-  
+
   try {
     const response = await $fetch('/api/feed/posts', {
       query: { page: page.value, limit }
     }) as any;
-    
+
     const newPosts = response.posts || [];
-    
+
     // De-duplicate elements
     const existingIds = new Set(feedPosts.value.map(p => p.id));
     const uniqueNewPosts = newPosts.filter((p: FeedPostRecord) => !existingIds.has(p.id));
-    
+
     feedPosts.value.push(...uniqueNewPosts);
     hasMore.value = response.hasMore;
   } catch (err) {
@@ -130,7 +115,7 @@ onMounted(() => {
       loadMore();
     }
   }, { rootMargin: '200px' });
-  
+
   if (loadMoreTrigger.value) {
     observer.observe(loadMoreTrigger.value);
   }
@@ -148,7 +133,7 @@ const displayCount = computed(() => {
 const masonryClass = computed(() => {
   const count = displayCount.value;
   const baseClasses = 'masonry-grid gap-5 sm:gap-6 block break-inside-avoid mx-auto transition-all duration-500 ';
-  
+
   if (count <= 1) {
     return baseClasses + 'columns-1 max-w-md';
   } else if (count === 2) {

@@ -1,12 +1,12 @@
 <template>
-  <div class="relative flex h-full w-full overflow-hidden bg-white/75 dark:bg-[#140e0c]/75">
+  <div class="relative flex h-full w-full overflow-hidden bg-background">
     <aside
       :class="[
-        'absolute z-10 flex h-full w-full shrink-0 flex-col border-r border-muted/70 bg-white/92 dark:bg-[#140e0c]/92 backdrop-blur transition-transform duration-300 md:relative md:w-80',
+        'absolute z-10 flex h-full w-full shrink-0 flex-col border-r bg-background/90 backdrop-blur transition-transform duration-300 md:relative md:w-80',
         activeSessionId ? '-translate-x-full md:translate-x-0' : 'translate-x-0',
       ]"
     >
-      <div class="border-b border-muted/70 px-4 py-4">
+      <div class="border-b px-4 py-4">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-muted">Chat Sessions</p>
@@ -21,18 +21,17 @@
           v-for="session in sessions"
           :key="session.id"
           type="button"
-          class="w-full rounded-2xl border p-3 text-left transition-all duration-300"
+          class="w-full border p-3 text-left transition-all duration-300"
           :class="
             activeSessionId === session.id
-              ? 'border-primary/30 bg-primary/8 shadow-[0_18px_48px_-36px_rgba(201,70,45,0.7)]'
-              : 'border-transparent bg-muted/30 hover:border-muted hover:bg-white dark:hover:bg-[#1a1310]'
+              ? 'border-primary/30 bg-primary/10'
+              : 'border-transparent hover:border-primary/50'
           "
           @click="activeSessionId = session.id"
         >
           <div class="flex items-center gap-3">
             <UAvatar
               size="md"
-              :ui="{ root: 'bg-gradient-to-br from-clawme-500 to-amber-300' }"
             />
             <div class="min-w-0 flex-1">
               <div class="flex items-center justify-between gap-3">
@@ -54,7 +53,7 @@
 
     <section
       :class="[
-        'absolute inset-0 z-20 flex h-full flex-1 flex-col bg-[radial-gradient(circle_at_top,rgba(224,93,68,0.08),transparent_28%),linear-gradient(180deg,#fffaf7_0%,#ffffff_44%)] transition-transform duration-300 md:relative',
+        'absolute inset-0 z-20 flex h-full flex-1 flex-col transition-transform duration-300 md:relative',
         activeSessionId ? 'translate-x-0' : 'translate-x-full md:translate-x-0',
       ]"
     >
@@ -63,7 +62,7 @@
         class="hidden h-full items-center justify-center text-center md:flex"
       >
         <div class="space-y-3">
-          <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-muted/45">
+          <div class="mx-auto flex size-16 items-center justify-center rounded-full border border-dashed">
             <UIcon name="i-lucide-message-circle" class="size-8 text-muted" />
           </div>
           <p class="text-base font-medium text-highlighted">选择一条会话开始协作</p>
@@ -73,7 +72,7 @@
 
       <template v-else>
         <header
-          class="flex h-[76px] items-center justify-between border-b border-muted/70 bg-white/85 dark:bg-[#140e0c]/85 px-4 backdrop-blur"
+          class="flex h-[76px] items-center justify-between border-b bg-background/80 px-4 backdrop-blur"
         >
           <div class="flex items-center gap-3">
             <UButton
@@ -124,7 +123,7 @@
 
                   <details
                     v-if="getUiMessageRole(message) === 'assistant' && getThinkingContent(getUiMessageId(message))"
-                    class="rounded-2xl bg-muted/45 p-3 text-xs text-toned"
+                    class="border border-dashed p-3 text-xs text-muted"
                   >
                     <summary class="cursor-pointer font-medium text-highlighted">思考面板</summary>
                     <p class="mt-2 whitespace-pre-wrap leading-6">
@@ -137,7 +136,7 @@
           </div>
         </div>
 
-        <div class="border-t border-muted/70 bg-white/88 dark:bg-[#140e0c]/88 px-4 py-4 backdrop-blur">
+        <div class="border-t bg-background/80 px-4 py-4 backdrop-blur">
           <div class="mx-auto max-w-3xl">
             <UChatPrompt
               v-model="inputMessage"
@@ -147,9 +146,9 @@
               :disabled="!activeSessionId"
               :placeholder="activeSessionId ? '告诉虾米接下来该先做什么...' : '请先选择会话...'"
               :ui="{
-                root: 'rounded-[1.75rem] border border-muted/70 bg-white dark:bg-neutral-900 shadow-[0_24px_56px_-40px_rgba(40,32,28,0.5)] dark:shadow-none',
+                root: 'border bg-background',
                 body: 'px-4 pt-3 pb-2 text-sm leading-7',
-                footer: 'border-t border-muted/60 px-3 py-2',
+                footer: 'border-t px-3 py-2',
               }"
               @submit="handlePromptSubmit"
             >
@@ -273,7 +272,6 @@ const assistantMessageProps = computed(() => ({
     src: bot.value?.avatar ?? undefined,
     alt: assistantName.value,
     icon: bot.value?.avatar ? undefined : "i-lucide-shell",
-    ui: { root: "bg-gradient-to-br from-clawme-500 to-amber-300" },
   },
 }));
 

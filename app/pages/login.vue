@@ -1,6 +1,6 @@
 <template>
   <div class="flex min-h-[70vh] items-center justify-center">
-    <UCard class="w-full max-w-md border border-default bg-default/90">
+    <UCard class="w-full max-w-md">
       <UAuthForm
         icon="i-lucide-log-in"
         title="登录"

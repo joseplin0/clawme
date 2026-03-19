@@ -3,7 +3,7 @@
     <template #header>
       <div class="flex flex-col items-center gap-4 w-full mt-2">
         <UButton to="/feed" label="F" color="primary" variant="solid"
-          class="flex h-10 w-10 items-center justify-center rounded-xl text-xl font-bold font-sans shadow-lg shadow-primary/20 transition-transform duration-300 hover:scale-105" />
+          class="flex h-10 w-10 items-center justify-center text-xl font-bold font-sans transition-transform duration-300 hover:scale-105" />
       </div>
     </template>
 
@@ -14,12 +14,12 @@
     <template #footer>
       <div class="mt-auto flex flex-col items-center gap-4">
         <!-- Theme Switcher -->
-        <UColorModeButton class="rounded-full text-gray-400 hover:text-primary dark:text-muted" />
+        <UColorModeButton />
 
         <!-- Avatar -->
         <UButton color="neutral" variant="ghost"
-          class="rounded-full p-0 overflow-hidden shadow-sm transition-all hover:ring-2 hover:ring-primary/20 cursor-pointer border-2 border-white dark:border-[#140e0c]">
-          <UAvatar size="md" :ui="{ root: 'bg-gradient-to-br from-primary-500 via-primary-400 to-amber-300' }" />
+          class="rounded-full p-0 overflow-hidden transition-all cursor-pointer">
+          <UAvatar size="md" />
         </UButton>
       </div>
     </template>

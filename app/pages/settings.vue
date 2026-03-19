@@ -18,7 +18,7 @@
 
       <div
         v-if="!state.system.isInitialized"
-        class="rounded-3xl border border-dashed border-primary/40 bg-white/70 dark:bg-neutral-900/70 p-8 text-center"
+        class="border border-dashed p-8 text-center"
       >
         <p class="text-base font-medium text-highlighted">系统还没有完成首次引导。</p>
         <p class="mt-2 text-sm text-muted">
@@ -27,7 +27,7 @@
       </div>
 
       <section v-else class="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
-        <UCard class="border border-muted/70 bg-white/80 dark:bg-neutral-900/80">
+        <UCard>
           <template #header>
             <div class="flex items-center justify-between">
               <div>
@@ -39,11 +39,10 @@
           </template>
 
           <div class="space-y-4">
-            <div class="rounded-2xl border border-muted/70 bg-muted/35 p-4">
+            <div class="border p-4">
               <div class="flex items-start gap-4">
                 <UAvatar
                   size="lg"
-                  :ui="{ root: 'bg-gradient-to-br from-sky-500 to-cyan-400' }"
                 />
                 <div class="space-y-1">
                   <p class="text-base font-semibold text-highlighted">
@@ -55,11 +54,10 @@
               </div>
             </div>
 
-            <div class="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+            <div class="border p-4">
               <div class="flex items-start gap-4">
                 <UAvatar
                   size="lg"
-                  :ui="{ root: 'bg-gradient-to-br from-clawme-500 to-amber-300' }"
                 />
                 <div class="space-y-1">
                   <div class="flex items-center gap-2">
@@ -80,22 +78,22 @@
         </UCard>
 
         <div class="space-y-6">
-          <UCard class="border border-muted/70 bg-white/80 dark:bg-neutral-900/80">
+          <UCard>
             <template #header>
               <h2 class="text-lg font-semibold text-highlighted">模型网关</h2>
             </template>
 
             <div v-if="provider" class="space-y-4">
-              <div class="rounded-2xl border border-muted/70 bg-muted/35 p-4">
+              <div class="border p-4">
                 <p class="text-sm text-muted">Provider</p>
                 <p class="mt-1 text-base font-semibold text-highlighted">{{ provider.name }}</p>
               </div>
               <div class="grid gap-3">
-                <div class="rounded-2xl border border-muted/70 bg-white dark:bg-neutral-950 p-4">
+                <div class="border p-4">
                   <p class="text-sm text-muted">Model</p>
                   <p class="mt-1 font-medium text-highlighted">{{ provider.modelId }}</p>
                 </div>
-                <div class="rounded-2xl border border-muted/70 bg-white dark:bg-neutral-950 p-4">
+                <div class="border p-4">
                   <p class="text-sm text-muted">Base URL</p>
                   <p class="mt-1 break-all text-sm text-default">{{ provider.baseUrl }}</p>
                 </div>
@@ -105,27 +103,27 @@
             <p v-else class="text-sm text-muted">尚未创建模型网关配置。</p>
           </UCard>
 
-          <UCard class="border border-muted/70 bg-white/80 dark:bg-neutral-900/80">
+          <UCard>
             <template #header>
               <h2 class="text-lg font-semibold text-highlighted">系统脉搏</h2>
             </template>
 
             <div class="space-y-3 text-sm">
-              <div class="flex items-center justify-between rounded-2xl bg-muted/35 px-4 py-3">
+              <div class="flex items-center justify-between border px-4 py-3">
                 <span class="text-muted">会话数</span>
                 <span class="font-semibold text-highlighted">{{ state.sessions.length }}</span>
               </div>
-              <div class="flex items-center justify-between rounded-2xl bg-muted/35 px-4 py-3">
+              <div class="flex items-center justify-between border px-4 py-3">
                 <span class="text-muted">消息数</span>
                 <span class="font-semibold text-highlighted">{{ state.messages.length }}</span>
               </div>
-              <div class="flex items-center justify-between rounded-2xl bg-muted/35 px-4 py-3">
+              <div class="flex items-center justify-between border px-4 py-3">
                 <span class="text-muted">Owner Session</span>
                 <UBadge :color="viewer.isOwnerAuthenticated ? 'success' : 'warning'" variant="subtle">
                   {{ viewer.isOwnerAuthenticated ? "Authenticated" : "Missing" }}
                 </UBadge>
               </div>
-              <div class="flex items-center justify-between rounded-2xl bg-muted/35 px-4 py-3">
+              <div class="flex items-center justify-between border px-4 py-3">
                 <span class="text-muted">BOT Secret</span>
                 <UBadge :color="viewer.hasBotSecret ? 'info' : 'warning'" variant="subtle">
                   {{ viewer.hasBotSecret ? "Ready" : "Missing" }}
