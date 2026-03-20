@@ -1,5 +1,5 @@
 import { createError, readBody } from "h3";
-import { hashPassword, readStoredState, writeStoredState } from "~~/server/utils/app-state";
+import { readStoredState } from "~~/server/utils/app-state";
 import { setOwnerSession, type OwnerSessionUser } from "~~/server/utils/auth";
 import { prisma } from "~~/server/utils/db";
 
@@ -37,9 +37,14 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!state.ownerPasswordHash) {
-    state.ownerPasswordHash = hashPassword(password);
-    await writeStoredState(state);
-  } else if (state.ownerPasswordHash !== hashPassword(password)) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Owner password not set. Please reinitialize the system.",
+    });
+  }
+
+  const isValid = await verifyPassword(state.ownerPasswordHash, password);
+  if (!isValid) {
     throw createError({
       statusCode: 401,
       statusMessage: "Invalid password.",

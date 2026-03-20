@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import type {
   ActorProfile,
   BootstrapRequest,
@@ -18,10 +18,6 @@ interface StoredClawmeAppState extends ClawmeAppState {
   ownerAuthToken: string | null;
   ownerPasswordHash: string | null;
   botApiSecret: string | null;
-}
-
-export function hashPassword(password: string) {
-  return createHash("sha256").update(password).digest("hex");
 }
 
 export async function readStoredState(): Promise<StoredClawmeAppState> {
@@ -153,12 +149,6 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
   };
 }
 
-export async function writeStoredState(_state: StoredClawmeAppState) {
-  console.warn(
-    "writeStoredState is deprecated. Database mutations must use Prisma clients directly.",
-  );
-}
-
 export async function initializeSystem(input: BootstrapRequest) {
   const existing = await prisma.systemConfig.findUnique({
     where: { id: "global" },
@@ -168,7 +158,7 @@ export async function initializeSystem(input: BootstrapRequest) {
   }
 
   const ownerApiSecret = randomBytes(24).toString("hex");
-  const ownerPasswordHash = hashPassword(input.ownerPassword);
+  const ownerPasswordHash = await hashPassword(input.ownerPassword);
   const botApiSecret = randomBytes(24).toString("hex");
 
   await prisma.$transaction(
