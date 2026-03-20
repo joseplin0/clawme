@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -20,11 +20,12 @@
     "@nuxt/image": "2.0.0",
     "@nuxt/ui": "https://pkg.pr.new/@nuxt/ui@ba34a0b",
     "@nuxtjs/mdc": "^0.20.2",
-    "@prisma/client": "^6.6.0",
     "@tailwindcss/postcss": "^4.2.1",
     "ai": "^6.0.116",
+    "drizzle-orm": "^0.45.1",
     "nuxt": "^4.4.2",
     "nuxt-auth-utils": "0.5.29",
+    "postgres": "^3.4.8",
     "tailwindcss": "^4.2.1",
     "vue": "^3.5.30",
     "vue-router": "^4.5.1",
@@ -33,7 +34,8 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "@vueuse/core": "^14.2.1",
-    "prisma": "^6.6.0",
+    "drizzle-kit": "^0.31.10",
+    "pg": "^8.20.0",
     "reka-ui": "^2.9.2"
   }
 }

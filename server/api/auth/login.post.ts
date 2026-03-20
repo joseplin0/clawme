@@ -1,7 +1,10 @@
 import { createError, readBody } from "h3";
+import { and, eq } from "drizzle-orm";
 import { readStoredState } from "~~/server/utils/app-state";
 import { setOwnerSession, type OwnerSessionUser } from "~~/server/utils/auth";
-import { prisma } from "~~/server/utils/db";
+import { db, schema } from "~~/server/utils/db";
+
+const { users } = schema;
 
 interface LoginRequest {
   username?: string;
@@ -52,14 +55,21 @@ export default defineEventHandler(async (event) => {
   }
 
   // Get the owner from database for full user info
-  const owner = await prisma.user.findFirst({
-    where: { role: "OWNER", type: "HUMAN" },
+  const owner = await db.query.users.findFirst({
+    where: and(eq(users.role, "OWNER"), eq(users.type, "HUMAN")),
   });
 
   if (!owner) {
     throw createError({
       statusCode: 500,
       statusMessage: "Owner not found in database.",
+    });
+  }
+
+  if (!owner.apiSecret) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Owner API secret not set.",
     });
   }
 

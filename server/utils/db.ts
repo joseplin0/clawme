@@ -1,13 +1,27 @@
-import { PrismaClient } from "@prisma/client";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import * as schema from "../database";
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+const connectionString = process.env.DATABASE_URL!;
 
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-  });
+// Type for the database with schema
+type Db = ReturnType<typeof drizzle<typeof schema>>;
+
+// Development singleton pattern
+const globalForDb = globalThis as unknown as {
+  client: postgres.Sql | undefined;
+  db: Db | undefined;
+};
+
+export const client =
+  globalForDb.client ?? postgres(connectionString);
+
+export const db: Db =
+  globalForDb.db ?? drizzle(client, { schema });
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  globalForDb.client = client;
+  globalForDb.db = db;
 }
+
+export { schema };

@@ -1,7 +1,10 @@
 import { createError, defineEventHandler, getRouterParam } from "h3";
 import { z } from "zod";
 import { requireOwnerSession } from "~~/server/utils/auth";
-import { prisma } from "~~/server/utils/db";
+import { db, schema } from "~~/server/utils/db";
+import { eq, asc } from "drizzle-orm";
+
+const { chatSessions, chatMessages } = schema;
 
 const paramsSchema = z.object({
   id: z.string().uuid(),
@@ -13,11 +16,11 @@ export default defineEventHandler(async (event) => {
   const rawId = getRouterParam(event, "id");
   const { id } = paramsSchema.parse({ id: rawId });
 
-  const session = await prisma.chatSession.findFirst({
-    where: { id },
-    include: {
+  const session = await db.query.chatSessions.findFirst({
+    where: eq(chatSessions.id, id),
+    with: {
       messages: {
-        orderBy: { createdAt: "asc" },
+        orderBy: [asc(chatMessages.createdAt)],
       },
     },
   });

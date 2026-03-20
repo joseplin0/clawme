@@ -1,7 +1,10 @@
 import { createError, getHeader } from "h3";
+import { and, eq } from "drizzle-orm";
 import { readStoredState } from "~~/server/utils/app-state";
-import { prisma } from "~~/server/utils/db";
+import { db, schema } from "~~/server/utils/db";
 import type { H3Event } from "h3";
+
+const { users, systemConfig } = schema;
 
 // Owner session user type
 export interface OwnerSessionUser {
@@ -44,11 +47,11 @@ export async function setOwnerSession(event: H3Event, user: OwnerSessionUser, ap
 export async function getOwnerSession(event: H3Event): Promise<OwnerSessionData | null> {
   const session = await getUserSession(event);
 
-  if (!session?.user?.id) {
+  if (!session?.user || !('id' in session.user)) {
     return null;
   }
 
-  return session as OwnerSessionData;
+  return session as unknown as OwnerSessionData;
 }
 
 /**
@@ -59,8 +62,12 @@ export async function isOwnerAuthenticated(event: H3Event): Promise<boolean> {
   const session = await getOwnerSession(event);
   if (session?.user) {
     // Verify the apiSecret matches
-    const owner = await prisma.user.findFirst({
-      where: { id: session.user.id, role: "OWNER", type: "HUMAN" },
+    const owner = await db.query.users.findFirst({
+      where: and(
+        eq(users.id, session.user.id),
+        eq(users.role, "OWNER"),
+        eq(users.type, "HUMAN")
+      ),
     });
     if (owner && session.secure?.apiSecret === owner.apiSecret) {
       return true;
@@ -70,8 +77,12 @@ export async function isOwnerAuthenticated(event: H3Event): Promise<boolean> {
   // Fallback to Bearer token for API access
   const bearer = extractBearerToken(getHeader(event, "authorization"));
   if (bearer) {
-    const owner = await prisma.user.findFirst({
-      where: { role: "OWNER", type: "HUMAN", apiSecret: bearer },
+    const owner = await db.query.users.findFirst({
+      where: and(
+        eq(users.role, "OWNER"),
+        eq(users.type, "HUMAN"),
+        eq(users.apiSecret, bearer)
+      ),
     });
     return Boolean(owner);
   }
@@ -87,11 +98,11 @@ export async function requireOwnerSession(event: H3Event) {
   const bearer = extractBearerToken(getHeader(event, "authorization"));
 
   if (bearer) {
-    const ownerModel = await prisma.user.findFirst({
-      where: { role: "OWNER", type: "HUMAN" },
+    const ownerModel = await db.query.users.findFirst({
+      where: and(eq(users.role, "OWNER"), eq(users.type, "HUMAN")),
     });
-    const isInitializedConfig = await prisma.systemConfig.findUnique({
-      where: { id: "global" },
+    const isInitializedConfig = await db.query.systemConfig.findFirst({
+      where: eq(systemConfig.id, "global"),
     });
 
     if (
@@ -124,11 +135,15 @@ export async function requireOwnerSession(event: H3Event) {
   }
 
   // Verify the session is still valid
-  const ownerModel = await prisma.user.findFirst({
-    where: { id: session.user.id, role: "OWNER", type: "HUMAN" },
+  const ownerModel = await db.query.users.findFirst({
+    where: and(
+      eq(users.id, session.user.id),
+      eq(users.role, "OWNER"),
+      eq(users.type, "HUMAN")
+    ),
   });
-  const isInitializedConfig = await prisma.systemConfig.findUnique({
-    where: { id: "global" },
+  const isInitializedConfig = await db.query.systemConfig.findFirst({
+    where: eq(systemConfig.id, "global"),
   });
 
   if (

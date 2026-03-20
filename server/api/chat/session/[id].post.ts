@@ -13,9 +13,11 @@ import {
 } from "h3";
 import { z } from "zod";
 import { requireOwnerSession } from "~~/server/utils/auth";
-import { prisma } from "~~/server/utils/db";
+import { db, schema } from "~~/server/utils/db";
 import { getModel } from "~~/server/utils/llm";
-import type { Prisma } from "@prisma/client";
+import { eq } from "drizzle-orm";
+
+const { chatSessions, chatMessages } = schema;
 
 const paramsSchema = z.object({
   id: z.string().uuid(),
@@ -34,8 +36,8 @@ export default defineEventHandler(async (event) => {
   const { messages } = bodySchema.parse(body);
 
   // Verify session exists
-  const session = await prisma.chatSession.findFirst({
-    where: { id: sessionId },
+  const session = await db.query.chatSessions.findFirst({
+    where: eq(chatSessions.id, sessionId),
   });
 
   if (!session) {
@@ -50,13 +52,11 @@ export default defineEventHandler(async (event) => {
   // Save user message if it's a follow-up
   const lastMessage = messages[messages.length - 1];
   if (lastMessage?.role === "user" && messages.length > 1) {
-    await prisma.chatMessage.create({
-      data: {
-        sessionId,
-        role: "USER",
-        parts: lastMessage.parts as Prisma.InputJsonValue,
-        status: "DONE",
-      },
+    await db.insert(chatMessages).values({
+      sessionId,
+      role: "USER",
+      parts: lastMessage.parts,
+      status: "DONE",
     });
   }
 
@@ -74,13 +74,11 @@ export default defineEventHandler(async (event) => {
     onFinish: async ({ messages: responseMessages }) => {
       // Save assistant's response to database
       for (const message of responseMessages) {
-        await prisma.chatMessage.create({
-          data: {
-            sessionId,
-            role: message.role === "assistant" ? "ASSISTANT" : "USER",
-            parts: message.parts as Prisma.InputJsonValue,
-            status: "DONE",
-          },
+        await db.insert(chatMessages).values({
+          sessionId,
+          role: message.role === "assistant" ? "ASSISTANT" : "USER",
+          parts: message.parts,
+          status: "DONE",
         });
       }
     },

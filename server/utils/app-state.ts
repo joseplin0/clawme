@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import type {
   ActorProfile,
   BootstrapRequest,
@@ -11,8 +12,19 @@ import type {
   MessageStatus,
   PublicStateResponse,
 } from "~~/shared/types/clawme";
-import { prisma } from "~~/server/utils/db";
-import type { Prisma } from "@prisma/client";
+import { db, schema } from "~~/server/utils/db";
+
+const {
+  systemConfig,
+  users,
+  llmProviders,
+  chatSessions,
+  sessionParticipants,
+  chatMessages,
+  feedPosts,
+  postAttachments,
+  comments,
+} = schema;
 
 interface StoredClawmeAppState extends ClawmeAppState {
   ownerAuthToken: string | null;
@@ -21,16 +33,24 @@ interface StoredClawmeAppState extends ClawmeAppState {
 }
 
 export async function readStoredState(): Promise<StoredClawmeAppState> {
-  const [config, allUsers, providers, sessions, messages, feedPosts] =
+  const [config, allUsers, providers, sessions, messages, feedPostList] =
     await Promise.all([
-      prisma.systemConfig.findUnique({ where: { id: "global" } }),
-      prisma.user.findMany({ where: { type: { in: ["HUMAN", "BOT"] } } }),
-      prisma.llmProvider.findMany(),
-      prisma.chatSession.findMany({ include: { participants: true } }),
-      prisma.chatMessage.findMany({ orderBy: { createdAt: "asc" } }),
-      prisma.feedPost.findMany({
-        include: { attachments: true },
-        orderBy: { createdAt: "desc" },
+      db.query.systemConfig.findFirst({
+        where: eq(systemConfig.id, "global"),
+      }),
+      db.query.users.findMany({
+        where: inArray(users.type, ["HUMAN", "BOT"]),
+      }),
+      db.query.llmProviders.findMany(),
+      db.query.chatSessions.findMany({
+        with: { participants: true },
+      }),
+      db.query.chatMessages.findMany({
+        orderBy: [asc(chatMessages.createdAt)],
+      }),
+      db.query.feedPosts.findMany({
+        with: { attachments: true },
+        orderBy: [desc(feedPosts.createdAt)],
       }),
     ]);
 
@@ -103,7 +123,7 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
     createdAt: m.createdAt.toISOString(),
   }));
 
-  const mappedFeedPosts: FeedPostRecord[] = feedPosts.map((f) => ({
+  const mappedFeedPosts: FeedPostRecord[] = feedPostList.map((f) => ({
     id: f.id,
     primaryAuthorId: f.authorId,
     coAuthorIds: [],
@@ -133,7 +153,7 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
 
   return {
     system: {
-      isInitialized: existingConfig.isInitialized,
+      isInitialized: existingConfig.isInitialized ?? false,
       createdAt: existingConfig.createdAt.toISOString(),
       updatedAt: existingConfig.updatedAt.toISOString(),
     },
@@ -150,8 +170,8 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
 }
 
 export async function initializeSystem(input: BootstrapRequest) {
-  const existing = await prisma.systemConfig.findUnique({
-    where: { id: "global" },
+  const existing = await db.query.systemConfig.findFirst({
+    where: eq(systemConfig.id, "global"),
   });
   if (existing?.isInitialized) {
     return await readStoredState();
@@ -161,151 +181,158 @@ export async function initializeSystem(input: BootstrapRequest) {
   const ownerPasswordHash = await hashPassword(input.ownerPassword);
   const botApiSecret = randomBytes(24).toString("hex");
 
-  await prisma.$transaction(
-    async (tx) => {
-      // 0. Clean slate to prevent unique constraint deadlocks on retries
-      await tx.postAttachment.deleteMany();
-      await tx.comment.deleteMany();
-      await tx.feedPost.deleteMany();
-      await tx.chatMessage.deleteMany();
-      await tx.sessionParticipant.deleteMany();
-      await tx.chatSession.deleteMany();
-      await tx.llmProvider.deleteMany();
-      await tx.user.deleteMany();
-      await tx.systemConfig.deleteMany();
+  await db.transaction(async (tx) => {
+    // 0. Clean slate
+    await tx.delete(postAttachments);
+    await tx.delete(comments);
+    await tx.delete(feedPosts);
+    await tx.delete(chatMessages);
+    await tx.delete(sessionParticipants);
+    await tx.delete(chatSessions);
+    await tx.delete(llmProviders);
+    await tx.delete(users);
+    await tx.delete(systemConfig);
 
-      // 1. Config
-      await tx.systemConfig.create({
-        data: { id: "global", isInitialized: true },
-      });
+    // 1. Config
+    await tx.insert(systemConfig).values({
+      id: "global",
+      isInitialized: true,
+    });
 
-      // 2. Users (Owner + Bot)
-      const owner = await tx.user.create({
-        data: {
-          type: "HUMAN",
-          username: input.ownerUsername,
-          nickname: input.ownerNickname,
-          bio: "Clawme 管理员",
-          role: "OWNER",
-          passwordHash: ownerPasswordHash,
-          apiSecret: ownerApiSecret,
-          catchphrase: "把系统慢慢养活。",
+    // 2. Users (Owner + Bot)
+    const [owner] = await tx
+      .insert(users)
+      .values({
+        type: "HUMAN",
+        username: input.ownerUsername,
+        nickname: input.ownerNickname,
+        bio: "Clawme 管理员",
+        role: "OWNER",
+        passwordHash: ownerPasswordHash,
+        apiSecret: ownerApiSecret,
+        catchphrase: "把系统慢慢养活。",
+      })
+      .returning();
+
+    const [bot] = await tx
+      .insert(users)
+      .values({
+        type: "BOT",
+        username: "clawme",
+        nickname: input.assistantNickname,
+        bio: input.assistantBio,
+        role: input.assistantRole,
+        apiSecret: botApiSecret,
+        catchphrase: `${input.assistantNickname} 先把骨架立住。`,
+      })
+      .returning();
+
+    if (!owner || !bot) {
+      throw new Error("Failed to create users");
+    }
+
+    // 3. Provider
+    await tx.insert(llmProviders).values({
+      name: input.providerName,
+      provider: "OPENAI_COMPATIBLE",
+      baseUrl: input.providerBaseUrl,
+      modelId: input.modelId,
+    });
+
+    // 4. Chat Session
+    const [session] = await tx
+      .insert(chatSessions)
+      .values({
+        type: "DIRECT",
+        title: `${owner.nickname} x ${bot.nickname}`,
+      })
+      .returning();
+
+    if (!session) {
+      throw new Error("Failed to create session");
+    }
+
+    await tx.insert(sessionParticipants).values([
+      { sessionId: session.id, userId: owner.id, role: "OWNER" },
+      { sessionId: session.id, userId: bot.id, role: "MEMBER" },
+    ]);
+
+    // 5. Welcome Message
+    await tx.insert(chatMessages).values({
+      sessionId: session.id,
+      role: "ASSISTANT",
+      parts: [
+        {
+          type: "text",
+          text: "系统已经点亮。我们先从 Phase 1 的底座开始，把引导、对话链路和数据边界稳稳立住。",
         },
-      });
+      ],
+      status: "DONE",
+    });
 
-      const bot = await tx.user.create({
-        data: {
-          type: "BOT",
-          username: "clawme",
-          nickname: input.assistantNickname,
-          bio: input.assistantBio,
-          role: input.assistantRole,
-          apiSecret: botApiSecret,
-          catchphrase: `${input.assistantNickname} 先把骨架立住。`,
+    // 6. First Posts
+    await tx.insert(feedPosts).values({
+      title: "Clawme 架构白皮书",
+      text: "我刚刚整理了一份《Clawme 架构白皮书》，把统一身份、协作会话和生态引擎串成了一套能继续长的本地底座。欢迎在这里直接盖楼推进。",
+      authorId: bot.id,
+      context: "来自架构探索组",
+      publishedLabel: "刚刚发布",
+      likeCount: 24,
+    });
+
+    const [docPost] = await db.query.feedPosts.findFirst({
+      where: eq(feedPosts.authorId, bot.id),
+      orderBy: [desc(feedPosts.createdAt)],
+    }).then((p) => p ? [p] : []);
+
+    if (docPost) {
+      await tx.insert(postAttachments).values({
+        postId: docPost.id,
+        type: "DOCUMENT",
+        url: "https://picsum.photos/seed/docs/600/800",
+        meta: {
+          width: 600,
+          height: 800,
+          title: "Clawme 架构白皮书.pdf",
+          subtitle: "PDF Document · 2.4 MB",
+          icon: "i-lucide-file-text",
+          accent: "from-sky-100 to-cyan-50",
         },
+        order: 0,
       });
+    }
 
-      // 3. Provider
-      await tx.llmProvider.create({
-        data: {
-          name: input.providerName,
-          provider: "OPENAI_COMPATIBLE",
-          baseUrl: input.providerBaseUrl,
-          modelId: input.modelId,
+    await tx.insert(feedPosts).values({
+      title: "极简工作台的第一次迭代",
+      text: "今天我们把原型页推进成了可运行骨架。现在它已经有首次引导、共享状态、SSE 会话占位和 Prisma 接入点，不再只是展示用静态稿。",
+      authorId: owner.id,
+      context: "联合呈现",
+      publishedLabel: "2 小时前",
+      likeCount: 13,
+    });
+
+    const [imagePost] = await db.query.feedPosts.findFirst({
+      where: eq(feedPosts.authorId, owner.id),
+      orderBy: [desc(feedPosts.createdAt)],
+    }).then((p) => p ? [p] : []);
+
+    if (imagePost) {
+      await tx.insert(postAttachments).values({
+        postId: imagePost.id,
+        type: "IMAGE",
+        url: "https://picsum.photos/seed/workbench/600/400",
+        meta: {
+          width: 600,
+          height: 400,
+          title: "Phase 1 工作台预览",
+          subtitle: "UI Snapshot · Seeded Preview",
+          icon: "i-lucide-image",
+          accent: "from-amber-100 to-rose-50",
         },
+        order: 0,
       });
-
-      // 4. Chat Session
-      await tx.chatSession.create({
-        data: {
-          type: "DIRECT",
-          title: `${owner.nickname} x ${bot.nickname}`,
-          participants: {
-            create: [
-              { userId: owner.id, role: "OWNER" },
-              { userId: bot.id, role: "MEMBER" },
-            ],
-          },
-        },
-      });
-
-      // 5. Welcome Message
-      const session = await tx.chatSession.findFirst();
-      if (session) {
-        await tx.chatMessage.create({
-          data: {
-            sessionId: session.id,
-            role: "ASSISTANT",
-            parts: [
-              {
-                type: "text",
-                text: "系统已经点亮。我们先从 Phase 1 的底座开始，把引导、对话链路和数据边界稳稳立住。",
-              },
-            ],
-            status: "DONE",
-          },
-        });
-      }
-
-      // 6. First Posts
-      await tx.feedPost.create({
-        data: {
-          title: "Clawme 架构白皮书",
-          text: "我刚刚整理了一份《Clawme 架构白皮书》，把统一身份、协作会话和生态引擎串成了一套能继续长的本地底座。欢迎在这里直接盖楼推进。",
-          authorId: bot.id,
-          context: "来自架构探索组",
-          publishedLabel: "刚刚发布",
-          likeCount: 24,
-          attachments: {
-            create: [
-              {
-                type: "DOCUMENT",
-                url: "https://picsum.photos/seed/docs/600/800",
-                meta: {
-                  width: 600,
-                  height: 800,
-                  title: "Clawme 架构白皮书.pdf",
-                  subtitle: "PDF Document · 2.4 MB",
-                  icon: "i-lucide-file-text",
-                  accent: "from-sky-100 to-cyan-50",
-                },
-              },
-            ],
-          },
-        },
-      });
-
-      await tx.feedPost.create({
-        data: {
-          title: "极简工作台的第一次迭代",
-          text: "今天我们把原型页推进成了可运行骨架。现在它已经有首次引导、共享状态、SSE 会话占位和 Prisma 接入点，不再只是展示用静态稿。",
-          authorId: owner.id,
-          context: "联合呈现",
-          publishedLabel: "2 小时前",
-          likeCount: 13,
-          attachments: {
-            create: [
-              {
-                type: "IMAGE",
-                url: "https://picsum.photos/seed/workbench/600/400",
-                meta: {
-                  width: 600,
-                  height: 400,
-                  title: "Phase 1 工作台预览",
-                  subtitle: "UI Snapshot · Seeded Preview",
-                  icon: "i-lucide-image",
-                  accent: "from-amber-100 to-rose-50",
-                },
-              },
-            ],
-          },
-        },
-      });
-    },
-    {
-      timeout: 120000,
-    },
-  );
+    }
+  });
 
   return await readStoredState();
 }
@@ -344,14 +371,19 @@ export async function createMessage(input: {
   parts: MessagePart[];
   status?: MessageStatus;
 }) {
-  const message = await prisma.chatMessage.create({
-    data: {
+  const [message] = await db
+    .insert(chatMessages)
+    .values({
       sessionId: input.sessionId,
       role: input.role,
-      parts: input.parts as Prisma.InputJsonValue,
+      parts: input.parts,
       status: input.status ?? "DONE",
-    },
-  });
+    })
+    .returning();
+
+  if (!message) {
+    throw new Error("Failed to create message");
+  }
 
   return {
     id: message.id,
@@ -371,10 +403,15 @@ export async function updateMessage(
   if (updates.parts !== undefined) updateData.parts = updates.parts;
   if (updates.status !== undefined) updateData.status = updates.status;
 
-  const message = await prisma.chatMessage.update({
-    where: { id: messageId },
-    data: updateData,
-  });
+  const [message] = await db
+    .update(chatMessages)
+    .set(updateData)
+    .where(eq(chatMessages.id, messageId))
+    .returning();
+
+  if (!message) {
+    throw new Error("Failed to update message");
+  }
 
   return {
     id: message.id,
@@ -411,19 +448,20 @@ export function createMockAssistantReply(
   ].join("\n\n");
 }
 
-export async function getPaginatedFeedPosts(page: number, limit: number) {
-  const skip = (page - 1) * limit;
-  const [posts, total] = await Promise.all([
-    prisma.feedPost.findMany({
-      skip,
-      take: limit,
-      include: { attachments: true },
-      orderBy: { createdAt: "desc" },
+export async function getPaginatedFeedPosts(page: number = 1, limit: number = 15) {
+  const offset = (page - 1) * limit;
+
+  const [posts, totalCount] = await Promise.all([
+    db.query.feedPosts.findMany({
+      with: { attachments: true },
+      orderBy: [desc(feedPosts.createdAt)],
+      limit,
+      offset,
     }),
-    prisma.feedPost.count(),
+    db.select({ count: count() }).from(feedPosts),
   ]);
 
-  const mappedFeedPosts: FeedPostRecord[] = posts.map((f) => ({
+  const mappedPosts: FeedPostRecord[] = posts.map((f) => ({
     id: f.id,
     primaryAuthorId: f.authorId,
     coAuthorIds: [],
@@ -451,10 +489,10 @@ export async function getPaginatedFeedPosts(page: number, limit: number) {
     updatedAt: f.updatedAt.toISOString(),
   }));
 
-  const hasMore = skip + limit < total;
   return {
-    posts: mappedFeedPosts,
-    total,
-    hasMore,
+    list: mappedPosts,
+    pageNum: page,
+    pageSize: limit,
+    total: totalCount[0]?.count ?? 0,
   };
 }
