@@ -1,13 +1,11 @@
 <template>
   <aside
     :class="[
-      'absolute z-10 flex h-full w-full shrink-0 flex-col border-r border-default bg-elevated/30 backdrop-blur transition-transform duration-300 md:relative md:w-80',
+      'absolute z-10 flex h-full w-full shrink-0 flex-col md:relative md:w-80',
       modelValue ? '-translate-x-full md:translate-x-0' : 'translate-x-0',
     ]"
   >
-    <div
-      class="flex h-16 items-center border-b border-default bg-elevated/50 px-3"
-    >
+    <div class="flex h-16 items-center px-3">
       <div class="flex w-full items-center gap-2">
         <UInput
           v-model="searchQuery"
@@ -25,43 +23,53 @@
       </div>
     </div>
 
-    <div class="flex-1 space-y-1 overflow-y-auto">
-      <button
-        v-for="session in filteredSessions"
-        :key="session.id"
-        type="button"
-        :class="[
-          'w-full p-3 text-left transition-all duration-300 hover:bg-elevated/50',
-          modelValue === session.id ? 'bg-elevated' : '',
-        ]"
-        @click="$emit('update:modelValue', session.id)"
+    <UScrollArea
+      ref="scrollArea"
+      v-slot="{ item }"
+      :items="filteredSessions"
+      :virtualize="{
+        estimateSize: 72,
+        skipMeasurement: true,
+      }"
+      class="flex-1 w-full"
+    >
+      <UUser
+        :avatar="{ src: 'https://i.pravatar.cc/150?u=john-doe' }"
+        size="xl"
+        class="p-3"
+        :description="
+          getMessageText(getLastMessage(item.id)) || '这条会话刚刚初始化。'
+        "
+        :ui="{
+          wrapper: 'flex-1 min-w-0',
+          description: 'truncate',
+        }"
       >
-        <div class="flex items-center gap-3">
-          <UAvatar size="md" />
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center justify-between gap-3">
-              <p class="truncate text-sm font-semibold text-highlighted">
-                {{ session.title }}
-              </p>
-              <span class="text-xs text-muted">
-                {{ formatRelativeTime(getLastMessage(session.id)?.createdAt) }}
-              </span>
-            </div>
-            <p class="mt-1 truncate text-sm text-muted">
-              {{
-                getMessageText(getLastMessage(session.id)) ||
-                "这条会话刚刚初始化。"
-              }}
-            </p>
+        <template #name>
+          <div class="flex items-center justify-between gap-3">
+            <span class="truncate">
+              {{ item.title }}
+            </span>
+            <span class="text-xs text-muted shrink-0">
+              {{ formatRelativeTime(getLastMessage(item.id)?.createdAt) }}
+            </span>
           </div>
-        </div>
-      </button>
-    </div>
+        </template>
+      </UUser>
+    </UScrollArea>
+
+    <UProgress
+      v-if="isLoading"
+      indeterminate
+      size="xs"
+      class="absolute top-16 inset-x-0 z-1"
+      :ui="{ base: 'bg-default' }"
+    />
   </aside>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { useInfiniteScroll } from "@vueuse/core";
 import type {
   ChatSessionRecord,
   ChatMessageRecord,
@@ -71,14 +79,18 @@ const props = defineProps<{
   modelValue: string | null;
   sessions: ChatSessionRecord[];
   messages: ChatMessageRecord[];
+  hasMore?: boolean;
+  isLoading?: boolean;
 }>();
 
 const emit = defineEmits<{
   "update:modelValue": [value: string | null];
   create: [];
+  loadMore: [];
 }>();
 
 const searchQuery = ref("");
+const scrollArea = useTemplateRef("scrollArea");
 
 const filteredSessions = computed(() => {
   if (!searchQuery.value) return props.sessions;
@@ -123,4 +135,20 @@ function formatRelativeTime(value?: string) {
   const deltaHours = Math.round(deltaMinutes / 60);
   return `${deltaHours} 小时前`;
 }
+
+// 无限滚动
+onMounted(() => {
+  useInfiniteScroll(
+    scrollArea.value?.$el,
+    () => {
+      emit("loadMore");
+    },
+    {
+      distance: 100,
+      canLoadMore: () => {
+        return !props.isLoading && props.hasMore !== false;
+      },
+    },
+  );
+});
 </script>

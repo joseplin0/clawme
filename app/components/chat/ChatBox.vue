@@ -27,9 +27,7 @@
     </div>
 
     <template v-else>
-      <header
-        class="flex h-16 items-center justify-between gap-4 border-b border-default px-4"
-      >
+      <header class="flex h-16 items-center justify-between gap-4 px-4">
         <div class="flex min-w-0 items-center gap-3">
           <UButton
             icon="i-lucide-arrow-left"

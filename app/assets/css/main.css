@@ -1,7 +1,21 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+/*
+ * Design System: The Precision Editorial
+ * Theme: Technical Warmth - Zinc & Fire Palette
+ */
+
+/*
+ * Design System: The Precision Editorial
+ * Theme: Technical Warmth - Zinc & Fire Palette
+ */
+
 @theme static {
+  /* 字体配置 */
+  --font-sans: "Public Sans", sans-serif;
+
+  /* Clawme 品牌色调色板 */
   --color-clawme-50: #fff5f2;
   --color-clawme-100: #ffe6de;
   --color-clawme-200: #ffcbbd;
@@ -9,21 +23,56 @@
   --color-clawme-400: #f98363;
   --color-clawme-500: #e05d44;
   --color-clawme-600: #c9462d;
+  /* Primary - 火焰橙红 */
   --color-clawme-700: #a83724;
   --color-clawme-800: #873021;
   --color-clawme-900: #6d2b20;
   --color-clawme-950: #3b120c;
+
+  /* Surface 背景色 */
+  --color-surface-50: #fbf8ff;
+  --color-surface-950: #12131a;
 }
 
+/* ================================
+   Nuxt UI CSS Variables - 亮色模式
+   ================================ */
 :root {
-  --ui-primary: var(--ui-color-primary-600);
-  --ui-container: 90rem;
+  color-scheme: light;
+
+  /* Primary - 柔和橙红 */
+  --ui-primary: var(--color-primary-600);
+
+  /* Background layers */
+  --ui-bg: var(--color-surface-50);
+  --ui-bg-muted: var(--ui-color-neutral-50);
+  --ui-bg-elevated: white;
+  --ui-bg-accented: var(--ui-color-neutral-200);
+  --ui-bg-inverted: var(--ui-color-neutral-900);
+  --ui-bg-surface: var(--color-surface-50);
+  /* Error */
+  --ui-error: var(--color-error);
+
+  /* Container */
+  --ui-container: 100rem;
   color-scheme: light;
 }
 
+/* ================================
+   Nuxt UI CSS Variables - 暗色模式
+   ================================ */
 .dark {
   color-scheme: dark;
-  --ui-primary: var(--ui-color-primary-500);
+  /* Primary - 柔和橙红 */
+  --ui-primary: var(--color-primary-500);
+
+  /* Background layers */
+  --ui-bg: var(--color-surface-950);
+  --ui-bg-muted: var(--ui-color-neutral-800);
+  --ui-bg-elevated: var(--ui-color-neutral-900);
+  --ui-bg-accented: var(--ui-color-neutral-700);
+  --ui-bg-inverted: white;
+  --ui-bg-surface: var(--color-surface-950);
 }
 
 body {

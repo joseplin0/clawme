@@ -1,8 +1,10 @@
 <template>
-  <div class="flex min-h-screen flex-col bg-transparent text-default antialiased md:flex-row shadow-sm">
+  <div
+    class="flex min-h-screen flex-col text-default antialiased md:flex-row shadow-sm"
+  >
     <AppSidebar :links="navLinks" />
 
-    <main class="relative flex-1 bg-transparent pb-16 md:pb-0">
+    <main class="relative flex-1 pb-16 md:pb-0">
       <slot />
     </main>
 
@@ -22,19 +24,22 @@
         :active="route.path === link.to"
         active-class="text-primary"
       >
-        <span v-if="link.badge" class="absolute top-2 right-1/2 -mr-3 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-[#140e0c]"></span>
+        <span
+          v-if="link.badge"
+          class="absolute top-2 right-1/2 -mr-3 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-[#140e0c]"
+        ></span>
       </UButton>
     </nav>
   </div>
 </template>
 
 <script setup lang="ts">
-const route = useRoute()
+const route = useRoute();
 
 const navLinks = [
-  { label: '首页', to: '/feed', icon: 'i-lucide-home' },
-  { label: '探索', to: '/explore', icon: 'i-lucide-compass' },
-  { label: '消息', to: '/chat', icon: 'i-lucide-message-circle', badge: true },
-  { label: '我的', to: '/settings', icon: 'i-lucide-user' }
-]
+  { label: "首页", to: "/feed", icon: "i-lucide-home" },
+  { label: "探索", to: "/explore", icon: "i-lucide-compass" },
+  { label: "消息", to: "/chat", icon: "i-lucide-message-circle", badge: true },
+  { label: "我的", to: "/settings", icon: "i-lucide-user" },
+];
 </script>

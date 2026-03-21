@@ -2,8 +2,9 @@
   <UBlogPost
     orientation="vertical"
     variant="outline"
-    class="hover:shadow-xl hover:-translate-y-1 transition-all duration-500 border-muted"
+    :to="postLink"
     :ui="{
+      root: 'bg-surface-container-lowest rounded-lg overflow-hidden transition-all duration-300',
       image: 'aspect-auto h-auto object-cover',
     }"
     :title="post.title || primaryAuthor?.nickname || 'Clawme 更新'"
@@ -36,6 +37,8 @@ const coAuthors = computed(() =>
     .filter(isActorProfile),
 );
 
+const postLink = computed(() => `/post/${props.post.id}`);
+
 const authors = computed(() => {
   const allAuthors = [primaryAuthor.value, ...coAuthors.value].filter(
     isActorProfile,
@@ -50,12 +53,6 @@ const authors = computed(() => {
     avatar: {
       alt: author.nickname,
       text: author.nickname.slice(0, 1),
-      ui: {
-        root:
-          author.type === "BOT"
-            ? "bg-gradient-to-br from-clawme-500 to-amber-300"
-            : "bg-gradient-to-br from-sky-500 to-cyan-400",
-      },
     },
   }));
 });
@@ -85,14 +82,3 @@ const heroImage = computed(() => {
   };
 });
 </script>
-
-<style scoped>
-:deep([class*="aspect-"]) {
-  aspect-ratio: auto !important;
-}
-:deep(img) {
-  height: auto !important;
-  object-fit: contain !important; /* or cover */
-  width: 100% !important;
-}
-</style>

@@ -1,44 +1,56 @@
 <template>
-  <USidebar class="hidden md:flex shrink-0 shadow-sm" collapsible="icon" :open="false">
+  <USidebar
+    class="hidden md:flex"
+    collapsible="icon"
+    :open="false"
+    :ui="{
+      container: 'h-full border-none bg-zinc-50 dark:bg-zinc-950',
+      inner: 'divide-transparent',
+    }"
+  >
     <template #header>
-      <div class="flex flex-col items-center gap-4 w-full mt-2">
-        <UButton to="/feed" label="F" color="primary" variant="solid"
-          class="flex h-10 w-10 items-center justify-center text-xl font-bold font-sans transition-transform duration-300 hover:scale-105" />
-      </div>
+      <UButton
+        to="/feed"
+        label="F"
+        variant="ghost"
+        class="text-orange-600 dark:text-orange-500 font-black text-xl tracking-tighter cursor-pointer"
+      />
     </template>
 
     <template #default="{ state }">
-      <UNavigationMenu :key="state" :items="menuItems" orientation="vertical" :ui="{ link: 'p-1.5 overflow-hidden' }" />
+      <UNavigationMenu
+        :key="state"
+        :items="menuItems"
+        tooltip
+        variant="link"
+        orientation="vertical"
+        :ui="{ link: 'p-2 px-1.5 overflow-hidden', linkLeadingIcon: 'size-5' }"
+      />
     </template>
 
     <template #footer>
-      <div class="mt-auto flex flex-col items-center gap-4">
-        <!-- Theme Switcher -->
-        <UColorModeButton />
-
-        <!-- Avatar -->
-        <UButton color="neutral" variant="ghost"
-          class="rounded-full p-0 overflow-hidden transition-all cursor-pointer">
-          <UAvatar size="md" />
-        </UButton>
-      </div>
+      <UButton
+        color="neutral"
+        variant="ghost"
+        class="rounded-full p-0 overflow-hidden transition-all cursor-pointer"
+      >
+        <UAvatar size="md" />
+      </UButton>
     </template>
   </USidebar>
 </template>
 
 <script setup lang="ts">
-const route = useRoute()
-
 const props = defineProps<{
-  links: Array<{ label: string; to: string; icon: string; badge?: boolean }>
-}>()
+  links: Array<{ label: string; to: string; icon: string; badge?: boolean }>;
+}>();
 
 const menuItems = computed(() => {
-  return props.links.map(link => ({
+  return props.links.map((link) => ({
     label: link.label,
     to: link.to,
     icon: link.icon,
-    badge: link.badge ? ' ' : undefined
-  }))
-})
+    badge: link.badge ? " " : undefined,
+  }));
+});
 </script>

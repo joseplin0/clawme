@@ -1,17 +1,13 @@
 <template>
-  <div class="flex min-h-[70vh] items-center justify-center">
-    <UCard class="w-full max-w-md">
-      <UAuthForm
-        icon="i-lucide-log-in"
-        title="登录"
-        description="请输入用户名和密码。"
-        :fields="fields"
-        :submit="{ label: '登录', icon: 'i-lucide-arrow-right' }"
-        :loading="submitting"
-        @submit="handleSubmit"
-      />
-    </UCard>
-  </div>
+  <UAuthForm
+    icon="i-lucide-user"
+    title="登录"
+    description="请输入用户名和密码。"
+    :fields="fields"
+    :submit="{ label: '登录' }"
+    :loading="submitting"
+    @submit="handleSubmit"
+  />
 </template>
 
 <script setup lang="ts">
@@ -30,7 +26,6 @@ const fields = [
     name: "username",
     type: "text",
     label: "用户名",
-    placeholder: "例如：linqiang",
     required: true,
     defaultValue: "",
   },
@@ -38,7 +33,6 @@ const fields = [
     name: "password",
     type: "password",
     label: "密码",
-    placeholder: "请输入密码",
     required: true,
     defaultValue: "",
   },
