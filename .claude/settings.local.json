@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(npm run dev:*)",
-      "Bash(open http://localhost:3000)"
+      "Bash(open http://localhost:3000)",
+      "Bash(pnpm exec nuxi typecheck*)",
+      "Bash(npx nuxi typecheck:*)",
+      "Bash(openspec new change*)",
+      "Bash(openspec status --change*)",
+      "Bash(npx nuxt module add:*)",
+      "Bash(pnpm build:*)",
+      "Bash(openspec:*)",
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm list:*)"
     ]
   }
 }
