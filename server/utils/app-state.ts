@@ -236,6 +236,7 @@ export async function initializeSystem(input: BootstrapRequest) {
       name: input.providerName,
       provider: "OPENAI_COMPATIBLE",
       baseUrl: input.providerBaseUrl,
+      apiKey: input.apiKey,
       modelId: input.modelId,
     });
 
@@ -446,6 +447,174 @@ export function createMockAssistantReply(
       ? `当前预留的模型网关是 ${provider.name} / ${provider.modelId}。等真实本地模型接上后，这条 SSE 链路可以直接替换生成器。`
       : "当前还没有模型网关配置，所以我先用可替换的 mock 生成器把服务链打通。",
   ].join("\n\n");
+}
+
+/**
+ * Get minimal public data for feed page (owner, bot, initial feed posts)
+ */
+export async function getFeedInitData(feedPostsLimit: number = 15) {
+  const [config, ownerModel, botModel, feedPostList] = await Promise.all([
+    db.query.systemConfig.findFirst({
+      where: eq(systemConfig.id, "global"),
+    }),
+    db.query.users.findFirst({
+      where: and(eq(users.type, "HUMAN"), eq(users.role, "OWNER")),
+    }),
+    db.query.users.findFirst({
+      where: eq(users.type, "BOT"),
+    }),
+    db.query.feedPosts.findMany({
+      with: { attachments: true },
+      orderBy: [desc(feedPosts.createdAt)],
+      limit: feedPostsLimit,
+    }),
+  ]);
+
+  const owner: ActorProfile | null = ownerModel
+    ? {
+        id: ownerModel.id,
+        type: ownerModel.type,
+        username: ownerModel.username,
+        nickname: ownerModel.nickname,
+        avatar: ownerModel.avatar,
+        bio: ownerModel.bio,
+        role: ownerModel.role,
+        catchphrase: ownerModel.catchphrase,
+        createdAt: ownerModel.createdAt.toISOString(),
+        updatedAt: ownerModel.updatedAt.toISOString(),
+      }
+    : null;
+
+  const bot: ActorProfile | null = botModel
+    ? {
+        id: botModel.id,
+        type: botModel.type,
+        username: botModel.username,
+        nickname: botModel.nickname,
+        avatar: botModel.avatar,
+        bio: botModel.bio,
+        role: botModel.role,
+        catchphrase: botModel.catchphrase,
+        createdAt: botModel.createdAt.toISOString(),
+        updatedAt: botModel.updatedAt.toISOString(),
+      }
+    : null;
+
+  const mappedFeedPosts: FeedPostRecord[] = feedPostList.map((f) => ({
+    id: f.id,
+    primaryAuthorId: f.authorId,
+    coAuthorIds: [],
+    title: f.title,
+    text: f.text || "",
+    context: f.context || "随笔",
+    publishedLabel: f.publishedLabel || "刚刚发布",
+    likeCount: f.likeCount,
+    commentCount: 0,
+    attachments: f.attachments.map((a) => {
+      const meta = (a.meta as Record<string, unknown>) || {};
+      return {
+        id: a.id,
+        kind: a.type as "DOCUMENT" | "IMAGE" | "LINK",
+        url: a.url,
+        width: meta.width as number | undefined,
+        height: meta.height as number | undefined,
+        title: (meta.title as string) || "",
+        subtitle: (meta.subtitle as string) || "",
+        icon: (meta.icon as string) || "",
+        accent: (meta.accent as string) || "",
+      };
+    }),
+    createdAt: f.createdAt.toISOString(),
+    updatedAt: f.updatedAt.toISOString(),
+  }));
+
+  return {
+    isInitialized: config?.isInitialized ?? false,
+    owner,
+    bot,
+    feedPosts: mappedFeedPosts,
+  };
+}
+
+/**
+ * Get chat session data (owner, bot, sessions, messages)
+ */
+export async function getChatSessionData() {
+  const [config, ownerModel, botModel, sessions, messages] = await Promise.all([
+    db.query.systemConfig.findFirst({
+      where: eq(systemConfig.id, "global"),
+    }),
+    db.query.users.findFirst({
+      where: and(eq(users.type, "HUMAN"), eq(users.role, "OWNER")),
+    }),
+    db.query.users.findFirst({
+      where: eq(users.type, "BOT"),
+    }),
+    db.query.chatSessions.findMany({
+      with: { participants: true },
+    }),
+    db.query.chatMessages.findMany({
+      orderBy: [asc(chatMessages.createdAt)],
+    }),
+  ]);
+
+  const owner: ActorProfile | null = ownerModel
+    ? {
+        id: ownerModel.id,
+        type: ownerModel.type,
+        username: ownerModel.username,
+        nickname: ownerModel.nickname,
+        avatar: ownerModel.avatar,
+        bio: ownerModel.bio,
+        role: ownerModel.role,
+        catchphrase: ownerModel.catchphrase,
+        createdAt: ownerModel.createdAt.toISOString(),
+        updatedAt: ownerModel.updatedAt.toISOString(),
+      }
+    : null;
+
+  const bot: ActorProfile | null = botModel
+    ? {
+        id: botModel.id,
+        type: botModel.type,
+        username: botModel.username,
+        nickname: botModel.nickname,
+        avatar: botModel.avatar,
+        bio: botModel.bio,
+        role: botModel.role,
+        catchphrase: botModel.catchphrase,
+        createdAt: botModel.createdAt.toISOString(),
+        updatedAt: botModel.updatedAt.toISOString(),
+      }
+    : null;
+
+  const mappedSessions = sessions.map((s) => ({
+    id: s.id,
+    type: s.type,
+    title: s.title || "",
+    participantIds: s.participants.map((p) => p.userId),
+    isArchived: s.isArchived,
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+  }));
+
+  const mappedMessages: ChatMessageRecord[] = messages.map((m) => ({
+    id: m.id,
+    sessionId: m.sessionId,
+    role: m.role as MessageRole,
+    parts: (m.parts as MessagePart[]) ?? [],
+    status: m.status as MessageStatus,
+    createdAt: m.createdAt.toISOString(),
+  }));
+
+  return {
+    isInitialized: config?.isInitialized ?? false,
+    owner,
+    bot,
+    sessions: mappedSessions,
+    messages: mappedMessages,
+    activeSessionId: sessions[0]?.id ?? null,
+  };
 }
 
 export async function getPaginatedFeedPosts(page: number = 1, limit: number = 15) {

@@ -70,27 +70,19 @@
 <script setup lang="ts">
 import { useInfiniteScroll } from "@vueuse/core";
 import { useElementSize } from "@vueuse/core";
-import type { ActorProfile, PublicStateResponse } from "~~/shared/types/clawme";
+import type { ActorProfile, FeedPostRecord } from "~~/shared/types/clawme";
 
-const bootstrap = useState<PublicStateResponse | null>("bootstrap-state");
-
-if (!bootstrap.value) {
-  bootstrap.value = await $fetch("/api/system/bootstrap");
-}
-
-const owner = computed(() => bootstrap.value?.state.owner ?? null);
-const bot = computed(() => bootstrap.value?.state.bot ?? null);
-
-const page = ref(1);
+const page = ref(0);
 const limit = 15;
 const feedPosts = ref<FeedPostRecord[]>([]);
-
-if (bootstrap.value?.state.feedPosts) {
-  feedPosts.value = [...bootstrap.value.state.feedPosts];
-}
-
-const hasMore = ref(feedPosts.value.length >= limit);
+const actors = ref<ActorProfile[]>([]);
+const hasMore = ref(true);
 const isLoading = ref(false);
+
+// actorsById 用于 FeedPostCard
+const actorsById = computed<Record<string, ActorProfile>>(() => {
+  return Object.fromEntries(actors.value.map((a) => [a.id, a]));
+});
 
 // 瀑布流布局计算
 const gap = 16;
@@ -117,7 +109,12 @@ const loadMore = async () => {
       query: { page: page.value, limit },
     })) as any;
 
-    const newPosts = response.posts || [];
+    const newPosts = response.list || [];
+
+    // 第一页时保存 actors 信息
+    if (response.actors) {
+      actors.value = response.actors;
+    }
 
     // De-duplicate elements
     const existingIds = new Set(feedPosts.value.map((p) => p.id));
@@ -126,7 +123,7 @@ const loadMore = async () => {
     );
 
     feedPosts.value.push(...uniqueNewPosts);
-    hasMore.value = response.hasMore;
+    hasMore.value = newPosts.length >= limit;
   } catch (err) {
     console.error("Failed to load more posts", err);
     page.value--; // revert
@@ -135,8 +132,11 @@ const loadMore = async () => {
   }
 };
 
-// 使用 useInfiniteScroll 实现无限滚动
+// 初始加载第一页
 onMounted(() => {
+  loadMore();
+
+  // 使用 useInfiniteScroll 实现无限滚动
   useInfiniteScroll(
     scrollArea.value?.$el,
     () => {
@@ -149,13 +149,5 @@ onMounted(() => {
       },
     },
   );
-});
-
-const actorsById = computed<Record<string, ActorProfile>>(() => {
-  const entries = [owner.value, bot.value]
-    .filter(Boolean)
-    .map((actor) => [actor!.id, actor!] as const);
-
-  return Object.fromEntries(entries);
 });
 </script>

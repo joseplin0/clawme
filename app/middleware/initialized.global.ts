@@ -1,25 +1,23 @@
-import type { PublicStateResponse } from "~~/shared/types/clawme";
-
 export default defineNuxtRouteMiddleware(async (to) => {
   // Use nuxt-auth-utils session
   const { loggedIn } = useUserSession();
 
-  // Fetch system bootstrap state for initialization check
-  const bootstrap = useState<PublicStateResponse | null>(
-    "bootstrap-state",
+  // Fetch minimal system status for initialization check
+  const status = useState<{ isInitialized: boolean } | null>(
+    "system-status",
     () => null,
   );
 
-  let bootstrapValue = bootstrap.value;
+  let statusValue = status.value;
 
-  if (!bootstrapValue) {
-    bootstrapValue = await $fetch<PublicStateResponse>("/api/system/bootstrap");
-    bootstrap.value = bootstrapValue;
+  if (!statusValue) {
+    statusValue = await $fetch<{ isInitialized: boolean }>("/api/system/status");
+    status.value = statusValue;
   }
 
-  if (!bootstrapValue) return;
+  if (!statusValue) return;
 
-  const isInitialized = bootstrapValue.state.system.isInitialized;
+  const isInitialized = statusValue.isInitialized;
   const isOwnerAuthenticated = loggedIn.value;
 
   if (!isInitialized && to.path !== "/setup") {

@@ -154,7 +154,6 @@ import type {
   ChatMessageRecord,
 } from "~~/shared/types/clawme";
 
-const bootstrap = useState<PublicStateResponse | null>("bootstrap-state");
 const toast = useToast();
 
 const props = defineProps<{
@@ -166,7 +165,7 @@ const emit = defineEmits<{
 }>();
 
 const { data: sessionData, refresh: refreshSessionData } =
-  await useFetch<ChatSessionResponse>("/api/chat/session");
+  useFetch<ChatSessionResponse>("/api/chat/session", { lazy: true });
 
 const activeSessionId = ref<string | null>(props.activeSessionId);
 

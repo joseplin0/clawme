@@ -1,6 +1,5 @@
 import { createError, getHeader } from "h3";
 import { and, eq } from "drizzle-orm";
-import { readStoredState } from "~~/server/utils/app-state";
 import { db, schema } from "~~/server/utils/db";
 import type { H3Event } from "h3";
 
@@ -92,6 +91,7 @@ export async function isOwnerAuthenticated(event: H3Event): Promise<boolean> {
 
 /**
  * Require owner session - throws 401 if not authenticated
+ * Only validates authentication, does not fetch state data
  */
 export async function requireOwnerSession(event: H3Event) {
   // Check Bearer token first for API access
@@ -116,12 +116,7 @@ export async function requireOwnerSession(event: H3Event) {
       });
     }
 
-    const state = await readStoredState();
-    return {
-      state,
-      owner: state.owner,
-      bot: state.bot,
-    };
+    return;
   }
 
   // Check session-based authentication
@@ -158,13 +153,6 @@ export async function requireOwnerSession(event: H3Event) {
       statusMessage: "Owner session is required.",
     });
   }
-
-  const state = await readStoredState();
-  return {
-    state,
-    owner: state.owner,
-    bot: state.bot,
-  };
 }
 
 /**

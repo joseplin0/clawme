@@ -1,18 +1,18 @@
-import { getActiveSessionId } from "~~/server/utils/app-state";
+import { getChatSessionData } from "~~/server/utils/app-state";
 import { requireOwnerSession } from "~~/server/utils/auth";
 
 export default defineEventHandler(async (event) => {
-  const { state } = await requireOwnerSession(event);
+  await requireOwnerSession(event);
+
+  const data = await getChatSessionData();
 
   return {
     state: {
-      system: state.system,
-      owner: state.owner,
-      bot: state.bot,
-      providers: state.providers,
-      sessions: state.sessions,
-      messages: state.messages,
+      owner: data.owner,
+      bot: data.bot,
+      sessions: data.sessions,
+      messages: data.messages,
     },
-    activeSessionId: getActiveSessionId(state),
+    activeSessionId: data.activeSessionId,
   };
 });

@@ -195,19 +195,35 @@
 <script setup lang="ts">
 import type { PublicStateResponse } from "~~/shared/types/clawme";
 
-const bootstrap = useState<PublicStateResponse | null>("bootstrap-state");
+const { data: bootstrap } = useFetch<PublicStateResponse>(
+  "/api/system/bootstrap",
+  {
+    lazy: true,
+  },
+);
 const toast = useToast();
 const loggingOut = ref(false);
 
 // Use nuxt-auth-utils session
 const { loggedIn, clear: clearSession } = useUserSession();
 
-if (!bootstrap.value) {
-  bootstrap.value = await $fetch("/api/system/bootstrap");
-}
+const defaultState: PublicStateResponse["state"] = {
+  system: { isInitialized: false, createdAt: "", updatedAt: "" },
+  owner: null,
+  bot: null,
+  providers: [],
+  sessions: [],
+  messages: [],
+  feedPosts: [],
+};
 
-const state = computed(() => bootstrap.value!.state);
-const viewer = computed(() => bootstrap.value!.viewer);
+const defaultViewer: PublicStateResponse["viewer"] = {
+  isOwnerAuthenticated: false,
+  hasBotSecret: false,
+};
+
+const state = computed(() => bootstrap.value?.state ?? defaultState);
+const viewer = computed(() => bootstrap.value?.viewer ?? defaultViewer);
 const provider = computed(() => state.value.providers[0] ?? null);
 
 async function handleLogout() {

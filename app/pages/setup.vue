@@ -109,6 +109,16 @@
                   />
                 </UFormField>
 
+                <UFormField name="apiKey" label="API Key" required>
+                  <UInput
+                    v-model="form.apiKey"
+                    class="w-full"
+                    type="password"
+                    placeholder="sk-..."
+                    required
+                  />
+                </UFormField>
+
                 <UFormField name="modelId" label="Model ID" required>
                   <UInput
                     v-model="form.modelId"
@@ -217,16 +227,16 @@ const stepIndex = computed(() =>
 const isLastStep = computed(() => stepIndex.value === stepItems.length - 1);
 
 const form = reactive<BootstrapRequest>({
-  ownerNickname: "林",
-  ownerUsername: "lin",
+  ownerNickname: "",
+  ownerUsername: "",
   ownerPassword: "",
-  assistantNickname: "虾米",
-  assistantRole: "本地助理",
-  assistantBio:
-    "你是 Clawme 的默认本地助理，擅长把复杂想法拆成可执行任务，并优先稳住系统底座与协作流。",
-  providerName: "oMLX",
-  providerBaseUrl: "http://localhost:8000/v1",
-  modelId: "qwen3-4b-instruct",
+  assistantNickname: "",
+  assistantRole: "",
+  assistantBio: "",
+  providerName: "",
+  providerBaseUrl: "",
+  apiKey: "",
+  modelId: "",
 });
 
 function nextStep() {

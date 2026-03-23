@@ -15,38 +15,23 @@ function clean(value: string | undefined, fallback = "") {
 }
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody<Partial<BootstrapRequest>>(event);
+  const body = await readBody<BootstrapRequest>(event);
 
-  const payload: BootstrapRequest = {
-    ownerNickname: clean(body.ownerNickname, "管理员"),
-    ownerUsername: clean(body.ownerUsername, "owner").toLowerCase(),
-    ownerPassword: clean(body.ownerPassword),
-    assistantNickname: clean(body.assistantNickname, "虾米"),
-    assistantRole: clean(body.assistantRole, "本地助理"),
-    assistantBio: clean(
-      body.assistantBio,
-      "你是 Clawme 的默认本地助理，负责把系统底座与协作链路稳稳搭好。",
-    ),
-    providerName: clean(body.providerName, "oMLX"),
-    providerBaseUrl: clean(body.providerBaseUrl, "http://localhost:8000/v1"),
-    modelId: clean(body.modelId, "qwen3.5-8b-instruct"),
-  };
-
-  if (!/^[a-z0-9_-]{3,24}$/.test(payload.ownerUsername)) {
+  if (!/^[a-z0-9_-]{3,24}$/.test(body.ownerUsername)) {
     throw createError({
       statusCode: 400,
       statusMessage: "ownerUsername must be 3-24 chars of a-z, 0-9, _ or -.",
     });
   }
 
-  if (payload.ownerPassword.length < 6) {
+  if (body.ownerPassword.length < 6) {
     throw createError({
       statusCode: 400,
       statusMessage: "ownerPassword must be at least 6 characters.",
     });
   }
 
-  const state = await initializeSystem(payload);
+  const state = await initializeSystem(body);
 
   if (!state.ownerAuthToken) {
     throw createError({

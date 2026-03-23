@@ -126,11 +126,19 @@ export interface BootstrapRequest {
   assistantBio: string;
   providerName: string;
   providerBaseUrl: string;
+  apiKey: string;
   modelId: string;
 }
 
+export interface ChatSessionState {
+  owner: ActorProfile | null;
+  bot: ActorProfile | null;
+  sessions: ChatSessionRecord[];
+  messages: ChatMessageRecord[];
+}
+
 export interface ChatSessionResponse {
-  state: ClawmeAppState;
+  state: ChatSessionState;
   activeSessionId: string | null;
 }
 
