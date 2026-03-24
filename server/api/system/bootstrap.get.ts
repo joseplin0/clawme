@@ -1,5 +1,5 @@
 import { isOwnerAuthenticated } from "~~/server/utils/auth";
-import { readStoredState, toPublicStateResponse } from "~~/server/utils/app-state";
+import { readStoredState, toPublicStateResponse } from "~~/server/services";
 
 export default defineEventHandler(async (event) => {
   const state = await readStoredState();

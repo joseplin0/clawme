@@ -1,4 +1,4 @@
-import { getPaginatedFeedPosts, getFeedInitData } from "~~/server/utils/app-state";
+import { getPaginatedFeedPosts, getFeedInitData } from "~~/server/services";
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);

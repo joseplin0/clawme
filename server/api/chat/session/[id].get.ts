@@ -7,7 +7,7 @@ import { eq, asc } from "drizzle-orm";
 const { chatSessions, chatMessages } = schema;
 
 const paramsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 
 export default defineEventHandler(async (event) => {
@@ -19,6 +19,7 @@ export default defineEventHandler(async (event) => {
   const session = await db.query.chatSessions.findFirst({
     where: eq(chatSessions.id, id),
     with: {
+      participants: true,
       messages: {
         orderBy: [asc(chatMessages.createdAt)],
       },
@@ -38,11 +39,15 @@ export default defineEventHandler(async (event) => {
     type: session.type,
     createdAt: session.createdAt.toISOString(),
     updatedAt: session.updatedAt.toISOString(),
+    participants: session.participants,
     messages: session.messages.map((m) => ({
       id: m.id,
-      role: m.role.toLowerCase(),
+      role: m.role.toLowerCase() as "user" | "assistant",
       parts: m.parts,
-      createdAt: m.createdAt.toISOString(),
+      metadata: {
+        userId: m.userId,
+        createdAt: m.createdAt.getTime(),
+      },
     })),
   };
 });

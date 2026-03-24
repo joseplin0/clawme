@@ -1,8 +1,16 @@
+import type { UIMessage } from "ai";
+
 export type UserType = "HUMAN" | "BOT";
 export type SessionType = "DIRECT" | "GROUP";
 export type MessageRole = "USER" | "ASSISTANT" | "SYSTEM";
 export type MessageStatus = "GENERATING" | "DONE" | "ERROR";
 export type FeedAttachmentKind = "DOCUMENT" | "IMAGE" | "LINK";
+
+// AI SDK message metadata
+export interface MessageMetadata {
+  createdAt: number;
+  userId: string;
+}
 
 // AI SDK compatible message part types
 export type TextPart = { type: "text"; text: string };
@@ -59,6 +67,7 @@ export interface ChatSessionRecord {
   title: string;
   participantIds: string[];
   isArchived: boolean;
+  lastMessage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -66,6 +75,7 @@ export interface ChatSessionRecord {
 export interface ChatMessageRecord {
   id: string;
   sessionId: string;
+  userId: string;
   role: MessageRole;
   parts: MessagePart[];
   status: MessageStatus;
@@ -134,7 +144,6 @@ export interface ChatSessionState {
   owner: ActorProfile | null;
   bot: ActorProfile | null;
   sessions: ChatSessionRecord[];
-  messages: ChatMessageRecord[];
 }
 
 export interface ChatSessionResponse {
@@ -142,15 +151,15 @@ export interface ChatSessionResponse {
   activeSessionId: string | null;
 }
 
+// AI SDK compatible message types
+
+export type ClawmeUIMessage = UIMessage<MessageMetadata>;
+
 export interface ChatSessionDetailResponse {
   id: string;
   title: string;
-  messages: Array<{
-    id: string;
-    role: "user" | "assistant";
-    parts: unknown[];
-    createdAt: string;
-  }>;
+  participants: ActorProfile[];
+  messages: ClawmeUIMessage[];
 }
 
 export interface ChatStreamRequest {

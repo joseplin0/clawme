@@ -50,15 +50,26 @@
       <div v-if="chat" class="flex-1 overflow-y-auto px-4 py-5 md:px-6">
         <div class="mx-auto max-w-3xl space-y-4">
           <UChatMessages
-            :messages="chat.messages"
             :status="chat.status"
             should-auto-scroll
             :spacing-offset="80"
-            :assistant="assistantMessageProps"
-            :user="userMessageProps"
             class="space-y-4"
           >
-            <template #content="{ message }">
+            <UChatMessage
+              v-for="message in chat.messages"
+              :key="message.id"
+              :id="message.id"
+              :role="message.role"
+              :parts="message.parts"
+            >
+              <template #avatar>
+                <UAvatar
+                  v-bind="
+                    getMessageUserProps(message.metadata?.userId ?? '').avatar
+                  "
+                  size="sm"
+                />
+              </template>
               <div class="space-y-2">
                 <template
                   v-for="(part, index) in message.parts"
@@ -99,7 +110,7 @@
                   </template>
                 </template>
               </div>
-            </template>
+            </UChatMessage>
           </UChatMessages>
         </div>
       </div>
@@ -147,27 +158,26 @@
 import { ref, computed, watch, onMounted } from "vue";
 import { Chat } from "@ai-sdk/vue";
 import { DefaultChatTransport } from "ai";
-import type { UIMessage, UIMessagePart, UIDataTypes, UITools } from "ai";
-import ChatList from "~/components/chat/ChatList.vue";
+import type { UIMessagePart, UIDataTypes, UITools } from "ai";
 import type {
   ChatSessionRecord,
-  ChatMessageRecord,
+  ChatSessionDetailResponse,
+  ClawmeUIMessage,
 } from "~~/shared/types/clawme";
+
+// Typed UIMessage with custom metadata
 
 const toast = useToast();
 
 const props = defineProps<{
   activeSessionId: string | null;
+  sessions: ChatSessionRecord[];
 }>();
-
-const emit = defineEmits<{
-  "update:activeSessionId": [value: string | null];
-}>();
-
-const { data: sessionData, refresh: refreshSessionData } =
-  useFetch<ChatSessionResponse>("/api/chat/session", { lazy: true });
 
 const activeSessionId = ref<string | null>(props.activeSessionId);
+
+// Use global actors cache
+const { getActor, fetchActors } = useActors();
 
 watch(
   () => props.activeSessionId,
@@ -177,26 +187,10 @@ watch(
   { immediate: true },
 );
 
-// Load messages when session changes
-watch(
-  activeSessionId,
-  async (id) => {
-    if (id) {
-      await loadSessionMessages();
-    }
-  },
-  { immediate: true },
-);
-
-const state = computed(() => sessionData.value?.state);
-const sessions = computed(() => state.value?.sessions ?? []);
-const owner = computed(() => state.value?.owner);
-const assistant = computed(() => state.value?.bot);
-
 const inputMessage = ref("");
 
 // Initialize Chat instance
-const chat = ref<Chat<UIMessage> | null>(null);
+const chat = ref<Chat<ClawmeUIMessage> | null>(null);
 
 onMounted(async () => {
   if (activeSessionId.value) {
@@ -216,28 +210,34 @@ async function initializeChat() {
   if (!activeSessionId.value) return;
 
   try {
-    const response = await $fetch<{
-      id: string;
-      title: string;
-      messages: {
-        id: string;
-        role: string;
-        parts: unknown[];
-        createdAt: string;
-      }[];
-    }>(`/api/chat/session/${activeSessionId.value}`);
+    const response = await $fetch<ChatSessionDetailResponse>(
+      `/api/chat/session/${activeSessionId.value}`,
+    );
 
-    const messages: UIMessage[] = response.messages.map((m) => ({
-      id: m.id,
-      role: m.role as "user" | "assistant",
-      parts: m.parts as UIMessagePart<UIDataTypes, UITools>[],
-    }));
+    // Collect all userIds and fetch them
+    const userIds = response.messages
+      .map((m) => m.metadata?.userId)
+      .filter((id): id is string => Boolean(id));
+    await fetchActors(userIds);
+
+    // Get receiverId from participants (not current user)
+    const receiverId = response.participants.find(
+      (p) => p.id !== currentUser.value?.id,
+    )?.id;
+
+    if (!receiverId) {
+      throw new Error("Receiver not found in participants");
+    }
+
+    // Cast parts to UIMessagePart array for AI SDK compatibility
+    const messages = response.messages as ClawmeUIMessage[];
 
     chat.value = new Chat({
       id: activeSessionId.value,
       messages,
       transport: new DefaultChatTransport({
         api: `/api/chat/session/${activeSessionId.value}`,
+        body: { receiverId },
       }),
       onError(error) {
         toast.add({
@@ -259,35 +259,6 @@ async function initializeChat() {
   }
 }
 
-async function loadSessionMessages() {
-  if (!activeSessionId.value) return;
-
-  try {
-    const response = await $fetch<{
-      id: string;
-      title: string;
-      messages: {
-        id: string;
-        role: string;
-        parts: unknown[];
-        createdAt: string;
-      }[];
-    }>(`/api/chat/session/${activeSessionId.value}`);
-
-    const messages: UIMessage[] = response.messages.map((m) => ({
-      id: m.id,
-      role: m.role as "user" | "assistant",
-      parts: m.parts as UIMessagePart<UIDataTypes, UITools>[],
-    }));
-
-    if (chat.value) {
-      chat.value.messages = messages;
-    }
-  } catch (error) {
-    console.error("Failed to load messages:", error);
-  }
-}
-
 function handleSubmit() {
   if (!inputMessage.value.trim() || !chat.value) return;
 
@@ -296,29 +267,35 @@ function handleSubmit() {
 }
 
 const selectedSession = computed(
-  () => sessions.value.find((s) => s.id === activeSessionId.value) ?? null,
+  () => props.sessions.find((s) => s.id === activeSessionId.value) ?? null,
 );
 
-const ownerName = computed(() => owner.value?.nickname ?? "用户");
-const assistantName = computed(() => assistant.value?.nickname ?? "虾米");
+// Fetch participants when session changes
+watch(selectedSession, async (session) => {
+  if (session?.participantIds.length) {
+    await fetchActors(session.participantIds);
+  }
+});
 
-const userMessageProps = computed(() => ({
-  side: "right" as const,
-  variant: "soft" as const,
-  avatar: {
-    src: owner.value?.avatar ?? undefined,
-    alt: ownerName.value,
-    icon: owner.value?.avatar ? undefined : "i-lucide-user-round",
-  },
-}));
+// Get actor info by id
+function getActorById(actorId: string) {
+  return getActor(actorId);
+}
 
-const assistantMessageProps = computed(() => ({
-  side: "left" as const,
-  variant: "naked" as const,
-  avatar: {
-    src: assistant.value?.avatar ?? undefined,
-    alt: assistantName.value,
-    icon: assistant.value?.avatar ? undefined : "i-lucide-shell",
-  },
-}));
+// Get current user session
+const { user: currentUser } = useUserSession();
+
+// Get message props based on userId
+function getMessageUserProps(userId: string) {
+  const user = getActorById(userId);
+  const isCurrentUser = currentUser.value?.id === userId;
+  return {
+    side: isCurrentUser ? "right" : "left",
+    variant: isCurrentUser ? "soft" : "naked",
+    avatar: {
+      src: user?.avatar ?? undefined,
+      alt: user?.nickname ?? (isCurrentUser ? "用户" : "助手"),
+    },
+  };
+}
 </script>

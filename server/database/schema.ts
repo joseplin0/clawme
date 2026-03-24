@@ -182,6 +182,7 @@ export const sessionParticipants = pgTable("SessionParticipant", {
 export const chatMessages = pgTable("ChatMessage", {
   id: uuid("id").primaryKey().defaultRandom(),
   sessionId: uuid("sessionId").notNull(),
+  userId: uuid("userId").notNull(),
   role: messageRoleEnum("role").default("USER").notNull(),
   parts: json("parts").notNull().$type<unknown[]>(),
   status: messageStatusEnum("status").default("DONE").notNull(),

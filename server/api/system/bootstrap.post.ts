@@ -4,7 +4,7 @@ import { setOwnerSession, type OwnerSessionUser } from "~~/server/utils/auth";
 import {
   initializeSystem,
   toPublicStateResponse,
-} from "~~/server/utils/app-state";
+} from "~~/server/services";
 import { db, schema } from "~~/server/utils/db";
 import { and, eq } from "drizzle-orm";
 
