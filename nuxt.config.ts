@@ -9,6 +9,14 @@ export default defineNuxtConfig({
   fonts: {
     provider: "local",
   },
+  icon: {
+    customCollections: [
+      {
+        prefix: "cm",
+        dir: "./app/assets/icons",
+      },
+    ],
+  },
   mdc: {
     headings: {
       anchorLinks: false, // Disable anchor links in AI responses

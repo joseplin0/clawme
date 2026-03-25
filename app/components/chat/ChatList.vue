@@ -1,8 +1,7 @@
 <template>
-  <aside
+  <div
     :class="[
-      'absolute z-10 flex h-full w-full shrink-0 flex-col md:relative md:w-80',
-      modelValue ? '-translate-x-full md:translate-x-0' : 'translate-x-0',
+      'absolute z-10 flex shrink-0 flex-col md:relative md:w-80 bg-white dark:bg-[#111111])',
     ]"
   >
     <div class="flex h-16 items-center px-3">
@@ -31,12 +30,13 @@
         estimateSize: 72,
         skipMeasurement: true,
       }"
-      class="flex-1 w-full"
+      class="flex-1 w-full p-1"
     >
       <UUser
         :avatar="{ src: 'https://i.pravatar.cc/150?u=john-doe' }"
         size="xl"
-        class="p-3"
+        class="p-3 rounded"
+        :class="{ 'bg-gray-100': item.id === modelValue }"
         :description="item.lastMessage"
         :ui="{
           wrapper: 'flex-1 min-w-0',
@@ -55,7 +55,7 @@
         </template>
       </UUser>
     </UScrollArea>
-  </aside>
+  </div>
 </template>
 
 <script setup lang="ts">

@@ -16,7 +16,7 @@
         v-for="link in navLinks"
         :key="link.to"
         :to="link.to"
-        :icon="link.icon"
+        :icon="route.path === link.to ? link.activeIcon : link.icon"
         variant="ghost"
         color="neutral"
         size="xl"
@@ -37,9 +37,24 @@
 const route = useRoute();
 
 const navLinks = [
-  { label: "首页", to: "/feed", icon: "i-lucide-home" },
-  { label: "探索", to: "/explore", icon: "i-lucide-compass" },
-  { label: "消息", to: "/chat", icon: "i-lucide-message-circle", badge: true },
-  { label: "我的", to: "/settings", icon: "i-lucide-user" },
+  {
+    label: "首页",
+    to: "/feed",
+    icon: "cm-waterfalls-h",
+    activeIcon: "cm-waterfalls-h-fill",
+  },
+  {
+    label: "消息",
+    to: "/chat",
+    icon: "ph-chat-circle-bold",
+    activeIcon: "ph-chat-circle-fill",
+    badge: true,
+  },
+  {
+    label: "我的",
+    to: "/settings",
+    icon: "ph-user-bold",
+    activeIcon: "ph-user-fill",
+  },
 ];
 </script>

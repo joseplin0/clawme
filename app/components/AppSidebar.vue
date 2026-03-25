@@ -3,54 +3,80 @@
     class="hidden md:flex"
     collapsible="icon"
     :open="false"
+    :style="{
+      '--sidebar-width-icon': '3.5rem',
+      '--sidebar-width-collapsed': '3.5rem',
+    }"
     :ui="{
-      container: 'h-full border-none bg-zinc-50 dark:bg-zinc-950',
+      container: 'h-full bg-surface',
       inner: 'divide-transparent',
+      header: 'p-2.5',
+      body: 'p-2 flex-1 overflow-hidden',
+      footer: 'p-3',
     }"
   >
     <template #header>
       <UButton
         to="/feed"
-        label="F"
+        label="C"
         variant="ghost"
-        class="text-orange-600 dark:text-orange-500 font-black text-xl tracking-tighter cursor-pointer"
+        class="text-primary font-black text-xl tracking-tighter cursor-pointer"
       />
     </template>
 
-    <template #default="{ state }">
-      <UNavigationMenu
-        :key="state"
-        :items="menuItems"
-        tooltip
-        variant="link"
-        orientation="vertical"
-        :ui="{ link: 'p-2 px-1.5 overflow-hidden', linkLeadingIcon: 'size-5' }"
-      />
+    <template #default>
+      <UScrollArea class="flex-1" orientation="vertical">
+        <div class="flex flex-col gap-3">
+          <component
+            :is="link.to ? NuxtLink : 'div'"
+            v-for="(link, index) in links"
+            :key="link.to || index"
+            :to="link.to"
+            :prefetch="true"
+            :class="[
+              'rounded-lg hover:bg-gray-50 dark:hover:bg-gray-300 size-10 flex items-center justify-center cursor-pointer transition-all duration-200 hover:text-primary',
+              {
+                'text-primary': route.path === link.to,
+              },
+            ]"
+            :title="link.label"
+            @click="link.onClick?.($event)"
+          >
+            <UChip color="error" size="xs" :show="!!link.badge">
+              <UIcon
+                :name="
+                  route.path === link.to
+                    ? link.activeIcon || link.icon
+                    : link.icon
+                "
+                class="text-xl"
+              />
+            </UChip>
+          </component>
+        </div>
+      </UScrollArea>
     </template>
 
     <template #footer>
-      <UButton
-        color="neutral"
-        variant="ghost"
-        class="rounded-full p-0 overflow-hidden transition-all cursor-pointer"
-      >
-        <UAvatar size="md" />
-      </UButton>
+      <UAvatar size="md" />
     </template>
   </USidebar>
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{
-  links: Array<{ label: string; to: string; icon: string; badge?: boolean }>;
+interface MenuItem {
+  label: string;
+  to?: string;
+  icon: string;
+  activeIcon?: string;
+  badge?: boolean | string | number;
+  onClick?: (e: MouseEvent) => void;
+}
+
+defineProps<{
+  links: MenuItem[];
 }>();
 
-const menuItems = computed(() => {
-  return props.links.map((link) => ({
-    label: link.label,
-    to: link.to,
-    icon: link.icon,
-    badge: link.badge ? " " : undefined,
-  }));
-});
+const route = useRoute();
+const NuxtLink = resolveComponent("NuxtLink");
 </script>

@@ -12,26 +12,24 @@
  */
 
 @theme static {
+  /* --color-primary: var(--color-violet-500); */
+  /* --color-primary: var(--color-Purple-500); */
+  /* --color-primary: #fa7070; */
+  --color-primary: #ff5a5f;
+  /* --color-primary: var(--color-teal-600); */
+  /* --color-primary: var(--color-sky-500); */
+  --color-error: #ff2323;
+  --color-success: #67c23a;
+  --color-warning: #ffbf11;
+  --color-danger: #ff4545;
+
   /* 字体配置 */
   --font-sans: "Public Sans", sans-serif;
-
-  /* Clawme 品牌色调色板 */
-  --color-clawme-50: #fff5f2;
-  --color-clawme-100: #ffe6de;
-  --color-clawme-200: #ffcbbd;
-  --color-clawme-300: #ffab92;
-  --color-clawme-400: #f98363;
-  --color-clawme-500: #e05d44;
-  --color-clawme-600: #c9462d;
-  /* Primary - 火焰橙红 */
-  --color-clawme-700: #a83724;
-  --color-clawme-800: #873021;
-  --color-clawme-900: #6d2b20;
-  --color-clawme-950: #3b120c;
 
   /* Surface 背景色 */
   --color-surface-50: #fbf8ff;
   --color-surface-950: #12131a;
+  --color-surface: #f2f2f2;
 }
 
 /* ================================
@@ -40,16 +38,13 @@
 :root {
   color-scheme: light;
 
-  /* Primary - 柔和橙红 */
-  --ui-primary: var(--color-primary-600);
-
   /* Background layers */
   --ui-bg: var(--color-surface-50);
   --ui-bg-muted: var(--ui-color-neutral-50);
   --ui-bg-elevated: white;
   --ui-bg-accented: var(--ui-color-neutral-200);
   --ui-bg-inverted: var(--ui-color-neutral-900);
-  --ui-bg-surface: var(--color-surface-50);
+  --ui-bg-surface: var(--color-surface);
   /* Error */
   --ui-error: var(--color-error);
 
@@ -63,8 +58,6 @@
    ================================ */
 .dark {
   color-scheme: dark;
-  /* Primary - 柔和橙红 */
-  --ui-primary: var(--color-primary-500);
 
   /* Background layers */
   --ui-bg: var(--color-surface-950);
@@ -72,7 +65,8 @@
   --ui-bg-elevated: var(--ui-color-neutral-900);
   --ui-bg-accented: var(--ui-color-neutral-700);
   --ui-bg-inverted: white;
-  --ui-bg-surface: var(--color-surface-950);
+  --color-surface: #121212;
+  --ui-bg-surface: var(--color-surface);
 }
 
 body {

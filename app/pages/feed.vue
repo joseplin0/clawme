@@ -4,7 +4,7 @@
 
     <UHeader
       title="ClawMe"
-      class="sticky top-0 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-xl z-30 border-none"
+      class="sticky top-0 bg-surface backdrop-blur-xl z-30 border-none"
     >
       <!-- <div class="flex-1 max-w-2xl hidden sm:block">
         <UInput
@@ -38,7 +38,7 @@
           estimateSize,
           skipMeasurement: true,
         }"
-        class="w-full h-[calc(100vh-200px)] p-4"
+        class="w-full h-[calc(100vh-200px)] p-4 bg-surface"
       >
         <FeedPostCard
           :post="item"

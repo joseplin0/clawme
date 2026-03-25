@@ -60,6 +60,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@iconify-json/ph':
+        specifier: ^1.2.2
+        version: 1.2.2
       '@types/node':
         specifier: ^25.5.0
         version: 25.5.0
@@ -760,6 +763,9 @@ packages:
 
   '@iconify-json/lucide@1.2.97':
     resolution: {integrity: sha512-Za6N/B2Nz1Lbr43f7+FOy6ZbxWACJanqZcrA3Gk1QE7ubQ/YCT1iKPLe5iJQImd60BBPPUvIwD5LmJkVeGHAxg==}
+
+  '@iconify-json/ph@1.2.2':
+    resolution: {integrity: sha512-PgkEZNtqa8hBGjHXQa4pMwZa93hmfu8FUSjs/nv4oUU6yLsgv+gh9nu28Kqi8Fz9CCVu4hj1MZs9/60J57IzFw==}
 
   '@iconify/collections@1.0.660':
     resolution: {integrity: sha512-7SG+ZacgqAhZdjSv4+eyFtJ+amI2PzIrg6NrZ2T5qdRpWOBv0Px1SB0C+4CsGxHenhhWjGMfSHG1vzkPgF0PyA==}
@@ -6082,6 +6088,10 @@ snapshots:
       - vue
 
   '@iconify-json/lucide@1.2.97':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/ph@1.2.2':
     dependencies:
       '@iconify/types': 2.0.0
 

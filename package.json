@@ -32,6 +32,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@iconify-json/ph": "^1.2.2",
     "@types/node": "^25.5.0",
     "@vueuse/core": "^14.2.1",
     "drizzle-kit": "^0.31.10",
