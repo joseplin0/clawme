@@ -22,4 +22,9 @@ export default defineNuxtConfig({
       anchorLinks: false, // Disable anchor links in AI responses
     },
   },
+  nitro: {
+    experimental: {
+      websocket: true,
+    },
+  },
 });

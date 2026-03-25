@@ -144,7 +144,7 @@
                 class="shrink-0"
                 :disabled="!inputMessage.trim()"
                 @stop="chat.stop()"
-                @reload="chat.regenerate()"
+                @reload="handleReload"
               />
             </template>
           </UChatPrompt>
@@ -155,10 +155,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { Chat } from "@ai-sdk/vue";
-import { DefaultChatTransport } from "ai";
-import type { UIMessagePart, UIDataTypes, UITools } from "ai";
 import type {
   ChatSessionRecord,
   ChatSessionDetailResponse,
@@ -178,6 +176,7 @@ const activeSessionId = ref<string | null>(props.activeSessionId);
 
 // Use global actors cache
 const { getActor, fetchActors } = useActors();
+const { transport, onIncomingMessage } = useGlobalChatClient();
 
 watch(
   () => props.activeSessionId,
@@ -199,12 +198,44 @@ onMounted(async () => {
 });
 
 watch(activeSessionId, async (id) => {
+  await stopActiveChat();
+
   if (id) {
     await initializeChat();
   } else {
     chat.value = null;
   }
 });
+
+const unsubscribeIncomingMessage = onIncomingMessage(async (chatId, message) => {
+  if (!chat.value || chat.value.id !== chatId) {
+    return;
+  }
+
+  const senderId = message.metadata?.userId;
+  if (senderId) {
+    await fetchActors([senderId]);
+  }
+
+  if (chat.value.messages.some((existingMessage) => existingMessage.id === message.id)) {
+    return;
+  }
+
+  chat.value.messages = [...chat.value.messages, message as ClawmeUIMessage];
+});
+
+onUnmounted(() => {
+  void stopActiveChat();
+  unsubscribeIncomingMessage();
+});
+
+async function stopActiveChat() {
+  if (!chat.value) {
+    return;
+  }
+
+  await chat.value.stop();
+}
 
 async function initializeChat() {
   if (!activeSessionId.value) return;
@@ -219,26 +250,12 @@ async function initializeChat() {
       .map((m) => m.metadata?.userId)
       .filter((id): id is string => Boolean(id));
     await fetchActors(userIds);
-
-    // Get receiverId from participants (not current user)
-    const receiverId = response.participants.find(
-      (p) => p.id !== currentUser.value?.id,
-    )?.id;
-
-    if (!receiverId) {
-      throw new Error("Receiver not found in participants");
-    }
-
-    // Cast parts to UIMessagePart array for AI SDK compatibility
     const messages = response.messages as ClawmeUIMessage[];
 
     chat.value = new Chat({
       id: activeSessionId.value,
       messages,
-      transport: new DefaultChatTransport({
-        api: `/api/chat/session/${activeSessionId.value}`,
-        body: { receiverId },
-      }),
+      transport,
       onError(error) {
         toast.add({
           title: "聊天出错",
@@ -260,10 +277,25 @@ async function initializeChat() {
 }
 
 function handleSubmit() {
-  if (!inputMessage.value.trim() || !chat.value) return;
+  if (!inputMessage.value.trim() || !chat.value || !currentUser.value?.id) return;
 
-  chat.value?.sendMessage({ text: inputMessage.value });
+  chat.value.sendMessage({
+    text: inputMessage.value,
+    metadata: {
+      userId: currentUser.value.id,
+      createdAt: Date.now(),
+    },
+  });
   inputMessage.value = "";
+}
+
+function handleReload() {
+  toast.add({
+    title: "暂不支持",
+    description: "当前 WebSocket 聊天暂不支持重新生成",
+    color: "warning",
+    icon: "i-lucide-rotate-ccw",
+  });
 }
 
 const selectedSession = computed(

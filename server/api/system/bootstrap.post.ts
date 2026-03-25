@@ -10,10 +10,6 @@ import { and, eq } from "drizzle-orm";
 
 const { users } = schema;
 
-function clean(value: string | undefined, fallback = "") {
-  return value?.trim() || fallback;
-}
-
 export default defineEventHandler(async (event) => {
   const body = await readBody<BootstrapRequest>(event);
 
@@ -31,9 +27,9 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const state = await initializeSystem(body);
+  const result = await initializeSystem(body);
 
-  if (!state.ownerAuthToken) {
+  if (!result.state.ownerAuthToken) {
     throw createError({
       statusCode: 500,
       statusMessage: "Failed to create the owner session token.",
@@ -69,5 +65,9 @@ export default defineEventHandler(async (event) => {
 
   await setOwnerSession(event, sessionUser, owner.apiSecret);
 
-  return toPublicStateResponse(state, true);
+  // 返回 PublicStateResponse，同时包含 sessionId
+  return {
+    ...toPublicStateResponse(result.state, true),
+    sessionId: result.sessionId,
+  };
 });

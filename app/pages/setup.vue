@@ -180,7 +180,7 @@
 <script setup lang="ts">
 import type {
   BootstrapRequest,
-  PublicStateResponse,
+  BootstrapResponse,
 } from "~~/shared/types/clawme";
 
 definePageMeta({

@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { generateText } from "ai";
 import type {
   ActorProfile,
   BootstrapRequest,
@@ -12,6 +13,7 @@ import type {
   PublicStateResponse,
 } from "~~/shared/types/clawme";
 import { db, schema } from "~~/server/utils/db";
+import { createModelFromProvider } from "~~/server/utils/llm";
 
 const {
   systemConfig,
@@ -180,7 +182,8 @@ export async function initializeSystem(input: BootstrapRequest) {
   const ownerPasswordHash = await hashPassword(input.ownerPassword);
   const botApiSecret = randomBytes(24).toString("hex");
 
-  await db.transaction(async (tx) => {
+  // Step 1: 在事务中创建基础数据
+  const { sessionId, botId, provider } = await db.transaction(async (tx) => {
     // 0. Clean slate
     await tx.delete(postAttachments);
     await tx.delete(comments);
@@ -231,13 +234,16 @@ export async function initializeSystem(input: BootstrapRequest) {
     }
 
     // 3. Provider
-    await tx.insert(llmProviders).values({
-      name: input.providerName,
-      provider: "OPENAI_COMPATIBLE",
-      baseUrl: input.providerBaseUrl,
-      apiKey: input.apiKey,
-      modelId: input.modelId,
-    });
+    const [provider] = await tx
+      .insert(llmProviders)
+      .values({
+        name: input.providerName,
+        provider: "OPENAI_COMPATIBLE",
+        baseUrl: input.providerBaseUrl,
+        apiKey: input.apiKey,
+        modelId: input.modelId,
+      })
+      .returning();
 
     // 4. Chat Session
     const [session] = await tx
@@ -248,8 +254,8 @@ export async function initializeSystem(input: BootstrapRequest) {
       })
       .returning();
 
-    if (!session) {
-      throw new Error("Failed to create session");
+    if (!session || !provider) {
+      throw new Error("Failed to create session or provider");
     }
 
     await tx.insert(sessionParticipants).values([
@@ -257,16 +263,11 @@ export async function initializeSystem(input: BootstrapRequest) {
       { sessionId: session.id, userId: bot.id, role: "MEMBER" },
     ]);
 
-    // 5. Welcome Message
+    // 5. 用户消息 "你好"
     await tx.insert(chatMessages).values({
       sessionId: session.id,
-      role: "ASSISTANT",
-      parts: [
-        {
-          type: "text",
-          text: "系统已经点亮。我们先从 Phase 1 的底座开始，把引导、对话链路和数据边界稳稳立住。",
-        },
-      ],
+      role: "USER",
+      parts: [{ type: "text", text: "你好" }],
       status: "DONE",
     });
 
@@ -332,7 +333,44 @@ export async function initializeSystem(input: BootstrapRequest) {
         order: 0,
       });
     }
+
+    return {
+      sessionId: session.id,
+      botId: bot.id,
+      provider,
+    };
   });
+
+  // Step 2: 在事务外部调用 LLM 生成响应
+  try {
+    const model = createModelFromProvider(provider);
+    const { text } = await generateText({
+      model,
+      messages: [{ role: "user", content: "你好" }],
+    });
+
+    // Step 3: 存储 AI 响应
+    await db.insert(chatMessages).values({
+      sessionId,
+      role: "ASSISTANT",
+      parts: [{ type: "text", text }],
+      status: "DONE",
+    });
+  } catch (error) {
+    console.error("Failed to generate AI response:", error);
+    // 如果 LLM 调用失败，存储一个默认响应
+    await db.insert(chatMessages).values({
+      sessionId,
+      role: "ASSISTANT",
+      parts: [
+        {
+          type: "text",
+          text: "系统已经点亮。我们先从 Phase 1 的底座开始，把引导、对话链路和数据边界稳稳立住。",
+        },
+      ],
+      status: "DONE",
+    });
+  }
 
   return await readStoredState();
 }

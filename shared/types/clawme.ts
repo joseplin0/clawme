@@ -127,6 +127,10 @@ export interface PublicStateResponse {
   };
 }
 
+export interface BootstrapResponse extends PublicStateResponse {
+  sessionId?: string;
+}
+
 export interface BootstrapRequest {
   ownerNickname: string;
   ownerUsername: string;
