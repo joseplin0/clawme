@@ -1,8 +1,14 @@
 import { streamText, type ModelMessage, type UIMessage, type UIMessageChunk } from "ai";
 import { eq } from "drizzle-orm";
+import type {
+  ChatWsClientMessage,
+  ChatWsConnectionAuth,
+  ChatWsServerMessage,
+} from "~~/shared/types/chat-ws";
+import { toUIMessageRole } from "~~/shared/types/clawme";
 import { getOwnerSession } from "~~/server/utils/auth";
 import { db, schema } from "~~/server/utils/db";
-import { createModelFromProvider } from "~~/server/utils/llm";
+import { createModelFromProvider, resolveUserLlmProvider } from "~~/server/utils/llm";
 
 const { users, chatSessions, sessionParticipants, chatMessages } = schema;
 
@@ -10,31 +16,8 @@ type UserWithProvider = typeof users.$inferSelect & {
   llmProvider: typeof schema.llmProviders.$inferSelect | null;
 };
 
-interface WSMessage {
-  type: "send" | "typing" | "read";
-  requestId?: string;
-  sessionId?: string;
-  targetUserId?: string;
-  content?: string;
-  messageId?: string;
-}
-
-interface WSResponse {
-  type: "stream-chunk" | "message" | "typing" | "error";
-  requestId?: string;
-  chatId?: string;
-  chunk?: UIMessageChunk;
-  message?: UIMessage;
-  sessionId?: string;
-  userId?: string;
-  code?: string;
-  text?: string;
-}
-
-interface WSConnectionAuth {
-  userId: string;
-  username: string;
-}
+type WSMessage = ChatWsClientMessage;
+type WSResponse = ChatWsServerMessage;
 
 export default defineWebSocketHandler({
   async upgrade(request: any) {
@@ -50,7 +33,7 @@ export default defineWebSocketHandler({
     request.context.auth = {
       userId: session.user.id,
       username: session.user.username,
-    } satisfies WSConnectionAuth;
+    } satisfies ChatWsConnectionAuth;
   },
 
   async open(peer: any) {
@@ -142,14 +125,14 @@ export default defineWebSocketHandler({
   },
 });
 
-function getPeerConnectionAuth(peer: any): WSConnectionAuth | null {
+function getPeerConnectionAuth(peer: any): ChatWsConnectionAuth | null {
   const auth = peer.context?.auth;
 
   if (!auth || typeof auth !== "object") {
     return null;
   }
 
-  const { userId, username } = auth as Partial<WSConnectionAuth>;
+  const { userId, username } = auth as Partial<ChatWsConnectionAuth>;
   if (!userId || !username) {
     return null;
   }
@@ -201,6 +184,22 @@ function sendFinishedStream(
   sendStreamChunk(peer, chatId, requestId, { type: "finish" });
 }
 
+function sendSessionAck(
+  peer: any,
+  chatId: string,
+  requestId: string,
+  sessionId: string,
+) {
+  peer.send(
+    JSON.stringify({
+      type: "ack",
+      requestId,
+      chatId,
+      sessionId,
+    } satisfies WSResponse),
+  );
+}
+
 function extractTextContent(parts: unknown[]): string {
   return parts
     .flatMap((part) => {
@@ -234,16 +233,16 @@ function buildModelMessages(
     }
 
     if (message.role === "SYSTEM") {
-      modelMessages.push({ role: "system", content: text });
+      modelMessages.push({ role: toUIMessageRole(message.role), content: text });
       continue;
     }
 
     if (message.role === "ASSISTANT") {
-      modelMessages.push({ role: "assistant", content: text });
+      modelMessages.push({ role: toUIMessageRole(message.role), content: text });
       continue;
     }
 
-    modelMessages.push({ role: "user", content: text });
+    modelMessages.push({ role: toUIMessageRole(message.role), content: text });
   }
 
   return modelMessages;
@@ -405,7 +404,7 @@ async function handleMessageSend(
 
   const uiMessage: UIMessage = {
     id: userMessage.id,
-    role: "user",
+    role: toUIMessageRole(userMessage.role),
     parts: [{ type: "text", text: content }],
     metadata: {
       createdAt: userMessage.createdAt.getTime(),
@@ -413,15 +412,9 @@ async function handleMessageSend(
     },
   };
 
-  peer.send(
-    JSON.stringify({
-      type: "message",
-      requestId,
-      chatId: activeSessionId,
-      message: uiMessage,
-      sessionId: createdSessionId,
-    } satisfies WSResponse),
-  );
+  if (requestId && createdSessionId) {
+    sendSessionAck(peer, activeSessionId, requestId, createdSessionId);
+  }
 
   if (!targetUser) {
     sendWsError(peer, "TARGET_NOT_FOUND", "未找到会话目标", {
@@ -455,7 +448,9 @@ async function streamAIResponse(
   assistantUser: UserWithProvider,
   requestId?: string,
 ) {
-  if (!assistantUser.llmProvider) {
+  const provider = await resolveUserLlmProvider(assistantUser);
+
+  if (!provider) {
     sendWsError(peer, "NO_LLM_PROVIDER", "AI 助理未配置 LLM 提供商", {
       chatId: sessionId,
       requestId,
@@ -473,7 +468,7 @@ async function streamAIResponse(
       userId: assistantUser.id,
       createdAt: Date.now(),
     };
-    const model = createModelFromProvider(assistantUser.llmProvider);
+    const model = createModelFromProvider(provider);
     const result = streamText({
       model,
       system: `你是 ${assistantUser.nickname || "虾米"}，一个有帮助的 AI 助手。请简洁友好地回复。`,

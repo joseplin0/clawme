@@ -1,25 +1,8 @@
 import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
-
-interface ClientWSMessage {
-  type: "send" | "typing" | "read";
-  requestId?: string;
-  sessionId?: string;
-  targetUserId?: string;
-  content?: string;
-  messageId?: string;
-}
-
-interface ServerWSMessage {
-  type: "stream-chunk" | "message" | "typing" | "error";
-  requestId?: string;
-  chatId?: string;
-  chunk?: UIMessageChunk;
-  message?: UIMessage;
-  sessionId?: string;
-  userId?: string;
-  code?: string;
-  text?: string;
-}
+import type {
+  ChatWsClientMessage,
+  ChatWsServerMessage,
+} from "~~/shared/types/chat-ws";
 
 export interface WebSocketChatTransportOptions {
   url: string;
@@ -278,11 +261,17 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
     try {
       const rawData =
         typeof event.data === "string" ? event.data : String(event.data);
-      const data: ServerWSMessage = JSON.parse(rawData);
+      const data: ChatWsServerMessage = JSON.parse(rawData);
       const { type, requestId, chatId, chunk, message, sessionId, userId, code, text } =
         data;
 
       switch (type) {
+        case "ack":
+          if (requestId && sessionId) {
+            this.resolvePendingSessionRequest(requestId, sessionId);
+          }
+          break;
+
         case "stream-chunk":
           if (requestId && chunk) {
             this.handleStreamChunk(requestId, chunk);
@@ -290,12 +279,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
           break;
 
         case "message":
-          if (requestId && sessionId) {
-            this.resolvePendingSessionRequest(requestId, sessionId);
-          }
-
-          // 带 requestId 的 message 是发送确认，不应再次当作“收到新消息”广播给当前客户端。
-          if (!requestId && chatId && message) {
+          if (chatId && message) {
             this.handleIncomingMessage(chatId, message, sessionId);
           }
           break;
@@ -399,7 +383,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
       },
     });
 
-    const payload: ClientWSMessage = {
+    const payload: ChatWsClientMessage = {
       type: "send",
       requestId,
       sessionId: chatId,
@@ -456,7 +440,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
       },
     });
 
-    const payload: ClientWSMessage = {
+    const payload: ChatWsClientMessage = {
       type: "send",
       requestId,
       targetUserId,
@@ -481,7 +465,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
 
   async sendTyping(sessionId: string): Promise<void> {
     const ws = await this.connect();
-    ws.send(JSON.stringify({ type: "typing", sessionId } satisfies ClientWSMessage));
+    ws.send(JSON.stringify({ type: "typing", sessionId } satisfies ChatWsClientMessage));
   }
 
   async sendRead(sessionId: string, messageId: string): Promise<void> {
@@ -491,7 +475,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
         type: "read",
         sessionId,
         messageId,
-      } satisfies ClientWSMessage),
+      } satisfies ChatWsClientMessage),
     );
   }
 

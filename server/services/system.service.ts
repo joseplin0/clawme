@@ -118,6 +118,7 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
   const mappedMessages: ChatMessageRecord[] = messages.map((m) => ({
     id: m.id,
     sessionId: m.sessionId,
+    userId: m.userId,
     role: m.role as MessageRole,
     parts: (m.parts as MessagePart[]) ?? [],
     status: m.status as MessageStatus,
@@ -258,6 +259,13 @@ export async function initializeSystem(input: BootstrapRequest) {
       throw new Error("Failed to create session or provider");
     }
 
+    await tx
+      .update(users)
+      .set({
+        llmProviderId: provider.id,
+      })
+      .where(eq(users.id, bot.id));
+
     await tx.insert(sessionParticipants).values([
       { sessionId: session.id, userId: owner.id, role: "OWNER" },
       { sessionId: session.id, userId: bot.id, role: "MEMBER" },
@@ -266,6 +274,7 @@ export async function initializeSystem(input: BootstrapRequest) {
     // 5. 用户消息 "你好"
     await tx.insert(chatMessages).values({
       sessionId: session.id,
+      userId: owner.id,
       role: "USER",
       parts: [{ type: "text", text: "你好" }],
       status: "DONE",
@@ -352,6 +361,7 @@ export async function initializeSystem(input: BootstrapRequest) {
     // Step 3: 存储 AI 响应
     await db.insert(chatMessages).values({
       sessionId,
+      userId: botId,
       role: "ASSISTANT",
       parts: [{ type: "text", text }],
       status: "DONE",
@@ -361,6 +371,7 @@ export async function initializeSystem(input: BootstrapRequest) {
     // 如果 LLM 调用失败，存储一个默认响应
     await db.insert(chatMessages).values({
       sessionId,
+      userId: botId,
       role: "ASSISTANT",
       parts: [
         {

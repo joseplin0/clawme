@@ -7,9 +7,10 @@ import {
 } from "ai";
 import { createError, defineEventHandler, getRouterParam, readBody } from "h3";
 import { z } from "zod";
+import { toDbMessageRole } from "~~/shared/types/clawme";
 import { getOwnerSession } from "~~/server/utils/auth";
 import { db, schema } from "~~/server/utils/db";
-import { createModelFromProvider } from "~~/server/utils/llm";
+import { createModelFromProvider, resolveUserLlmProvider } from "~~/server/utils/llm";
 import { eq } from "drizzle-orm";
 
 const { users, chatSessions, chatMessages } = schema;
@@ -56,14 +57,22 @@ export default defineEventHandler(async (event) => {
     with: { llmProvider: true },
   });
 
-  if (!receiver?.llmProvider) {
+  if (!receiver) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Receiver not found",
+    });
+  }
+
+  const provider = await resolveUserLlmProvider(receiver);
+  if (!provider) {
     throw createError({
       statusCode: 400,
       statusMessage: "Receiver or LLM provider not found",
     });
   }
 
-  const model = createModelFromProvider(receiver.llmProvider);
+  const model = createModelFromProvider(provider);
 
   // Save user message if it's a follow-up
   const lastMessage = messages[messages.length - 1];
@@ -94,7 +103,7 @@ export default defineEventHandler(async (event) => {
         await db.insert(chatMessages).values({
           sessionId,
           userId: receiver.id,
-          role: message.role === "assistant" ? "ASSISTANT" : "USER",
+          role: toDbMessageRole(message.role),
           parts: message.parts,
           status: "DONE",
         });

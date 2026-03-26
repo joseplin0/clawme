@@ -2,9 +2,43 @@ import type { UIMessage } from "ai";
 
 export type UserType = "HUMAN" | "BOT";
 export type SessionType = "DIRECT" | "GROUP";
-export type MessageRole = "USER" | "ASSISTANT" | "SYSTEM";
+export type DbMessageRole = "USER" | "ASSISTANT" | "SYSTEM";
+export type UIMessageRole = "user" | "assistant" | "system";
+export type MessageRole = DbMessageRole;
 export type MessageStatus = "GENERATING" | "DONE" | "ERROR";
 export type FeedAttachmentKind = "DOCUMENT" | "IMAGE" | "LINK";
+
+const DB_TO_UI_MESSAGE_ROLE_MAP: Record<DbMessageRole, UIMessageRole> = {
+  USER: "user",
+  ASSISTANT: "assistant",
+  SYSTEM: "system",
+};
+
+const UI_TO_DB_MESSAGE_ROLE_MAP: Record<UIMessageRole, DbMessageRole> = {
+  user: "USER",
+  assistant: "ASSISTANT",
+  system: "SYSTEM",
+};
+
+export function toUIMessageRole(
+  role: DbMessageRole | UIMessageRole,
+): UIMessageRole {
+  if (role in UI_TO_DB_MESSAGE_ROLE_MAP) {
+    return role as UIMessageRole;
+  }
+
+  return DB_TO_UI_MESSAGE_ROLE_MAP[role as DbMessageRole];
+}
+
+export function toDbMessageRole(
+  role: DbMessageRole | UIMessageRole,
+): DbMessageRole {
+  if (role in DB_TO_UI_MESSAGE_ROLE_MAP) {
+    return role as DbMessageRole;
+  }
+
+  return UI_TO_DB_MESSAGE_ROLE_MAP[role as UIMessageRole];
+}
 
 // AI SDK message metadata
 export interface MessageMetadata {

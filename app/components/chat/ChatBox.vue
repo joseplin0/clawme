@@ -47,69 +47,64 @@
         </div>
       </header>
 
-      <div v-if="chat" class="flex-1 overflow-y-auto px-4 py-5 md:px-6">
+      <div class="flex-1 overflow-y-auto px-4 py-5 md:px-6">
         <div class="mx-auto max-w-3xl space-y-4">
           <UChatMessages
-            :status="chat.status"
+            :messages="chatMessages"
+            :status="chatStatus"
             should-auto-scroll
             :spacing-offset="80"
             class="space-y-4"
           >
             <UChatMessage
-              v-for="message in chat.messages"
+              v-for="message in chatMessages"
               :key="message.id"
               :id="message.id"
               :role="message.role"
               :parts="message.parts"
+              v-bind="getMessageDisplayProps(message)"
             >
-              <template #avatar>
-                <UAvatar
-                  v-bind="
-                    getMessageUserProps(message.metadata?.userId ?? '').avatar
-                  "
-                  size="sm"
-                />
-              </template>
-              <div class="space-y-2">
-                <template
-                  v-for="(part, index) in message.parts"
-                  :key="`${message.id}-${part.type}-${index}`"
-                >
-                  <UChatReasoning
-                    v-if="part.type === 'reasoning'"
-                    :text="part.text"
-                    :streaming="
-                      chat.status === 'streaming' &&
-                      message.id === chat.messages[chat.messages.length - 1]?.id
-                    "
+              <template #content>
+                <div class="space-y-2">
+                  <template
+                    v-for="(part, index) in message.parts"
+                    :key="`${message.id}-${part.type}-${index}`"
                   >
-                    <MDC
+                    <UChatReasoning
                       v-if="part.type === 'reasoning'"
-                      :value="part.text"
-                      :cache-key="`reasoning-${message.id}-${index}`"
-                      class="*:first:mt-0 *:last:mb-0 whitespace-pre-wrap text-sm"
-                    />
-                  </UChatReasoning>
-
-                  <template v-else-if="part.type === 'text'">
-                    <MDC
-                      v-if="part.text"
-                      :value="part.text"
-                      :cache-key="message.id"
-                      class="*:first:mt-0 *:last:mb-0 whitespace-pre-wrap text-sm leading-7"
-                    />
-                    <UChatShimmer
-                      v-if="
-                        chat.status === 'streaming' &&
-                        message.id ===
-                          chat.messages[chat.messages.length - 1]?.id &&
-                        !part.text
+                      :text="part.text"
+                      :streaming="
+                        chatStatus === 'streaming' &&
+                        message.id === lastMessageId
                       "
-                      text=""
-                    />
+                    >
+                      <MDC
+                        v-if="part.type === 'reasoning'"
+                        :value="part.text"
+                        :cache-key="`reasoning-${message.id}-${index}`"
+                        class="*:first:mt-0 *:last:mb-0 whitespace-pre-wrap text-sm"
+                      />
+                    </UChatReasoning>
+
+                    <template v-else-if="part.type === 'text'">
+                      <MDC
+                        v-if="part.text"
+                        :value="part.text"
+                        :cache-key="message.id"
+                        class="*:first:mt-0 *:last:mb-0 whitespace-pre-wrap text-sm leading-7"
+                      />
+                      <UChatShimmer
+                        v-if="
+                          chatStatus === 'streaming' &&
+                          message.id === lastMessageId &&
+                          !part.text
+                        "
+                        text=""
+                      />
+                    </template>
                   </template>
-                </template>
-              </div>
+                </div>
+              </template>
             </UChatMessage>
           </UChatMessages>
         </div>
@@ -123,7 +118,7 @@
             :maxrows="6"
             autoresize
             variant="subtle"
-            :disabled="!activeSessionId || !chat"
+            :disabled="!isChatReady"
             :placeholder="
               activeSessionId
                 ? '告诉虾米接下来该先做什么...'
@@ -138,12 +133,11 @@
             <template #footer>
               <p class="text-xs text-muted">使用 AI SDK 流式接口，</p>
               <UChatPromptSubmit
-                v-if="chat"
-                :status="chat.status"
+                :status="chatStatus"
                 size="lg"
                 class="shrink-0"
-                :disabled="!inputMessage.trim()"
-                @stop="chat.stop()"
+                :disabled="!isChatReady || !inputMessage.trim()"
+                @stop="handleStop"
                 @reload="handleReload"
               />
             </template>
@@ -155,8 +149,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  onUnmounted,
+  shallowRef,
+  markRaw,
+} from "vue";
 import { Chat } from "@ai-sdk/vue";
+import type { ChatStatus } from "ai";
 import type {
   ChatSessionRecord,
   ChatSessionDetailResponse,
@@ -189,7 +192,17 @@ watch(
 const inputMessage = ref("");
 
 // Initialize Chat instance
-const chat = ref<Chat<ClawmeUIMessage> | null>(null);
+const chat = shallowRef<Chat<ClawmeUIMessage> | null>(null);
+const chatMessages = computed<ClawmeUIMessage[]>(
+  () => chat.value?.messages ?? [],
+);
+const chatStatus = computed<ChatStatus>(() => chat.value?.status ?? "ready");
+const lastMessageId = computed(
+  () => chatMessages.value[chatMessages.value.length - 1]?.id,
+);
+const isChatReady = computed(() =>
+  Boolean(activeSessionId.value && chat.value),
+);
 
 onMounted(async () => {
   if (activeSessionId.value) {
@@ -207,22 +220,28 @@ watch(activeSessionId, async (id) => {
   }
 });
 
-const unsubscribeIncomingMessage = onIncomingMessage(async (chatId, message) => {
-  if (!chat.value || chat.value.id !== chatId) {
-    return;
-  }
+const unsubscribeIncomingMessage = onIncomingMessage(
+  async (chatId, message) => {
+    if (!chat.value || chat.value.id !== chatId) {
+      return;
+    }
 
-  const senderId = message.metadata?.userId;
-  if (senderId) {
-    await fetchActors([senderId]);
-  }
+    const senderId = message.metadata?.userId;
+    if (senderId) {
+      await fetchActors([senderId]);
+    }
 
-  if (chat.value.messages.some((existingMessage) => existingMessage.id === message.id)) {
-    return;
-  }
+    if (
+      chat.value.messages.some(
+        (existingMessage) => existingMessage.id === message.id,
+      )
+    ) {
+      return;
+    }
 
-  chat.value.messages = [...chat.value.messages, message as ClawmeUIMessage];
-});
+    chat.value.messages = [...chat.value.messages, message as ClawmeUIMessage];
+  },
+);
 
 onUnmounted(() => {
   void stopActiveChat();
@@ -249,22 +268,25 @@ async function initializeChat() {
     const userIds = response.messages
       .map((m) => m.metadata?.userId)
       .filter((id): id is string => Boolean(id));
-    await fetchActors(userIds);
+    // await fetchActors(userIds);
     const messages = response.messages as ClawmeUIMessage[];
+    console.log("Fetched messages for session", messages);
 
-    chat.value = new Chat({
-      id: activeSessionId.value,
-      messages,
-      transport,
-      onError(error) {
-        toast.add({
-          title: "聊天出错",
-          description: error.message,
-          color: "error",
-          icon: "i-lucide-triangle-alert",
-        });
-      },
-    });
+    chat.value = markRaw(
+      new Chat({
+        id: activeSessionId.value,
+        messages,
+        transport,
+        onError(error) {
+          toast.add({
+            title: "聊天出错",
+            description: error.message,
+            color: "error",
+            icon: "i-lucide-triangle-alert",
+          });
+        },
+      }),
+    );
   } catch (error) {
     console.error("Failed to initialize chat:", error);
     toast.add({
@@ -277,7 +299,8 @@ async function initializeChat() {
 }
 
 function handleSubmit() {
-  if (!inputMessage.value.trim() || !chat.value || !currentUser.value?.id) return;
+  if (!inputMessage.value.trim() || !chat.value || !currentUser.value?.id)
+    return;
 
   chat.value.sendMessage({
     text: inputMessage.value,
@@ -296,6 +319,10 @@ function handleReload() {
     color: "warning",
     icon: "i-lucide-rotate-ccw",
   });
+}
+
+function handleStop() {
+  chat.value?.stop();
 }
 
 const selectedSession = computed(
@@ -322,12 +349,17 @@ function getMessageUserProps(userId: string) {
   const user = getActorById(userId);
   const isCurrentUser = currentUser.value?.id === userId;
   return {
-    side: isCurrentUser ? "right" : "left",
-    variant: isCurrentUser ? "soft" : "naked",
+    side: isCurrentUser ? ("right" as const) : ("left" as const),
+    variant: isCurrentUser ? ("soft" as const) : ("naked" as const),
     avatar: {
       src: user?.avatar ?? undefined,
       alt: user?.nickname ?? (isCurrentUser ? "用户" : "助手"),
+      size: "sm" as const,
     },
   };
+}
+
+function getMessageDisplayProps(message: ClawmeUIMessage) {
+  return getMessageUserProps(message.metadata?.userId ?? "");
 }
 </script>

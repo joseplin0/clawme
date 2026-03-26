@@ -1,5 +1,6 @@
 import { createError, defineEventHandler, getRouterParam } from "h3";
 import { z } from "zod";
+import { toUIMessageRole } from "~~/shared/types/clawme";
 import { requireOwnerSession } from "~~/server/utils/auth";
 import { db, schema } from "~~/server/utils/db";
 import { eq, asc } from "drizzle-orm";
@@ -42,7 +43,7 @@ export default defineEventHandler(async (event) => {
     participants: session.participants,
     messages: session.messages.map((m) => ({
       id: m.id,
-      role: m.role.toLowerCase() as "user" | "assistant",
+      role: toUIMessageRole(m.role),
       parts: m.parts,
       metadata: {
         userId: m.userId,

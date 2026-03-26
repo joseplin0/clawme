@@ -5,10 +5,6 @@ import {
   initializeSystem,
   toPublicStateResponse,
 } from "~~/server/services";
-import { db, schema } from "~~/server/utils/db";
-import { and, eq } from "drizzle-orm";
-
-const { users } = schema;
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<BootstrapRequest>(event);
@@ -29,45 +25,26 @@ export default defineEventHandler(async (event) => {
 
   const result = await initializeSystem(body);
 
-  if (!result.state.ownerAuthToken) {
+  if (!result.owner || !result.ownerAuthToken) {
     throw createError({
       statusCode: 500,
       statusMessage: "Failed to create the owner session token.",
     });
   }
 
-  // Get the owner from database for full user info
-  const owner = await db.query.users.findFirst({
-    where: and(eq(users.role, "OWNER"), eq(users.type, "HUMAN")),
-  });
-
-  if (!owner) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Owner not found in database after initialization.",
-    });
-  }
-
-  if (!owner.apiSecret) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Owner API secret not set.",
-    });
-  }
-
   // Set session using nuxt-auth-utils
   const sessionUser: OwnerSessionUser = {
-    id: owner.id,
-    username: owner.username,
-    nickname: owner.nickname,
-    role: owner.role || "OWNER",
+    id: result.owner.id,
+    username: result.owner.username,
+    nickname: result.owner.nickname,
+    role: result.owner.role || "OWNER",
   };
 
-  await setOwnerSession(event, sessionUser, owner.apiSecret);
+  await setOwnerSession(event, sessionUser, result.ownerAuthToken);
 
   // 返回 PublicStateResponse，同时包含 sessionId
   return {
-    ...toPublicStateResponse(result.state, true),
-    sessionId: result.sessionId,
+    ...toPublicStateResponse(result, true),
+    sessionId: result.sessions[0]?.id,
   };
 });

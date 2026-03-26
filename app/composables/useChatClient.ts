@@ -1,4 +1,5 @@
 import { useUserSession } from "#imports";
+import { toUIMessageRole } from "~~/shared/types/clawme";
 import {
   WebSocketChatTransport,
   type WebSocketConnectionState,
@@ -109,7 +110,11 @@ export function useChatClient() {
         trigger: "submit-message",
         chatId: sessionId,
         messageId: undefined,
-        messages: [{ id: crypto.randomUUID(), role: "user", parts: [{ type: "text", text: content }] }] as any,
+        messages: [{
+          id: crypto.randomUUID(),
+          role: toUIMessageRole("USER"),
+          parts: [{ type: "text", text: content }],
+        }] as any,
         abortSignal: undefined,
       });
 
