@@ -1,19 +1,19 @@
 import {
   convertToModelMessages,
-  createUIMessageStream,
   createUIMessageStreamResponse,
-  streamText,
   type UIMessage,
 } from "ai";
 import { createError, defineEventHandler, getRouterParam, readBody } from "h3";
 import { z } from "zod";
-import { toDbMessageRole } from "~~/shared/types/clawme";
+import type { MessagePart } from "~~/shared/types/clawme";
+import { createAssistantMessageStream } from "~~/server/ecosystem/core/AssistantInstant";
+import { createMessage } from "~~/server/services/chat.service";
 import { getOwnerSession } from "~~/server/utils/auth";
 import { db, schema } from "~~/server/utils/db";
-import { createModelFromProvider, resolveUserLlmProvider } from "~~/server/utils/llm";
+import { resolveUserLlmProvider } from "~~/server/utils/llm";
 import { eq } from "drizzle-orm";
 
-const { users, chatSessions, chatMessages } = schema;
+const { users, chatSessions } = schema;
 
 const paramsSchema = z.object({
   id: z.uuid(),
@@ -64,52 +64,38 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const provider = await resolveUserLlmProvider(receiver);
-  if (!provider) {
+  if (receiver.type !== "BOT") {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "HTTP streaming chat only supports bot receivers",
+    });
+  }
+
+  const hasProvider = await resolveUserLlmProvider(receiver);
+  if (!hasProvider) {
     throw createError({
       statusCode: 400,
       statusMessage: "Receiver or LLM provider not found",
     });
   }
 
-  const model = createModelFromProvider(provider);
+  const assistantReply = await createAssistantMessageStream({
+    sessionId,
+    assistantUser: receiver,
+    modelMessages: await convertToModelMessages(messages),
+  });
 
   // Save user message if it's a follow-up
   const lastMessage = messages[messages.length - 1];
   if (lastMessage?.role === "user" && messages.length > 1) {
-    await db.insert(chatMessages).values({
+    await createMessage({
       sessionId,
       userId,
       role: "USER",
-      parts: lastMessage.parts,
+      parts: lastMessage.parts as MessagePart[],
       status: "DONE",
     });
   }
 
-  // Create streaming response
-  const stream = createUIMessageStream({
-    execute: async ({ writer }) => {
-      const result = streamText({
-        model,
-        system: `你是 ${receiver.nickname ?? "虾米"}，一个有帮助的 AI 助手。请简洁友好地回复。`,
-        messages: await convertToModelMessages(messages),
-      });
-
-      writer.merge(result.toUIMessageStream());
-    },
-    onFinish: async ({ messages: responseMessages }) => {
-      // Save assistant's response to database
-      for (const message of responseMessages) {
-        await db.insert(chatMessages).values({
-          sessionId,
-          userId: receiver.id,
-          role: toDbMessageRole(message.role),
-          parts: message.parts,
-          status: "DONE",
-        });
-      }
-    },
-  });
-
-  return createUIMessageStreamResponse({ stream });
+  return createUIMessageStreamResponse({ stream: assistantReply.stream });
 });

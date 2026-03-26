@@ -1,20 +1,16 @@
-import { streamText, type ModelMessage, type UIMessage, type UIMessageChunk } from "ai";
-import { eq } from "drizzle-orm";
+import { type UIMessageChunk } from "ai";
 import type {
   ChatWsClientMessage,
   ChatWsConnectionAuth,
   ChatWsServerMessage,
 } from "~~/shared/types/chat-ws";
-import { toUIMessageRole } from "~~/shared/types/clawme";
+import {
+  ChatCommandError,
+  getSessionParticipantsForUser,
+  prepareDirectChatMessage,
+} from "~~/server/services/chat-command.service";
+import { createAssistantMessageStreamFromSession } from "~~/server/ecosystem/core/AssistantInstant";
 import { getOwnerSession } from "~~/server/utils/auth";
-import { db, schema } from "~~/server/utils/db";
-import { createModelFromProvider, resolveUserLlmProvider } from "~~/server/utils/llm";
-
-const { users, chatSessions, sessionParticipants, chatMessages } = schema;
-
-type UserWithProvider = typeof users.$inferSelect & {
-  llmProvider: typeof schema.llmProviders.$inferSelect | null;
-};
 
 type WSMessage = ChatWsClientMessage;
 type WSResponse = ChatWsServerMessage;
@@ -98,20 +94,21 @@ export default defineWebSocketHandler({
           await handleRead(peer, parsedData, senderId);
           break;
         default:
-          sendWsError(peer, "UNKNOWN_TYPE", `未知的消息类型: ${parsedData.type}`, {
-            requestId: parsedData.requestId,
-          });
+          sendWsError(
+            peer,
+            "UNKNOWN_TYPE",
+            `未知的消息类型: ${parsedData.type}`,
+            {
+              requestId: parsedData.requestId,
+            },
+          );
       }
     } catch (error) {
       console.error("[WS] Message handling error:", error);
-      sendWsError(
-        peer,
-        "MESSAGE_ERROR",
-        error instanceof Error ? error.message : "消息处理失败",
-        {
-          requestId: data?.requestId,
-        },
-      );
+      sendChatCommandError(peer, error, {
+        requestId: data?.requestId,
+        chatId: data?.sessionId,
+      });
     }
   },
 
@@ -160,6 +157,30 @@ function sendWsError(
   );
 }
 
+function sendChatCommandError(
+  peer: any,
+  error: unknown,
+  options: {
+    chatId?: string;
+    requestId?: string;
+  } = {},
+) {
+  if (error instanceof ChatCommandError) {
+    sendWsError(peer, error.code, error.message, {
+      chatId: error.chatId ?? options.chatId,
+      requestId: options.requestId,
+    });
+    return;
+  }
+
+  sendWsError(
+    peer,
+    "MESSAGE_ERROR",
+    error instanceof Error ? error.message : "消息处理失败",
+    options,
+  );
+}
+
 function sendStreamChunk(
   peer: any,
   chatId: string,
@@ -176,11 +197,7 @@ function sendStreamChunk(
   );
 }
 
-function sendFinishedStream(
-  peer: any,
-  chatId: string,
-  requestId?: string,
-) {
+function sendFinishedStream(peer: any, chatId: string, requestId?: string) {
   sendStreamChunk(peer, chatId, requestId, { type: "finish" });
 }
 
@@ -200,306 +217,60 @@ function sendSessionAck(
   );
 }
 
-function extractTextContent(parts: unknown[]): string {
-  return parts
-    .flatMap((part) => {
-      if (!part || typeof part !== "object") {
-        return [];
-      }
-
-      const candidate = part as { type?: string; text?: unknown };
-      if (candidate.type !== "text" || typeof candidate.text !== "string") {
-        return [];
-      }
-
-      const text = candidate.text.trim();
-      return text ? [text] : [];
-    })
-    .join("\n");
-}
-
-function buildModelMessages(
-  history: Array<typeof chatMessages.$inferSelect>,
-): ModelMessage[] {
-  const modelMessages: ModelMessage[] = [];
-
-  for (const message of history) {
-    const text = extractTextContent(
-      Array.isArray(message.parts) ? message.parts : [],
-    );
-
-    if (!text) {
-      continue;
-    }
-
-    if (message.role === "SYSTEM") {
-      modelMessages.push({ role: toUIMessageRole(message.role), content: text });
-      continue;
-    }
-
-    if (message.role === "ASSISTANT") {
-      modelMessages.push({ role: toUIMessageRole(message.role), content: text });
-      continue;
-    }
-
-    modelMessages.push({ role: toUIMessageRole(message.role), content: text });
-  }
-
-  return modelMessages;
-}
-
-async function getSessionParticipantsForUser(
-  sessionId: string,
-  userId: string,
-) {
-  const participants = await db.query.sessionParticipants.findMany({
-    where: eq(sessionParticipants.sessionId, sessionId),
-  });
-
-  const isParticipant = participants.some((participant) => participant.userId === userId);
-  if (!isParticipant) {
-    return null;
-  }
-
-  return participants;
-}
-
-async function handleMessageSend(
-  peer: any,
-  data: WSMessage,
-  senderId: string,
-) {
-  const sessionId = data.sessionId;
+async function handleMessageSend(peer: any, data: WSMessage, senderId: string) {
   const requestId = data.requestId;
-  const targetUserId = data.targetUserId;
-  const content = data.content?.trim();
-
-  if (!content) {
-    sendWsError(peer, "EMPTY_CONTENT", "消息内容不能为空", {
-      chatId: sessionId,
-      requestId,
-    });
-    return;
-  }
-
-  let activeSessionId: string | null = null;
-  let createdSessionId: string | undefined;
-  let targetUser: UserWithProvider | null = null;
-
-  if (sessionId) {
-    const session = await db.query.chatSessions.findFirst({
-      where: eq(chatSessions.id, sessionId),
-      with: {
-        participants: {
-          with: {
-            user: {
-              with: {
-                llmProvider: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!session) {
-      sendWsError(peer, "SESSION_NOT_FOUND", "会话不存在", {
-        chatId: sessionId,
-        requestId,
-      });
-      return;
-    }
-
-    const senderParticipant = session.participants.find(
-      (participant) => participant.userId === senderId,
-    );
-
-    if (!senderParticipant) {
-      sendWsError(peer, "FORBIDDEN", "无权访问该会话", {
-        chatId: sessionId,
-        requestId,
-      });
-      return;
-    }
-
-    activeSessionId = session.id;
-    targetUser =
-      session.participants.find((participant) => participant.userId !== senderId)?.user ?? null;
-  } else if (targetUserId) {
-    const [sender, target] = await Promise.all([
-      db.query.users.findFirst({
-        where: eq(users.id, senderId),
-      }),
-      db.query.users.findFirst({
-        where: eq(users.id, targetUserId),
-        with: {
-          llmProvider: true,
-        },
-      }),
-    ]);
-
-    if (!sender || !target) {
-      sendWsError(peer, "USER_NOT_FOUND", "用户不存在", {
-        requestId,
-      });
-      return;
-    }
-
-    const [newSession] = await db
-      .insert(chatSessions)
-      .values({
-        type: "DIRECT",
-        title: `${sender.nickname} x ${target.nickname}`,
-      })
-      .returning();
-
-    if (!newSession) {
-      sendWsError(peer, "SESSION_CREATE_FAILED", "会话创建失败", {
-        requestId,
-      });
-      return;
-    }
-
-    await db.insert(sessionParticipants).values([
-      { sessionId: newSession.id, userId: sender.id, role: "OWNER" },
-      { sessionId: newSession.id, userId: target.id, role: "MEMBER" },
-    ]);
-
-    activeSessionId = newSession.id;
-    createdSessionId = newSession.id;
-    targetUser = target;
-  } else {
-    sendWsError(peer, "MISSING_SESSION_OR_TARGET", "需要提供 sessionId 或 targetUserId", {
-      requestId,
-    });
-    return;
-  }
-
-  if (!activeSessionId) {
-    sendWsError(peer, "SESSION_RESOLVE_FAILED", "无法解析当前会话", {
-      chatId: sessionId,
-      requestId,
-    });
-    return;
-  }
-
-  const [userMessage] = await db
-    .insert(chatMessages)
-    .values({
-      sessionId: activeSessionId,
-      userId: senderId,
-      role: "USER",
-      parts: [{ type: "text", text: content }],
-      status: "DONE",
-    })
-    .returning();
-
-  if (!userMessage) {
-    sendWsError(peer, "MESSAGE_CREATE_FAILED", "消息保存失败", {
-      chatId: activeSessionId,
-      requestId,
-    });
-    return;
-  }
-
-  const uiMessage: UIMessage = {
-    id: userMessage.id,
-    role: toUIMessageRole(userMessage.role),
-    parts: [{ type: "text", text: content }],
-    metadata: {
-      createdAt: userMessage.createdAt.getTime(),
-      userId: senderId,
-    },
-  };
-
-  if (requestId && createdSessionId) {
-    sendSessionAck(peer, activeSessionId, requestId, createdSessionId);
-  }
-
-  if (!targetUser) {
-    sendWsError(peer, "TARGET_NOT_FOUND", "未找到会话目标", {
-      chatId: activeSessionId,
-      requestId,
-    });
-    return;
-  }
-
-  if (targetUser.type === "BOT") {
-    await streamAIResponse(peer, activeSessionId, targetUser, requestId);
-    return;
-  }
-
-  peer.publish(
-    `user:${targetUser.id}`,
-    JSON.stringify({
-      type: "message",
-      chatId: activeSessionId,
-      message: uiMessage,
-      sessionId: createdSessionId,
-    } satisfies WSResponse),
-  );
-
-  sendFinishedStream(peer, activeSessionId, requestId);
-}
-
-async function streamAIResponse(
-  peer: any,
-  sessionId: string,
-  assistantUser: UserWithProvider,
-  requestId?: string,
-) {
-  const provider = await resolveUserLlmProvider(assistantUser);
-
-  if (!provider) {
-    sendWsError(peer, "NO_LLM_PROVIDER", "AI 助理未配置 LLM 提供商", {
-      chatId: sessionId,
-      requestId,
-    });
-    return;
-  }
-
-  const history = await db.query.chatMessages.findMany({
-    where: eq(chatMessages.sessionId, sessionId),
-    orderBy: (messages, { asc }) => [asc(messages.createdAt)],
-  });
+  let chatId = data.sessionId;
 
   try {
-    const assistantMessageMetadata = {
-      userId: assistantUser.id,
-      createdAt: Date.now(),
-    };
-    const model = createModelFromProvider(provider);
-    const result = streamText({
-      model,
-      system: `你是 ${assistantUser.nickname || "虾米"}，一个有帮助的 AI 助手。请简洁友好地回复。`,
-      messages: buildModelMessages(history),
+    const prepared = await prepareDirectChatMessage({
+      senderId,
+      sessionId: data.sessionId,
+      targetUserId: data.targetUserId,
+      content: data.content ?? "",
     });
 
-    for await (const chunk of result.toUIMessageStream({
-      messageMetadata: () => assistantMessageMetadata,
-    })) {
-      sendStreamChunk(peer, sessionId, requestId, chunk);
+    chatId = prepared.activeSessionId;
+
+    if (requestId && prepared.createdSessionId) {
+      sendSessionAck(
+        peer,
+        prepared.activeSessionId,
+        requestId,
+        prepared.createdSessionId,
+      );
     }
 
-    const fullResponse = await result.text;
-    await db.insert(chatMessages).values({
-      sessionId,
-      userId: assistantUser.id,
-      role: "ASSISTANT",
-      parts: [{ type: "text", text: fullResponse }],
-      status: "DONE",
+    if (prepared.targetUser.type !== "BOT") {
+      peer.publish(
+        `user:${prepared.targetUser.id}`,
+        JSON.stringify({
+          type: "message",
+          chatId: prepared.activeSessionId,
+          message: prepared.uiMessage,
+          sessionId: prepared.createdSessionId,
+        } satisfies WSResponse),
+      );
+
+      sendFinishedStream(peer, prepared.activeSessionId, requestId);
+      return;
+    }
+
+    const assistantReply = await createAssistantMessageStreamFromSession({
+      sessionId: prepared.activeSessionId,
+      assistantUser: prepared.targetUser,
     });
+
+    for await (const chunk of assistantReply.stream) {
+      sendStreamChunk(peer, prepared.activeSessionId, requestId, chunk);
+    }
+
+    await assistantReply.completed;
   } catch (error) {
-    console.error("[WS] AI response error:", error);
-    sendWsError(
-      peer,
-      "AI_ERROR",
-      error instanceof Error ? error.message : "AI 响应失败",
-      {
-        chatId: sessionId,
-        requestId,
-      },
-    );
+    console.error("[WS] Send message error:", error);
+    sendChatCommandError(peer, error, {
+      chatId,
+      requestId,
+    });
   }
 }
 
@@ -550,5 +321,7 @@ async function handleRead(peer: any, data: WSMessage, senderId: string) {
     return;
   }
 
-  console.log(`[WS] User ${senderId} read message ${messageId} in session ${sessionId}`);
+  console.log(
+    `[WS] User ${senderId} read message ${messageId} in session ${sessionId}`,
+  );
 }

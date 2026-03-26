@@ -1,10 +1,10 @@
 <template>
   <div
     :class="[
-      'absolute z-10 flex shrink-0 flex-col md:relative md:w-80 bg-white dark:bg-[#111111])',
+      'absolute inset-y-0 left-0 z-10 flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden bg-white md:relative md:w-80 dark:bg-[#111111]',
     ]"
   >
-    <div class="flex h-16 items-center px-3">
+    <div class="flex h-16 shrink-0 items-center px-3">
       <div class="flex w-full items-center gap-2">
         <UInput
           v-model="searchQuery"
@@ -30,10 +30,9 @@
         estimateSize: 72,
         skipMeasurement: true,
       }"
-      class="flex-1 w-full p-1"
+      class="min-h-0 flex-1 w-full p-1"
     >
       <UUser
-        :avatar="{ src: 'https://i.pravatar.cc/150?u=john-doe' }"
         size="xl"
         class="p-3 rounded"
         :class="{ 'bg-gray-100': item.id === modelValue }"

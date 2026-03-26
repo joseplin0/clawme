@@ -1,10 +1,18 @@
 <template>
   <div
-    class="flex min-h-screen flex-col text-default antialiased md:flex-row shadow-sm"
+    :class="[
+      'flex flex-col text-default antialiased shadow-sm md:flex-row',
+      isChatRoute ? 'h-dvh overflow-hidden' : 'min-h-screen',
+    ]"
   >
     <AppSidebar :links="navLinks" />
 
-    <main class="relative flex-1 pb-16 md:pb-0">
+    <main
+      :class="[
+        'relative flex-1 pb-16 md:pb-0',
+        isChatRoute ? 'flex min-h-0 min-w-0 overflow-hidden' : '',
+      ]"
+    >
       <slot />
     </main>
 
@@ -35,6 +43,7 @@
 
 <script setup lang="ts">
 const route = useRoute();
+const isChatRoute = computed(() => route.path === "/chat");
 
 const navLinks = [
   {

@@ -67,6 +67,18 @@ class IntentionEngine {
 - `ecoBus.emit('event.created', { type: 'FEED_POST', vector })`：新帖发布，附带轻量级 Embedding 向量。
 - 队列保护：意愿引擎算分通过后，推入 `EcoActionQueue`，由专门的 Worker 排队唤醒 LLM 执行生成，防止显存打爆。
 
+## 当前代码落地边界
+
+当前仓库已经开始按这里的术语落地，但仍处于最小实现阶段：
+
+- 文档中的 `IntentionEngine pipelines` 仍然是目标形态，不是当前代码里的完整实现
+- 当前代码只保留了一个最小的 `DIRECT_CHAT` 意愿判断
+- 当前真正统一的扩展点在 `server/ecosystem/core/AssistantInstant.ts`，后续要接意愿打分时，只需要在触发大模型前拦截
+- 用户与自有 Bot 的直接会话默认立即执行
+- Agent 自主会话仍只保留 deferred 占位，后续再接 `EventBus + Queue + Worker`
+
+这意味着当前代码只是先把边界和扩展点放对，还没有把完整的 Evaluator 链、FSM 与异步队列正式落地。
+
 ---
 
 > **相关文档**：

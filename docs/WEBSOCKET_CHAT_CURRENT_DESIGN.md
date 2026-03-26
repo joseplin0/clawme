@@ -5,6 +5,8 @@
 - `app/composables/WebSocketChatTransport.ts`
 - `app/composables/useChatClient.ts`
 - `server/api/ws/chat.ts`
+- `server/services/chat-command.service.ts`
+- `server/ecosystem/core/AssistantInstant.ts`
 
 目标是把 AI SDK 5 的 `ChatTransport` 接口适配到 WebSocket 通道，并保证以下能力：
 
@@ -44,6 +46,12 @@ type ClientWSMessage =
 
 ```ts
 type ServerWSMessage =
+  | {
+      type: "ack";
+      requestId: string;
+      chatId: string;
+      sessionId: string;
+    }
   | {
       type: "message";
       requestId?: string;
@@ -88,8 +96,27 @@ type ServerWSMessage =
 
 服务端 `chat.ts` 维护两类上下文：
 
-- `peer.data.userId`: 当前连接用户身份
+- `peer.context.auth`: 当前连接用户身份
 - `user:${userId}` 频道订阅：用于单播消息或输入态广播
+
+## 统一消息生成入口
+
+当前实现把“是否触发大模型消息”收敛到服务端统一入口：
+
+- `chat-command.service.ts` 只负责准备会话、目标用户和用户消息
+- `AssistantInstant.ts` 统一负责创建 assistant 消息流与最终落库
+
+也就是说，HTTP 和 WS 虽然还是两个 adapter，但真正触发大模型的地方只剩一处：
+
+- `createAssistantMessageStream(...)`
+
+后续如果要加意愿打分、拦截器或观测逻辑，直接放在这里即可，不需要再去改 transport 层。
+
+当前仓库中的真实行为是：
+
+- `OWNER_INTERACTIVE -> BOT`：通过 `createAssistantMessageStream(...)` / `createAssistantMessageStreamFromSession(...)` 立即输出
+- `OWNER_INTERACTIVE -> HUMAN`：直接单播转发
+- 更完整的 `IntentionEngine pipelines` 仍保留在 `CYBER_ECOSYSTEM.md`，还没有完整落地到代码
 
 ## 总流程图
 
@@ -110,10 +137,10 @@ flowchart TD
     I --> K[写入用户消息]
     J --> K
 
-    K --> L[返回 message ACK]
+    K --> L[必要时返回 ack]
     L --> M{目标是否为 BOT?}
 
-    M -- 是 --> N[按会话历史构造模型消息]
+    M -- 是 --> N[createAssistantMessageStream / createAssistantMessageStreamFromSession]
     N --> O[streamText 生成 UIMessageChunk]
     O --> P[逐块发送 stream-chunk with requestId]
     P --> Q[写入 assistant 消息]
@@ -147,7 +174,6 @@ sequenceDiagram
     DB-->>WS: session + participants
     WS->>DB: 插入 USER 消息
     DB-->>WS: userMessage
-    WS-->>T: {type:"message", requestId, chatId, message}
 
     WS->>DB: 读取会话历史
     DB-->>WS: history
@@ -185,7 +211,7 @@ sequenceDiagram
     WS->>DB: 插入 USER 消息
     DB-->>WS: sessionId + userMessage
 
-    WS-->>T: {type:"message", requestId, chatId, sessionId, message}
+    WS-->>T: {type:"ack", requestId, chatId, sessionId}
     T->>T: resolve pendingSessionRequests(requestId)
     T-->>UI: sessionId Promise resolved
 
@@ -218,10 +244,11 @@ sequenceDiagram
 
 ### 2. ACK 与广播分离
 
-客户端收到 `type: "message"` 时分两类处理：
+客户端收到服务端回包时分三类处理：
 
-- 带 `requestId`：说明是当前请求的 ACK，用于解析 `sessionId`
-- 不带 `requestId`：说明是频道广播，用于作为“来自其他用户的新消息”分发
+- `type: "ack"`：只用于解析新建会话返回的 `sessionId`
+- `type: "message"`：只作为频道广播，分发给聊天 UI
+- `type: "stream-chunk"`：只推进当前请求的流式输出
 
 这样可以避免当前用户发送后又把 ACK 当作外部广播重复渲染。
 
@@ -244,7 +271,7 @@ sequenceDiagram
 ### 1. 连接建立
 
 - 从会话中识别用户
-- 将 `userId` 写入 `peer.data`
+- 将鉴权信息写入 `peer.context.auth`
 - 订阅 `user:${userId}` 频道
 
 ### 2. send 消息
@@ -266,11 +293,10 @@ sequenceDiagram
 
 如果目标是 `BOT`：
 
-- 读取当前会话历史
-- 转换为 `ModelMessage[]`
-- 调用 `streamText`
-- 逐块发送 `UIMessageChunk`
-- 收尾时写入 assistant 消息
+- HTTP 路由使用 `createAssistantMessageStream(...)`
+- WebSocket 路由使用 `createAssistantMessageStreamFromSession(...)`
+- 两者最终都汇聚到同一个 assistant 消息生成入口
+- 收尾时统一落库 assistant 消息
 
 如果目标是普通用户：
 
@@ -297,3 +323,4 @@ sequenceDiagram
 - `reconnectToStream()` 仍返回 `null`
 - 当前 `app/components/chat/ChatBox.vue` 仍在使用 HTTP `DefaultChatTransport`
 - 本文档描述的是 composable 与 WebSocket 路由层的当前方案，不等于聊天页已经切换到该方案
+- 更细粒度的生态意愿管线还没有接到 `server/ecosystem/core/AssistantInstant.ts`

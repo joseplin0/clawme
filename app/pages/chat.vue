@@ -1,5 +1,5 @@
 <template>
-  <div class="relative flex h-full w-full overflow-hidden bg-background">
+  <div class="absolute inset-0 flex min-h-0 w-full overflow-hidden">
     <ChatList
       v-model="activeSessionId"
       :sessions="sessions"

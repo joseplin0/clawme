@@ -1,33 +1,11 @@
 <template>
   <section
-    :class="[
-      'absolute inset-0 z-20 flex h-full flex-1 flex-col transition-transform duration-300 md:relative bg-surface',
-      activeSessionId ? 'translate-x-0' : 'translate-x-full md:translate-x-0',
-    ]"
+    class="absolute inset-0 z-20 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-surface transition-transform duration-300 md:relative border-l border-default"
   >
-    <div
-      v-if="!activeSessionId"
-      class="hidden h-full items-center justify-center text-center md:flex"
-    >
-      <div class="space-y-4">
-        <div
-          class="mx-auto flex size-20 items-center justify-center rounded-full bg-elevated/50"
-        >
-          <UIcon name="i-lucide-message-circle" class="size-10 text-muted" />
-        </div>
-        <div class="space-y-2">
-          <p class="text-lg font-medium text-highlighted">
-            选择或创建会话开始协作
-          </p>
-          <p class="text-sm text-muted">
-            从左侧列表选择会话，或点击 + 按钮创建新会话
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <template v-else>
-      <header class="flex h-16 items-center justify-between gap-4 px-4">
+    <template v-if="activeSessionId">
+      <header
+        class="flex h-16 shrink-0 items-center justify-between gap-4 px-4 bg-surface"
+      >
         <div class="flex min-w-0 items-center gap-3">
           <UButton
             icon="i-lucide-arrow-left"
@@ -47,15 +25,19 @@
         </div>
       </header>
 
-      <div class="flex-1 overflow-y-auto px-4 py-5 md:px-6">
-        <div class="mx-auto max-w-3xl space-y-4">
+      <div class="min-h-0 flex-1 overflow-y-auto py-4 sm:py-6">
+        <UContainer class="flex min-h-0 flex-1 flex-col">
           <UChatMessages
             :messages="chatMessages"
             :status="chatStatus"
             should-auto-scroll
+            should-scroll-to-bottom
             :spacing-offset="80"
             class="space-y-4"
           >
+            <template #indicator>
+              <UChatShimmer text="思考中。。。" />
+            </template>
             <UChatMessage
               v-for="message in chatMessages"
               :key="message.id"
@@ -65,84 +47,70 @@
               v-bind="getMessageDisplayProps(message)"
             >
               <template #content>
-                <div class="space-y-2">
-                  <template
-                    v-for="(part, index) in message.parts"
-                    :key="`${message.id}-${part.type}-${index}`"
+                <template
+                  v-for="(part, index) in message.parts"
+                  :key="`${message.id}-${part.type}-${index}`"
+                >
+                  <UChatReasoning
+                    v-if="isReasoningUIPart(part)"
+                    :text="part.text"
+                    :streaming="getReasoningStreaming(message, index)"
                   >
-                    <UChatReasoning
-                      v-if="part.type === 'reasoning'"
-                      :text="part.text"
-                      :streaming="
-                        chatStatus === 'streaming' &&
-                        message.id === lastMessageId
-                      "
-                    >
-                      <MDC
-                        v-if="part.type === 'reasoning'"
-                        :value="part.text"
-                        :cache-key="`reasoning-${message.id}-${index}`"
-                        class="*:first:mt-0 *:last:mb-0 whitespace-pre-wrap text-sm"
-                      />
-                    </UChatReasoning>
-
-                    <template v-else-if="part.type === 'text'">
-                      <MDC
-                        v-if="part.text"
-                        :value="part.text"
-                        :cache-key="message.id"
-                        class="*:first:mt-0 *:last:mb-0 whitespace-pre-wrap text-sm leading-7"
-                      />
-                      <UChatShimmer
-                        v-if="
-                          chatStatus === 'streaming' &&
-                          message.id === lastMessageId &&
-                          !part.text
-                        "
-                        text=""
-                      />
-                    </template>
-                  </template>
-                </div>
+                    <MDC
+                      :value="part.text"
+                      :cache-key="`reasoning-${message.id}-${index}`"
+                      class="*:first:mt-0 *:last:mb-0"
+                    />
+                  </UChatReasoning>
+                  <UChatTool
+                    v-else-if="isToolUIPart(part)"
+                    :text="getToolName(part)"
+                    :streaming="isToolStreaming(part)"
+                  />
+                  <MDCCached
+                    v-else-if="isTextUIPart(part)"
+                    :value="part.text"
+                    :cache-key="`${message.id}-${index}`"
+                    class="*:first:mt-0 *:last:mb-0"
+                  />
+                </template>
               </template>
             </UChatMessage>
           </UChatMessages>
-        </div>
+        </UContainer>
       </div>
 
-      <div class="px-4 py-4">
-        <div class="mx-auto max-w-3xl">
-          <UChatPrompt
-            v-model="inputMessage"
-            :rows="1"
-            :maxrows="6"
-            autoresize
-            variant="subtle"
-            :disabled="!isChatReady"
-            :placeholder="
-              activeSessionId
-                ? '告诉虾米接下来该先做什么...'
-                : '请先选择会话...'
-            "
-            :ui="{
-              body: 'text-sm leading-7',
-              footer: ' px-3 py-2',
-            }"
-            @submit="handleSubmit"
-          >
-            <template #footer>
-              <p class="text-xs text-muted">使用 AI SDK 流式接口，</p>
-              <UChatPromptSubmit
-                :status="chatStatus"
-                size="lg"
-                class="shrink-0"
-                :disabled="!isChatReady || !inputMessage.trim()"
-                @stop="handleStop"
-                @reload="handleReload"
-              />
-            </template>
-          </UChatPrompt>
-        </div>
+      <div class="shrink-0 border-t border-muted/50 pb-safe">
+        <UChatPrompt
+          v-model="inputMessage"
+          :rows="1"
+          :maxrows="6"
+          autoresize
+          variant="soft"
+          :disabled="!isChatReady"
+          :placeholder="
+            activeSessionId ? '告诉虾米接下来该先做什么...' : '请先选择会话...'
+          "
+          :ui="{
+            root: 'backdrop-none',
+            body: 'text-sm leading-7',
+            footer: 'px-3 py-2',
+          }"
+          class="w-full"
+          @submit="handleSubmit"
+        >
+          <template #footer>
+            <p class="text-xs text-muted"></p>
+            <UChatPromptSubmit
+              :status="chatStatus"
+              size="lg"
+              class="shrink-0"
+              :disabled="!isChatReady || !inputMessage.trim()"
+              @stop="handleStop"
+              @reload="handleReload"
+            />
+          </template>
+        </UChatPrompt>
       </div>
     </template>
   </section>
@@ -159,12 +127,23 @@ import {
   markRaw,
 } from "vue";
 import { Chat } from "@ai-sdk/vue";
-import type { ChatStatus } from "ai";
+import {
+  getToolName,
+  isReasoningUIPart,
+  isTextUIPart,
+  isToolUIPart,
+  type ChatStatus,
+} from "ai";
 import type {
   ChatSessionRecord,
   ChatSessionDetailResponse,
   ClawmeUIMessage,
 } from "~~/shared/types/clawme";
+
+import {
+  isReasoningStreaming as getNuxtReasoningStreaming,
+  isToolStreaming,
+} from "@nuxt/ui/utils/ai";
 
 // Typed UIMessage with custom metadata
 
@@ -361,5 +340,13 @@ function getMessageUserProps(userId: string) {
 
 function getMessageDisplayProps(message: ClawmeUIMessage) {
   return getMessageUserProps(message.metadata?.userId ?? "");
+}
+
+function getReasoningStreaming(message: ClawmeUIMessage, index: number) {
+  if (!chat.value) {
+    return false;
+  }
+
+  return getNuxtReasoningStreaming(message, index, chat.value);
 }
 </script>

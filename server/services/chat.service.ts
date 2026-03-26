@@ -35,6 +35,7 @@ export async function createMessage(input: {
   return {
     id: message.id,
     sessionId: message.sessionId,
+    userId: message.userId,
     role: message.role as MessageRole,
     parts: (message.parts as MessagePart[]) ?? [],
     status: message.status as MessageStatus,
