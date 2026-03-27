@@ -11,8 +11,6 @@
 </template>
 
 <script setup lang="ts">
-import ChatList from "~/components/chat/ChatList.vue";
-import ChatBox from "~/components/chat/ChatBox.vue";
 import type { ChatSessionRecord } from "~~/shared/types/clawme";
 
 const toast = useToast();

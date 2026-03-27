@@ -81,36 +81,16 @@
       </div>
 
       <div class="shrink-0 border-t border-muted/50 pb-safe">
-        <UChatPrompt
-          v-model="inputMessage"
-          :rows="1"
-          :maxrows="6"
-          autoresize
-          variant="soft"
-          :disabled="!isChatReady"
-          :placeholder="
-            activeSessionId ? '告诉虾米接下来该先做什么...' : '请先选择会话...'
-          "
-          :ui="{
-            root: 'backdrop-none',
-            body: 'text-sm leading-7',
-            footer: 'px-3 py-2',
-          }"
-          class="w-full"
+        <ChatComposer
+          :key="activeSessionId"
+          :ready="isChatReady"
+          :status="chatStatus"
+          :placeholder="composerPlaceholder"
+          :mention-items="mentionItems"
           @submit="handleSubmit"
-        >
-          <template #footer>
-            <p class="text-xs text-muted"></p>
-            <UChatPromptSubmit
-              :status="chatStatus"
-              size="lg"
-              class="shrink-0"
-              :disabled="!isChatReady || !inputMessage.trim()"
-              @stop="handleStop"
-              @reload="handleReload"
-            />
-          </template>
-        </UChatPrompt>
+          @stop="handleStop"
+          @reload="handleReload"
+        />
       </div>
     </template>
   </section>
@@ -135,6 +115,7 @@ import {
   type ChatStatus,
 } from "ai";
 import type {
+  ActorProfile,
   ChatSessionRecord,
   ChatSessionDetailResponse,
   ClawmeUIMessage,
@@ -144,6 +125,7 @@ import {
   isReasoningStreaming as getNuxtReasoningStreaming,
   isToolStreaming,
 } from "@nuxt/ui/utils/ai";
+import type { EditorMentionMenuItem } from "@nuxt/ui";
 
 // Typed UIMessage with custom metadata
 
@@ -157,7 +139,7 @@ const props = defineProps<{
 const activeSessionId = ref<string | null>(props.activeSessionId);
 
 // Use global actors cache
-const { getActor, fetchActors } = useActors();
+const { getActor, fetchActors, setActors } = useActors();
 const { transport, onIncomingMessage } = useGlobalChatClient();
 
 watch(
@@ -168,7 +150,7 @@ watch(
   { immediate: true },
 );
 
-const inputMessage = ref("");
+const sessionParticipants = ref<ActorProfile[]>([]);
 
 // Initialize Chat instance
 const chat = shallowRef<Chat<ClawmeUIMessage> | null>(null);
@@ -196,6 +178,7 @@ watch(activeSessionId, async (id) => {
     await initializeChat();
   } else {
     chat.value = null;
+    sessionParticipants.value = [];
   }
 });
 
@@ -238,16 +221,16 @@ async function stopActiveChat() {
 async function initializeChat() {
   if (!activeSessionId.value) return;
 
+  sessionParticipants.value = [];
+
   try {
     const response = await $fetch<ChatSessionDetailResponse>(
       `/api/chat/session/${activeSessionId.value}`,
     );
 
-    // Collect all userIds and fetch them
-    const userIds = response.messages
-      .map((m) => m.metadata?.userId)
-      .filter((id): id is string => Boolean(id));
-    // await fetchActors(userIds);
+    sessionParticipants.value = response.participants;
+    setActors(response.participants);
+
     const messages = response.messages as ClawmeUIMessage[];
     console.log("Fetched messages for session", messages);
 
@@ -277,18 +260,23 @@ async function initializeChat() {
   }
 }
 
-function handleSubmit() {
-  if (!inputMessage.value.trim() || !chat.value || !currentUser.value?.id)
+function handleSubmit(text: string) {
+  if (
+    !text.trim() ||
+    !chat.value ||
+    !currentUser.value?.id ||
+    chatStatus.value !== "ready"
+  ) {
     return;
+  }
 
   chat.value.sendMessage({
-    text: inputMessage.value,
+    text,
     metadata: {
       userId: currentUser.value.id,
       createdAt: Date.now(),
     },
   });
-  inputMessage.value = "";
 }
 
 function handleReload() {
@@ -304,24 +292,38 @@ function handleStop() {
   chat.value?.stop();
 }
 
+// Get current user session
+const { user: currentUser } = useUserSession();
 const selectedSession = computed(
   () => props.sessions.find((s) => s.id === activeSessionId.value) ?? null,
 );
+const composerPlaceholder = computed(() =>
+  activeSessionId.value ? "告诉虾米接下来该先做什么..." : "请先选择会话...",
+);
 
-// Fetch participants when session changes
-watch(selectedSession, async (session) => {
-  if (session?.participantIds.length) {
-    await fetchActors(session.participantIds);
-  }
+const mentionActors = computed<ActorProfile[]>(() => {
+  const currentUserId = currentUser.value?.id;
+  return sessionParticipants.value.filter(
+    (actor) => actor.id !== currentUserId,
+  );
 });
+
+const mentionItems = computed<EditorMentionMenuItem[]>(() =>
+  mentionActors.value.map((actor) => ({
+    id: actor.id,
+    label: actor.username,
+    description: `${actor.nickname}${actor.type === "BOT" ? " · BOT" : ""}`,
+    avatar: {
+      src: actor.avatar ?? undefined,
+      alt: actor.nickname,
+    },
+  })),
+);
 
 // Get actor info by id
 function getActorById(actorId: string) {
   return getActor(actorId);
 }
-
-// Get current user session
-const { user: currentUser } = useUserSession();
 
 // Get message props based on userId
 function getMessageUserProps(userId: string) {
