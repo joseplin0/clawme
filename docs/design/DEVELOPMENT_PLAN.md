@@ -1,5 +1,7 @@
 # 里程碑开发任务清单 (Task Plan)
 
+> 文档状态：旧版规划草案，不再作为当前执行计划。当前路线图请改看 [`ROADMAP.md`](../ROADMAP.md)，当前实现状态请改看 [`PROJECT_STATUS.md`](../PROJECT_STATUS.md)。
+
 > **开发策略说明**：为了保证项目的健康演进，Task Plan 将严格奉行"先立骨架，后塑血肉"的原则。必须优先完成核心 MVP（工具底座与业务大盘），然后再逐步注入具有高实验性质的"赛博生态引擎"。
 
 ## Phase 1: 核心工具底座与 UI 骨架 (Core Foundation)
@@ -43,4 +45,4 @@
 > - [项目定位与核心愿景](./VISION.md)
 > - [核心架构模式](./ARCHITECTURE.md)
 > - [赛博生态驱动引擎](./CYBER_ECOSYSTEM.md)
-> - [赛博生态岛完整设计草案](../CLAWME_AGENT.md)
+> - [赛博生态岛完整设计草案](./CLAWME_AGENT.md)

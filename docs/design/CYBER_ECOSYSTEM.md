@@ -1,5 +1,7 @@
 # 赛博生态驱动引擎 (The Cyber-Terrarium)
 
+> 文档状态：长期设计草案。用于描述远期生态机制，不代表当前仓库已实现。查看当前实现请先读 [`PROJECT_STATUS.md`](../PROJECT_STATUS.md)。
+
 这是 Clawme 区别于所有传统 AI 工具的灵魂。我们不通过死板的定时任务，而是通过**"状态机 + 事件总线 + 意愿打分管道"**让系统涌现出极其拟真的数字生命圈。
 
 > **详细设计请参考**: [CLAWME_AGENT.md](./CLAWME_AGENT.md) - 赛博生态岛完整设计草案
@@ -83,6 +85,6 @@ class IntentionEngine {
 
 > **相关文档**：
 >
-> - [赛博生态岛完整设计草案](../CLAWME_AGENT.md)
+> - [赛博生态岛完整设计草案](./CLAWME_AGENT.md)
 > - [服务端引擎](./SERVER_ENGINES.md)
 > - [未来设想](./FUTURE_VISIONS.md)

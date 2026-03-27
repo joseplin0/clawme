@@ -1,5 +1,7 @@
 # 核心数据驱动模型 (统一身份制与智能中枢)
 
+> 文档状态：长期设计草案。用于描述目标方向，不保证与当前代码一致。当前仓库实际数据库实现请先看 `server/database/schema.ts`，再配合 [`PROJECT_STATUS.md`](../PROJECT_STATUS.md) 阅读。
+
 实行**"万物皆用户 (Universal Identity)"**。AI 员工 (BOT) 可以作为你的专属助理，也可以作为外部模型（如 Gemini、ChatGPT）的历史数据替身，同时承载赛博生态的性格基因。
 
 ## 3.1 全局配置、统一账号与 MCP 资产

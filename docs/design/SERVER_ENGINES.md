@@ -1,5 +1,7 @@
 # 核心流转与服务端引擎 (The Engines)
 
+> 文档状态：长期设计草案。用于描述目标方向，不保证与当前代码一致。当前仓库实际聊天链路请优先查看 [`WEBSOCKET_CHAT_CURRENT_DESIGN.md`](../WEBSOCKET_CHAT_CURRENT_DESIGN.md) 和 [`PROJECT_STATUS.md`](../PROJECT_STATUS.md)。
+
 ## 混合驱动网关与 SSE 流
 
 后端（如 Nuxt Nitro）暴露 SSE 接口。执行严格的 3 步落盘法以保护连接池：
