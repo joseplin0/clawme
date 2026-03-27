@@ -2,6 +2,7 @@ import { createError, readBody } from "h3";
 import { and, eq } from "drizzle-orm";
 import { readStoredState } from "~~/server/services";
 import { setOwnerSession, type OwnerSessionUser } from "~~/server/utils/auth";
+import { signJwtToken } from "~~/server/utils/jwt";
 import { db, schema } from "~~/server/utils/db";
 
 const { users } = schema;
@@ -83,11 +84,15 @@ export default defineEventHandler(async (event) => {
 
   await setOwnerSession(event, sessionUser, owner.apiSecret);
 
+  // Issue a JWT token for non-cookie clients when JWT auth is configured
+  const token = await signJwtToken(sessionUser);
+
   return {
     ok: true,
     owner: {
       username: owner.username,
       nickname: owner.nickname,
     },
+    token,
   };
 });

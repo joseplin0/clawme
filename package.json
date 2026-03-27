@@ -23,6 +23,7 @@
     "@tailwindcss/postcss": "^4.2.1",
     "ai": "^6.0.116",
     "drizzle-orm": "^0.45.1",
+    "jose": "^6.2.2",
     "nuxt": "^4.4.2",
     "nuxt-auth-utils": "0.5.29",
     "postgres": "^3.4.8",

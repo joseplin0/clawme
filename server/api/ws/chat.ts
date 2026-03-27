@@ -10,16 +10,16 @@ import {
   prepareDirectChatMessage,
 } from "~~/server/services/chat-command.service";
 import { createAssistantMessageStreamFromSession } from "~~/server/ecosystem/core/AssistantInstant";
-import { getOwnerSession } from "~~/server/utils/auth";
+import { resolveOwnerSocketUser } from "~~/server/utils/auth";
 
 type WSMessage = ChatWsClientMessage;
 type WSResponse = ChatWsServerMessage;
 
 export default defineWebSocketHandler({
   async upgrade(request: any) {
-    const session = await getOwnerSession(request as any);
+    const user = await resolveOwnerSocketUser(request);
 
-    if (!session?.user?.id) {
+    if (!user?.id) {
       throw new Response("未授权的连接", {
         status: 401,
         statusText: "Unauthorized",
@@ -27,8 +27,8 @@ export default defineWebSocketHandler({
     }
 
     request.context.auth = {
-      userId: session.user.id,
-      username: session.user.username,
+      userId: user.id,
+      username: user.username,
     } satisfies ChatWsConnectionAuth;
   },
 

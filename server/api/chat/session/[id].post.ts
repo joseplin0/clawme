@@ -8,7 +8,7 @@ import { z } from "zod";
 import type { MessagePart } from "~~/shared/types/clawme";
 import { createAssistantMessageStream } from "~~/server/ecosystem/core/AssistantInstant";
 import { createMessage } from "~~/server/services/chat.service";
-import { getOwnerSession } from "~~/server/utils/auth";
+import { requireOwnerSession } from "~~/server/utils/auth";
 import { db, schema } from "~~/server/utils/db";
 import { resolveUserLlmProvider } from "~~/server/utils/llm";
 import { eq } from "drizzle-orm";
@@ -25,19 +25,13 @@ const bodySchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
-  const ownerSession = await getOwnerSession(event);
-  if (!ownerSession?.user) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: "Unauthorized",
-    });
-  }
+  const ownerUser = await requireOwnerSession(event);
 
   const rawId = getRouterParam(event, "id");
   const { id: sessionId } = paramsSchema.parse({ id: rawId });
   const body = await readBody(event);
   const { messages, receiverId } = bodySchema.parse(body);
-  const userId = ownerSession.user.id;
+  const userId = ownerUser.id;
 
   // Verify session exists
   const chatSession = await db.query.chatSessions.findFirst({

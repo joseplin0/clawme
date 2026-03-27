@@ -50,7 +50,9 @@
 - `server/api/system/bootstrap.post.ts`: 首次初始化
 - `server/api/auth/login.post.ts`: 管理员登录
 - `server/api/auth/logout.post.ts`: 管理员登出
-- `server/utils/auth.ts`: session / bearer token 认证边界
+- `server/middleware/auth.ts`: `/api/*` 统一 Owner 鉴权入口与公开路径白名单
+- `server/utils/auth.ts`: session / JWT / apiSecret 统一认证边界
+- `server/utils/jwt.ts`: Owner JWT 签发与校验
 
 ### Feed
 
@@ -91,6 +93,7 @@
 `app/pages/login.vue`
 -> `POST /api/auth/login`
 -> `server/utils/auth.ts`
+-> `server/utils/jwt.ts`
 
 ### Feed 链路
 
@@ -128,4 +131,3 @@
 
 - `server/api/agent.post.ts`: 早期实验路由
 - 多数愿景类文档：只描述目标方向，不描述当前实现
-

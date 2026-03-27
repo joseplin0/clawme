@@ -1,24 +1,16 @@
 import { createError, defineEventHandler } from "h3";
 import { eq } from "drizzle-orm";
-import { getOwnerSession, requireOwnerSession } from "~~/server/utils/auth";
+import { requireOwnerSession } from "~~/server/utils/auth";
 import { db, schema } from "~~/server/utils/db";
 
 const { chatSessions, sessionParticipants, users } = schema;
 
 export default defineEventHandler(async (event) => {
-  await requireOwnerSession(event);
-
-  const ownerSession = await getOwnerSession(event);
-  if (!ownerSession?.user?.id) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: "Owner session is required.",
-    });
-  }
+  const ownerUser = await requireOwnerSession(event);
 
   const [owner, bot] = await Promise.all([
     db.query.users.findFirst({
-      where: eq(users.id, ownerSession.user.id),
+      where: eq(users.id, ownerUser.id),
     }),
     db.query.users.findFirst({
       where: eq(users.type, "BOT"),
