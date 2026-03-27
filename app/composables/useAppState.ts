@@ -1,3 +1,4 @@
+import { computed, useState } from "#imports";
 import type { ActorProfile } from "~~/shared/types/clawme";
 
 export interface ActorsState {

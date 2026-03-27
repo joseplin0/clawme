@@ -21,6 +21,17 @@ interface OwnerSessionData {
   };
 }
 
+type RawOwnerSession = {
+  user?: Record<string, unknown> | null;
+  secure?: {
+    apiSecret?: string;
+  };
+} | null;
+
+declare const setUserSession: (event: H3Event, data: OwnerSessionData) => Promise<unknown>;
+declare const getUserSession: (event: H3Event) => Promise<RawOwnerSession>;
+declare const clearUserSession: (event: H3Event) => Promise<boolean>;
+
 function extractBearerToken(rawHeader?: string | null) {
   if (!rawHeader?.startsWith("Bearer ")) {
     return null;
