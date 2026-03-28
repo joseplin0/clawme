@@ -53,6 +53,7 @@ ISSUE_ID=$(bash ./scripts/create-issue.sh <type> "<title>" <USE_BRANCH> "$TMP_PA
 保留 `TMP_PATH` 文件，不自动删除，便于复核和重试。
 
 - 新任务建单成功后，默认进入 issue 分支准备阶段。
+- issue 分支命名默认使用 `${TYPE}-${ISSUE_ID}`，例如 `feat-9`、`fix-9`。
 - 如果当前工作区干净且就是本次任务的专用目录，可直接执行：
 
 ```bash
@@ -133,6 +134,7 @@ git push -u origin <issue-branch>
 gh pr create -d
 ```
 
+- 允许 `git push -u origin <issue-branch>` 推送非 `main` 的 issue 分支；不要直接 push `main`。
 - PR 描述使用 `Closes #$ISSUE_ID` 收口；主 agent 在 PR 创建成功后停止自动推进，等待用户 review / merge，不自动合并，也不手动关闭 issue。
 
 ## 规则
