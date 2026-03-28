@@ -1,8 +1,8 @@
 ---
-name: 🐛 缺陷修复 (fix)
+name: 缺陷修复 (fix)
 about: 报告并修复系统中的错误
 title: "fix: "
-labels: "bug"
+labels: "fix"
 assignees: ""
 ---
 

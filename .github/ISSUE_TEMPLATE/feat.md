@@ -1,6 +1,6 @@
 ---
 name: 新功能 (feat)
-about: 配合 AI 智能体的标准研发任务流
+about: 新增或扩展系统能力
 title: "feat:"
 labels: "feat"
 assignees: ""
@@ -14,6 +14,5 @@ assignees: ""
 
 - [ ] 核心要求 1：
 - [ ] 核心要求 2：
-- [ ] 确保在 `docs/content/` 中覆盖更新相关说明或用法。
 
 ### 📎 参考资料 (Context & Snippets)
