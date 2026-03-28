@@ -64,12 +64,12 @@ useSeoMeta({
     <section class="docs-card overflow-hidden rounded-[2rem] p-6 sm:p-8">
       <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
         <div>
-          <UBadge color="primary" variant="subtle" label="方案 1: docs 目录直接作为 app" />
+          <UBadge color="primary" variant="subtle" label="方案 2: content 独立收纳" />
           <h1 class="mt-4 max-w-3xl text-4xl font-semibold tracking-tight text-highlighted sm:text-5xl">
             把仓库文档直接发布成一个可独立部署的网站
           </h1>
           <p class="mt-4 max-w-2xl text-base leading-8 text-toned sm:text-lg">
-            当前站点读取本目录现有 Markdown，不复制、不迁移到第二套内容目录。适合先快速落地，再逐步整理 URL 和内容元数据。
+            当前站点读取 `docs/content` 下的 Markdown，文档内容与站点工程分层维护，目录职责更清晰。
           </p>
         </div>
 

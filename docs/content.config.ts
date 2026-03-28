@@ -1,14 +1,14 @@
 import { fileURLToPath } from "node:url";
 import { defineCollection, defineContentConfig } from "@nuxt/content";
 
-const docsRoot = fileURLToPath(new URL(".", import.meta.url));
+const contentRoot = fileURLToPath(new URL("./content/", import.meta.url));
 
 export default defineContentConfig({
   collections: {
     docs: defineCollection({
       type: "page",
       source: {
-        cwd: docsRoot,
+        cwd: contentRoot,
         include: "**/*.md",
         prefix: "/",
       },

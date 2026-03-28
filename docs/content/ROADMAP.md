@@ -42,6 +42,6 @@
 
 ## 文档策略
 
-- 当前执行计划继续维护在 `docs/ROADMAP.md`
-- 当前实现状态维护在 `docs/PROJECT_STATUS.md`
+- 当前执行计划继续维护在 `docs/content/ROADMAP.md`
+- 当前实现状态维护在 `docs/content/PROJECT_STATUS.md`
 - 长期愿景继续保留在原设计草案文档中，但不再作为近期任务清单

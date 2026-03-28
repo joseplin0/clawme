@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import resolveDocLinks from "./markdown/resolve-doc-links";
 
-const docsRoot = fileURLToPath(new URL(".", import.meta.url));
+const contentRoot = fileURLToPath(new URL("./content/", import.meta.url));
 
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
@@ -18,7 +18,7 @@ export default defineNuxtConfig({
           "resolve-doc-links": {
             instance: resolveDocLinks,
             options: {
-              rootDir: docsRoot,
+              rootDir: contentRoot,
             },
           },
         },

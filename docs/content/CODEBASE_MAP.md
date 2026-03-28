@@ -118,14 +118,14 @@
 
 ## 建议阅读顺序
 
-1. `docs/PROJECT_STATUS.md`
+1. `docs/content/PROJECT_STATUS.md`
 2. `shared/types/clawme.ts`
 3. `server/database/schema.ts`
 4. `server/services/system.service.ts`
 5. `server/services/chat-command.service.ts`
 6. `server/ecosystem/core/AssistantInstant.ts`
 7. `app/components/chat/Box.vue`
-8. `docs/WEBSOCKET_CHAT_CURRENT_DESIGN.md`
+8. `docs/content/WEBSOCKET_CHAT_CURRENT_DESIGN.md`
 
 ## 不应作为当前事实来源的文件
 
