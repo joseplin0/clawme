@@ -1,8 +1,8 @@
 ---
-name: 🚀 研发任务 (Task)
+name: 新功能 (feat)
 about: 配合 AI 智能体的标准研发任务流
-title: ""
-labels: ""
+title: "feat:"
+labels: "feat"
 assignees: ""
 ---
 
