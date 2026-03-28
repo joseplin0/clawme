@@ -1,6 +1,6 @@
 # 基于 @nuxt/ui 的 MVP 标准化设计 (MVP Design System)
 
-> 文档状态：长期设计草案。用于描述目标方向，不保证与当前代码一致。当前页面实现请结合 [`PROJECT_STATUS.md`](../PROJECT_STATUS.md) 和实际 `app/pages/`、`app/components/` 代码阅读。
+> 文档状态：已归档的历史设计稿。内容包含早期页面结构、主题和组件约束，不应作为当前 UI 实现依据。当前页面实现请结合 [`PROJECT_STATUS.md`](../../PROJECT_STATUS.md) 和实际 `app/pages/`、`app/components/` 代码阅读。
 
 ## 4.1 核心工程与配置策略 (MVP 阶段)
 

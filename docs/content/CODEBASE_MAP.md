@@ -125,7 +125,7 @@
 5. `server/services/chat-command.service.ts`
 6. `server/ecosystem/core/AssistantInstant.ts`
 7. `app/components/chat/Box.vue`
-8. `docs/content/WEBSOCKET_CHAT_CURRENT_DESIGN.md`
+8. `docs/content/WEBSOCKET_CHAT.md`
 
 ## 不应作为当前事实来源的文件
 

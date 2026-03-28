@@ -86,5 +86,5 @@ class IntentionEngine {
 > **相关文档**：
 >
 > - [赛博生态岛完整设计草案](./CLAWME_AGENT.md)
-> - [服务端引擎](./SERVER_ENGINES.md)
+> - [WebSocket Chat 当前方案](../WEBSOCKET_CHAT.md)
 > - [未来设想](./FUTURE_VISIONS.md)

@@ -21,4 +21,5 @@
 > **相关文档**：
 >
 > - [赛博生态驱动引擎](./CYBER_ECOSYSTEM.md)
-> - [开发计划](./DEVELOPMENT_PLAN.md)
+> - [项目定位与核心愿景](./VISION.md)
+> - [当前路线图](../ROADMAP.md)

@@ -1,6 +1,6 @@
 # 核心架构模式
 
-> 文档状态：长期设计草案。用于描述目标方向，不保证与当前代码一致。查看当前实现请先读 [`PROJECT_STATUS.md`](../PROJECT_STATUS.md) 和 [`CODEBASE_MAP.md`](../CODEBASE_MAP.md)。
+> 文档状态：已归档的历史设计稿。内容包含早期技术选型与阶段性设想，不应作为当前实现或当前方向依据。查看当前实现请先读 [`PROJECT_STATUS.md`](../../PROJECT_STATUS.md) 和 [`CODEBASE_MAP.md`](../../CODEBASE_MAP.md)。
 
 本项目采用**全栈大单体 (Full-stack Monolith)** 设计，追求极致的开发效率与数据流转体验。
 
@@ -45,7 +45,7 @@ Prisma + PostgreSQL (深度利用 JSONB 特性与 TOAST 机制)。
 
 > **相关文档**：
 >
-> - [项目定位与核心愿景](./VISION.md)
+> - [项目定位与核心愿景](../VISION.md)
 > - [核心数据模型](./DATA_MODELS.md)
 > - [服务端引擎](./SERVER_ENGINES.md)
-> - [WebSocket Chat 当前方案](../WEBSOCKET_CHAT_CURRENT_DESIGN.md)
+> - [WebSocket Chat 当前方案](../../WEBSOCKET_CHAT.md)

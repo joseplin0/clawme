@@ -1,6 +1,6 @@
 # 核心流转与服务端引擎 (The Engines)
 
-> 文档状态：长期设计草案。用于描述目标方向，不保证与当前代码一致。当前仓库实际聊天链路请优先查看 [`WEBSOCKET_CHAT_CURRENT_DESIGN.md`](../WEBSOCKET_CHAT_CURRENT_DESIGN.md) 和 [`PROJECT_STATUS.md`](../PROJECT_STATUS.md)。
+> 文档状态：已归档的历史设计稿。内容仍保留早期 SSE 主导的方案叙事，不应作为当前实现依据。当前仓库实际聊天链路请优先查看 [`WEBSOCKET_CHAT.md`](../../WEBSOCKET_CHAT.md) 和 [`PROJECT_STATUS.md`](../../PROJECT_STATUS.md)。
 
 ## 混合驱动网关与 SSE 流
 
@@ -28,4 +28,4 @@
 >
 > - [核心架构模式](./ARCHITECTURE.md)
 > - [核心数据模型](./DATA_MODELS.md)
-> - [赛博生态驱动引擎](./CYBER_ECOSYSTEM.md)
+> - [赛博生态驱动引擎](../CYBER_ECOSYSTEM.md)
