@@ -5,10 +5,12 @@
     mode="slideover"
     :toggle="false"
     :auto-close="true"
-    :resizable="true"
+    resizable
+    :collapsed-size="0"
     :default-size="24"
-    :min-size="13"
+    :min-size="20"
     :max-size="70"
+    units="px"
     :ui="{
       root: '!min-h-0',
       header: 'h-16 px-3',

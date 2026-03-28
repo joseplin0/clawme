@@ -4,7 +4,6 @@
   >
     <UDashboardNavbar
       :title="selectedRoom?.title || '默认房间'"
-      icon="i-lucide-message-square-text"
       class="border-b border-default/70"
     >
       <template #right>

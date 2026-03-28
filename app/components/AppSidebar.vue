@@ -1,11 +1,10 @@
 <template>
   <USidebar
     class="hidden md:flex"
-    collapsible="icon"
+    collapsible="none"
     :open="false"
     :style="{
-      '--sidebar-width-icon': '3.5rem',
-      '--sidebar-width-collapsed': '3.5rem',
+      '--sidebar-width': '3.5rem',
     }"
     :ui="{
       container: 'h-full bg-surface',
