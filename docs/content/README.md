@@ -24,6 +24,7 @@
 | [`CODEBASE_MAP.md`](./CODEBASE_MAP.md) | 面向 coding AI 和新同事的代码地图、入口文件和阅读顺序 |
 | [`ROADMAP.md`](./ROADMAP.md) | 当前阶段路线图，作为当前执行计划的唯一入口 |
 | [`WEBSOCKET_CHAT_CURRENT_DESIGN.md`](./WEBSOCKET_CHAT_CURRENT_DESIGN.md) | 当前仓库真实生效的 WebSocket 聊天方案 |
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | 协作约定、Conventional Commits 前缀说明与提交校验规则 |
 
 ## ADR
 
