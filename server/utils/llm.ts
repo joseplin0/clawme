@@ -62,12 +62,12 @@ export async function resolveUserLlmProvider(
     return null;
   }
 
-  const providers = await db.query.llmProviders.findMany();
-  if (providers.length !== 1) {
+  const llmConfigs = await db.query.llm.findMany();
+  if (llmConfigs.length !== 1) {
     return null;
   }
 
-  const [provider] = providers;
+  const [provider] = llmConfigs;
   if (!provider) {
     return null;
   }

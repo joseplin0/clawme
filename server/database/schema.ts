@@ -348,39 +348,34 @@ export const workflowTriggers = pgTable("workflow_trigger", {
 });
 
 /** 大模型提供商配置表。 */
-export const llmProviders = pgTable("LlmProvider", {
+export const llm = pgTable("llm", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
-  /** 提供商类型标识。 */
   provider: text("provider").notNull(),
-  /** OpenAI 兼容接口基地址。 */
-  baseUrl: text("baseUrl"),
-  apiKey: text("apiKey"),
-  modelId: text("modelId").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  baseUrl: text("base_url"),
+  apiKey: text("api_key"),
+  modelId: text("model_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 /** MCP 服务端配置表。 */
-export const mcpServers = pgTable("McpServer", {
+export const mcp = pgTable("mcp", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
-  /** 传输方式。 */
   transport: text("transport").notNull(),
-  /** 本地命令入口。 */
   command: text("command"),
-  /** 命令参数数组。 */
   args: json("args").$type<unknown[]>(),
   url: text("url"),
 });
 
 /** Bot 与 MCP 服务的绑定关系表。 */
-export const botMcpConnections = pgTable(
-  "BotMcpConnection",
+export const botMcp = pgTable(
+  "bot_mcp",
   {
-    botId: uuid("botId").notNull(),
-    mcpServerId: uuid("mcpServerId").notNull(),
+    botId: uuid("bot_id").notNull(),
+    mcpId: uuid("mcp_id").notNull(), // 极简字段名
   },
-  (table) => [primaryKey({ columns: [table.botId, table.mcpServerId] })],
+  (table) => [primaryKey({ columns: [table.botId, table.mcpId] })],
 );
 
 // Export types
@@ -388,10 +383,10 @@ export type SystemConfig = typeof systemConfig.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type UserFollow = typeof userFollows.$inferSelect;
-export type LlmProvider = typeof llmProviders.$inferSelect;
-export type NewLlmProvider = typeof llmProviders.$inferInsert;
-export type McpServer = typeof mcpServers.$inferSelect;
-export type BotMcpConnection = typeof botMcpConnections.$inferSelect;
+export type LlmProvider = typeof llm.$inferSelect;
+export type NewLlmProvider = typeof llm.$inferInsert;
+export type McpServer = typeof mcp.$inferSelect;
+export type BotMcpConnection = typeof botMcp.$inferSelect;
 export type Workflow = typeof workflows.$inferSelect;
 export type WorkflowTrigger = typeof workflowTriggers.$inferSelect;
 export type Moment = typeof moments.$inferSelect;

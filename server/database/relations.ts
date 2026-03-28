@@ -1,10 +1,10 @@
 import { relations } from "drizzle-orm";
 import {
   assets,
-  botMcpConnections,
+  botMcp,
   comments,
-  llmProviders,
-  mcpServers,
+  llm,
+  mcp,
   momentAssets,
   momentCollections,
   momentLikes,
@@ -22,9 +22,9 @@ import {
 
 // User relations
 export const usersRelations = relations(users, ({ one, many }) => ({
-  llmProvider: one(llmProviders, {
+  llmProvider: one(llm, {
     fields: [users.llmProviderId],
-    references: [llmProviders.id],
+    references: [llm.id],
   }),
   createdBy: one(users, {
     fields: [users.createdById],
@@ -35,7 +35,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     relationName: "UserCreatedUsers",
   }),
   roomMemberships: many(roomMembers),
-  mcpConnections: many(botMcpConnections),
+  mcpConnections: many(botMcp),
   ownedWorkflows: many(workflows, {
     relationName: "WorkflowOwner",
   }),
@@ -68,27 +68,27 @@ export const userFollowsRelations = relations(userFollows, ({ one }) => ({
   }),
 }));
 
-// LlmProvider relations
-export const llmProvidersRelations = relations(llmProviders, ({ many }) => ({
+// Llm relations
+export const llmRelations = relations(llm, ({ many }) => ({
   users: many(users),
 }));
 
-// McpServer relations
-export const mcpServersRelations = relations(mcpServers, ({ many }) => ({
-  connections: many(botMcpConnections),
+// Mcp relations
+export const mcpRelations = relations(mcp, ({ many }) => ({
+  connections: many(botMcp),
 }));
 
-// BotMcpConnection relations
-export const botMcpConnectionsRelations = relations(
-  botMcpConnections,
+// BotMcp relations
+export const botMcpRelations = relations(
+  botMcp,
   ({ one }) => ({
     bot: one(users, {
-      fields: [botMcpConnections.botId],
+      fields: [botMcp.botId],
       references: [users.id],
     }),
-    mcpServer: one(mcpServers, {
-      fields: [botMcpConnections.mcpServerId],
-      references: [mcpServers.id],
+    mcpServer: one(mcp, {
+      fields: [botMcp.mcpId],
+      references: [mcp.id],
     }),
   }),
 );

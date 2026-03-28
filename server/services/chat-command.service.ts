@@ -7,7 +7,7 @@ import { db, schema } from "~~/server/utils/db";
 const { users, roomMembers, roomMessages, rooms } = schema;
 
 export type UserWithProvider = typeof users.$inferSelect & {
-  llmProvider: typeof schema.llmProviders.$inferSelect | null;
+  llmProvider: typeof schema.llm.$inferSelect | null;
 };
 
 export interface PreparedChatCommand {

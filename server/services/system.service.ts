@@ -20,7 +20,7 @@ const {
   assets,
   systemConfig,
   users,
-  llmProviders,
+  llm,
   roomMembers,
   roomMessages,
   rooms,
@@ -48,7 +48,7 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
       db.query.users.findMany({
         where: inArray(users.type, ["human", "bot"]),
       }),
-      db.query.llmProviders.findMany(),
+      db.query.llm.findMany(),
       db.query.rooms.findMany({
         with: { members: true },
       }),
@@ -184,7 +184,7 @@ export async function initializeSystem(input: BootstrapRequest) {
     await tx.delete(roomMessages);
     await tx.delete(roomMembers);
     await tx.delete(rooms);
-    await tx.delete(llmProviders);
+    await tx.delete(llm);
     await tx.delete(users);
     await tx.delete(systemConfig);
 
@@ -228,7 +228,7 @@ export async function initializeSystem(input: BootstrapRequest) {
 
     // 3. Provider
     const [provider] = await tx
-      .insert(llmProviders)
+      .insert(llm)
       .values({
         name: input.providerName,
         provider: "OPENAI_COMPATIBLE",
