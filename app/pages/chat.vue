@@ -1,50 +1,50 @@
 <template>
   <div class="absolute inset-0 flex min-h-0 w-full overflow-hidden">
     <ChatList
-      v-model="activeSessionId"
-      :sessions="sessions"
-      @create="handleCreateSession"
+      v-model="activeRoomId"
+      :rooms="rooms"
+      @create="handleCreateRoom"
     />
 
-    <ChatBox :active-session-id="activeSessionId" :sessions="sessions" />
+    <ChatBox :active-room-id="activeRoomId" :rooms="rooms" />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { ChatSessionRecord } from "~~/shared/types/clawme";
+import type { ChatRoomRecord } from "~~/shared/types/clawme";
 
 const toast = useToast();
 
-interface SessionListResponse {
-  sessions: ChatSessionRecord[];
-  activeSessionId: string | null;
+interface RoomListResponse {
+  rooms: ChatRoomRecord[];
+  activeRoomId: string | null;
 }
 
-const { data: sessionData, refresh } = useFetch<SessionListResponse>(
-  "/api/chat/session",
+const { data: roomData, refresh } = useFetch<RoomListResponse>(
+  "/api/chat/room",
   { lazy: true },
 );
 
-const activeSessionId = ref<string | null>(null);
+const activeRoomId = ref<string | null>(null);
 
-// Set activeSessionId when data loads
+// Set activeRoomId when data loads
 watch(
-  () => sessionData.value,
+  () => roomData.value,
   (value) => {
     if (!value) return;
-    if (!activeSessionId.value && value.activeSessionId) {
-      activeSessionId.value = value.activeSessionId;
+    if (!activeRoomId.value && value.activeRoomId) {
+      activeRoomId.value = value.activeRoomId;
     }
   },
   { immediate: true },
 );
 
-const sessions = computed(() => sessionData.value?.sessions ?? []);
+const rooms = computed(() => roomData.value?.rooms ?? []);
 
-async function handleCreateSession() {
-  // TODO: Create new session
+async function handleCreateRoom() {
+  // TODO: Create new room
   toast.add({
-    title: "创建会话",
+    title: "创建房间",
     description: "功能开发中...",
     color: "info",
     icon: "i-lucide-info",

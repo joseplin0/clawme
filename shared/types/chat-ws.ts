@@ -3,7 +3,7 @@ import type { UIMessage, UIMessageChunk } from "ai";
 export interface ChatWsClientMessage {
   type: "send" | "typing" | "read";
   requestId?: string;
-  sessionId?: string;
+  roomId?: string;
   targetUserId?: string;
   content?: string;
   messageId?: string;
@@ -17,7 +17,7 @@ export interface ChatWsServerMessage<
   chatId?: string;
   chunk?: UIMessageChunk;
   message?: UI_MESSAGE;
-  sessionId?: string;
+  roomId?: string;
   userId?: string;
   code?: string;
   text?: string;

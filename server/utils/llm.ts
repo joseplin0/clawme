@@ -58,7 +58,7 @@ export async function resolveUserLlmProvider(
     return hydratedUser.llmProvider;
   }
 
-  if ((hydratedUser?.type ?? user.type) !== "BOT") {
+  if ((hydratedUser?.type ?? user.type) !== "bot") {
     return null;
   }
 

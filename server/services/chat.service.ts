@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import type {
-  ChatMessageRecord,
+  RoomMessageRecord,
   MessagePart,
   MessageRole,
   MessageStatus,
@@ -8,23 +8,23 @@ import type {
 import { db, schema } from "~~/server/utils/db";
 import type { StoredClawmeAppState } from "./system.service";
 
-const { chatMessages } = schema;
+const { roomMessages, rooms } = schema;
 
 export async function createMessage(input: {
-  sessionId: string;
-  userId: string;
+  roomId: string;
+  senderId: string;
   role: MessageRole;
   parts: MessagePart[];
   status?: MessageStatus;
 }) {
   const [message] = await db
-    .insert(chatMessages)
+    .insert(roomMessages)
     .values({
-      sessionId: input.sessionId,
-      userId: input.userId,
+      roomId: input.roomId,
+      senderId: input.senderId,
       role: input.role,
       parts: input.parts,
-      status: input.status ?? "DONE",
+      status: input.status ?? "done",
     })
     .returning();
 
@@ -34,8 +34,8 @@ export async function createMessage(input: {
 
   return {
     id: message.id,
-    sessionId: message.sessionId,
-    userId: message.userId,
+    roomId: message.roomId,
+    senderId: message.senderId,
     role: message.role as MessageRole,
     parts: (message.parts as MessagePart[]) ?? [],
     status: message.status as MessageStatus,
@@ -45,16 +45,16 @@ export async function createMessage(input: {
 
 export async function updateMessage(
   messageId: string,
-  updates: Partial<Pick<ChatMessageRecord, "parts" | "status">>,
+  updates: Partial<Pick<RoomMessageRecord, "parts" | "status">>,
 ) {
   const updateData: Record<string, unknown> = {};
   if (updates.parts !== undefined) updateData.parts = updates.parts;
   if (updates.status !== undefined) updateData.status = updates.status;
 
   const [message] = await db
-    .update(chatMessages)
+    .update(roomMessages)
     .set(updateData)
-    .where(eq(chatMessages.id, messageId))
+    .where(eq(roomMessages.id, messageId))
     .returning();
 
   if (!message) {
@@ -63,7 +63,7 @@ export async function updateMessage(
 
   return {
     id: message.id,
-    sessionId: message.sessionId,
+    roomId: message.roomId,
     role: message.role as MessageRole,
     parts: (message.parts as MessagePart[]) ?? [],
     status: message.status as MessageStatus,
@@ -71,8 +71,8 @@ export async function updateMessage(
   };
 }
 
-export function getActiveSessionId(state: StoredClawmeAppState) {
-  return state.sessions[0]?.id ?? null;
+export function getActiveRoomId(state: StoredClawmeAppState) {
+  return state.rooms[0]?.id ?? null;
 }
 
 export function createMockAssistantReply(
@@ -99,17 +99,17 @@ export function createMockAssistantReply(
 /**
  * Get chat session list data with last message for each session
  */
-export async function getChatSessionListData() {
-  const sessions = await db.query.chatSessions.findMany({
+export async function getChatRoomListData() {
+  const roomsList = await db.query.rooms.findMany({
     with: {
       messages: {
         limit: 1,
-        orderBy: [desc(chatMessages.createdAt)],
+        orderBy: [desc(roomMessages.createdAt)],
       },
     },
   });
 
-  const mappedSessions = sessions.map((s) => {
+  const mappedRooms = roomsList.map((s) => {
     const lastMsg = s.messages[0];
     let lastMessageText: string | undefined;
     if (lastMsg) {
@@ -120,8 +120,8 @@ export async function getChatSessionListData() {
     return {
       id: s.id,
       type: s.type,
-      title: s.title || "",
-      isArchived: s.isArchived,
+      title: s.name || "",
+      memberIds: [],
       lastMessage: lastMessageText,
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
@@ -129,7 +129,7 @@ export async function getChatSessionListData() {
   });
 
   return {
-    sessions: mappedSessions,
-    activeSessionId: sessions[0]?.id ?? null,
+    rooms: mappedRooms,
+    activeRoomId: roomsList[0]?.id ?? null,
   };
 }

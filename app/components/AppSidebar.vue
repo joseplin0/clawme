@@ -17,7 +17,7 @@
   >
     <template #header>
       <UButton
-        to="/feed"
+        to="/moment"
         label="C"
         variant="ghost"
         class="text-primary font-black text-xl tracking-tighter cursor-pointer"

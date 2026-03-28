@@ -1,12 +1,12 @@
 import { randomBytes } from "node:crypto";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import { generateText } from "ai";
 import type {
   ActorProfile,
   BootstrapRequest,
-  ChatMessageRecord,
+  RoomMessageRecord,
   ClawmeAppState,
-  FeedPostRecord,
+  MomentRecord,
   MessagePart,
   MessageRole,
   MessageStatus,
@@ -14,17 +14,23 @@ import type {
 } from "~~/shared/types/clawme";
 import { db, schema } from "~~/server/utils/db";
 import { createModelFromProvider } from "~~/server/utils/llm";
+import { mapMomentToMomentRecord } from "./moment-record.mapper";
 
 const {
+  assets,
   systemConfig,
   users,
   llmProviders,
-  chatSessions,
-  sessionParticipants,
-  chatMessages,
-  feedPosts,
-  postAttachments,
+  roomMembers,
+  roomMessages,
+  rooms,
   comments,
+  momentAssets,
+  momentCollections,
+  momentLikes,
+  momentTags,
+  moments,
+  tags,
 } = schema;
 
 export interface StoredClawmeAppState extends ClawmeAppState {
@@ -34,24 +40,30 @@ export interface StoredClawmeAppState extends ClawmeAppState {
 }
 
 export async function readStoredState(): Promise<StoredClawmeAppState> {
-  const [config, allUsers, providers, sessions, messages, feedPostList] =
+  const [config, allUsers, providers, sessions, messages, momentList] =
     await Promise.all([
       db.query.systemConfig.findFirst({
         where: eq(systemConfig.id, "global"),
       }),
       db.query.users.findMany({
-        where: inArray(users.type, ["HUMAN", "BOT"]),
+        where: inArray(users.type, ["human", "bot"]),
       }),
       db.query.llmProviders.findMany(),
-      db.query.chatSessions.findMany({
-        with: { participants: true },
+      db.query.rooms.findMany({
+        with: { members: true },
       }),
-      db.query.chatMessages.findMany({
-        orderBy: [asc(chatMessages.createdAt)],
+      db.query.roomMessages.findMany({
+        orderBy: [asc(roomMessages.createdAt)],
       }),
-      db.query.feedPosts.findMany({
-        with: { attachments: true },
-        orderBy: [desc(feedPosts.createdAt)],
+      db.query.moments.findMany({
+        with: {
+          assets: {
+            with: {
+              asset: true,
+            },
+          },
+        },
+        orderBy: [desc(moments.createdAt)],
       }),
     ]);
 
@@ -62,9 +74,9 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
   };
 
   const ownerModel = allUsers.find(
-    (u) => u.type === "HUMAN" && u.role === "OWNER",
+    (u) => u.type === "human" && u.role === "OWNER",
   );
-  const botModel = allUsers.find((u) => u.type === "BOT");
+  const botModel = allUsers.find((u) => u.type === "bot");
 
   const owner: ActorProfile | null = ownerModel
     ? {
@@ -73,7 +85,7 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
         username: ownerModel.username,
         nickname: ownerModel.nickname,
         avatar: ownerModel.avatar,
-        bio: ownerModel.bio,
+        intro: ownerModel.intro,
         role: ownerModel.role,
         catchphrase: ownerModel.catchphrase,
         createdAt: ownerModel.createdAt.toISOString(),
@@ -88,7 +100,7 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
         username: botModel.username,
         nickname: botModel.nickname,
         avatar: botModel.avatar,
-        bio: botModel.bio,
+        intro: botModel.intro,
         role: botModel.role,
         catchphrase: botModel.catchphrase,
         createdAt: botModel.createdAt.toISOString(),
@@ -105,53 +117,28 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
     createdAt: p.createdAt.toISOString(),
   }));
 
-  const mappedSessions = sessions.map((s) => ({
+  const mappedRooms = sessions.map((s) => ({
     id: s.id,
     type: s.type,
-    title: s.title || "",
-    participantIds: s.participants.map((p) => p.userId),
-    isArchived: s.isArchived,
+    title: s.name || "",
+    memberIds: s.members.map((p) => p.userId),
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
   }));
 
-  const mappedMessages: ChatMessageRecord[] = messages.map((m) => ({
+  const mappedRoomMessages: RoomMessageRecord[] = messages.map((m) => ({
     id: m.id,
-    sessionId: m.sessionId,
-    userId: m.userId,
+    roomId: m.roomId,
+    senderId: m.senderId,
     role: m.role as MessageRole,
     parts: (m.parts as MessagePart[]) ?? [],
     status: m.status as MessageStatus,
     createdAt: m.createdAt.toISOString(),
   }));
 
-  const mappedFeedPosts: FeedPostRecord[] = feedPostList.map((f) => ({
-    id: f.id,
-    primaryAuthorId: f.authorId,
-    coAuthorIds: [],
-    title: f.title,
-    text: f.text || "",
-    context: f.context || "随笔",
-    publishedLabel: f.publishedLabel || "刚刚发布",
-    likeCount: f.likeCount,
-    commentCount: 0,
-    attachments: f.attachments.map((a) => {
-      const meta = (a.meta as Record<string, unknown>) || {};
-      return {
-        id: a.id,
-        kind: a.type as "DOCUMENT" | "IMAGE" | "LINK",
-        url: a.url,
-        width: meta.width as number | undefined,
-        height: meta.height as number | undefined,
-        title: (meta.title as string) || "",
-        subtitle: (meta.subtitle as string) || "",
-        icon: (meta.icon as string) || "",
-        accent: (meta.accent as string) || "",
-      };
-    }),
-    createdAt: f.createdAt.toISOString(),
-    updatedAt: f.updatedAt.toISOString(),
-  }));
+  const mappedMoments: MomentRecord[] = momentList.map(
+    mapMomentToMomentRecord,
+  );
 
   return {
     system: {
@@ -162,9 +149,9 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
     owner,
     bot,
     providers: mappedProviders,
-    sessions: mappedSessions,
-    messages: mappedMessages,
-    feedPosts: mappedFeedPosts,
+    rooms: mappedRooms,
+    roomMessages: mappedRoomMessages,
+    moments: mappedMoments,
     ownerAuthToken: ownerModel?.apiSecret || null,
     ownerPasswordHash: ownerModel?.passwordHash || null,
     botApiSecret: botModel?.apiSecret || null,
@@ -184,14 +171,19 @@ export async function initializeSystem(input: BootstrapRequest) {
   const botApiSecret = randomBytes(24).toString("hex");
 
   // Step 1: 在事务中创建基础数据
-  const { sessionId, botId, provider } = await db.transaction(async (tx) => {
+  const { roomId, botId, provider } = await db.transaction(async (tx) => {
     // 0. Clean slate
-    await tx.delete(postAttachments);
+    await tx.delete(momentAssets);
+    await tx.delete(momentCollections);
+    await tx.delete(momentLikes);
+    await tx.delete(momentTags);
     await tx.delete(comments);
-    await tx.delete(feedPosts);
-    await tx.delete(chatMessages);
-    await tx.delete(sessionParticipants);
-    await tx.delete(chatSessions);
+    await tx.delete(assets);
+    await tx.delete(tags);
+    await tx.delete(moments);
+    await tx.delete(roomMessages);
+    await tx.delete(roomMembers);
+    await tx.delete(rooms);
     await tx.delete(llmProviders);
     await tx.delete(users);
     await tx.delete(systemConfig);
@@ -206,10 +198,10 @@ export async function initializeSystem(input: BootstrapRequest) {
     const [owner] = await tx
       .insert(users)
       .values({
-        type: "HUMAN",
+        type: "human",
         username: input.ownerUsername,
         nickname: input.ownerNickname,
-        bio: "Clawme 管理员",
+        intro: "Clawme 管理员",
         role: "OWNER",
         passwordHash: ownerPasswordHash,
         apiSecret: ownerApiSecret,
@@ -220,10 +212,10 @@ export async function initializeSystem(input: BootstrapRequest) {
     const [bot] = await tx
       .insert(users)
       .values({
-        type: "BOT",
+        type: "bot",
         username: "clawme",
         nickname: input.assistantNickname,
-        bio: input.assistantBio,
+        intro: input.assistantIntro,
         role: input.assistantRole,
         apiSecret: botApiSecret,
         catchphrase: `${input.assistantNickname} 先把骨架立住。`,
@@ -246,17 +238,17 @@ export async function initializeSystem(input: BootstrapRequest) {
       })
       .returning();
 
-    // 4. Chat Session
-    const [session] = await tx
-      .insert(chatSessions)
+    // 4. Chat Room
+    const [room] = await tx
+      .insert(rooms)
       .values({
-        type: "DIRECT",
-        title: `${owner.nickname} x ${bot.nickname}`,
+        type: "single",
+        name: `${owner.nickname} x ${bot.nickname}`,
       })
       .returning();
 
-    if (!session || !provider) {
-      throw new Error("Failed to create session or provider");
+    if (!room || !provider) {
+      throw new Error("Failed to create room or provider");
     }
 
     await tx
@@ -266,85 +258,97 @@ export async function initializeSystem(input: BootstrapRequest) {
       })
       .where(eq(users.id, bot.id));
 
-    await tx.insert(sessionParticipants).values([
-      { sessionId: session.id, userId: owner.id, role: "OWNER" },
-      { sessionId: session.id, userId: bot.id, role: "MEMBER" },
+    await tx.insert(roomMembers).values([
+      { roomId: room.id, userId: owner.id, role: "owner" },
+      { roomId: room.id, userId: bot.id, role: "member" },
     ]);
 
     // 5. 用户消息 "你好"
-    await tx.insert(chatMessages).values({
-      sessionId: session.id,
-      userId: owner.id,
-      role: "USER",
+    await tx.insert(roomMessages).values({
+      roomId: room.id,
+      senderId: owner.id,
+      role: "user",
       parts: [{ type: "text", text: "你好" }],
-      status: "DONE",
+      status: "done",
     });
 
-    // 6. First Posts
-    await tx.insert(feedPosts).values({
-      title: "Clawme 架构白皮书",
-      text: "我刚刚整理了一份《Clawme 架构白皮书》，把统一身份、协作会话和生态引擎串成了一套能继续长的本地底座。欢迎在这里直接盖楼推进。",
-      authorId: bot.id,
-      context: "来自架构探索组",
-      publishedLabel: "刚刚发布",
-      likeCount: 24,
-    });
+    // 6. First Moments
+    const [docMoment] = await tx
+      .insert(moments)
+      .values({
+        title: "Clawme 架构白皮书",
+        content:
+          "我刚刚整理了一份《Clawme 架构白皮书》，把统一身份、协作会话和生态引擎串成了一套能继续长的本地底座。欢迎在这里直接盖楼推进。",
+        userId: bot.id,
+        context: "来自架构探索组",
+        likeCount: 24,
+      })
+      .returning();
 
-    const [docPost] = await db.query.feedPosts.findFirst({
-      where: eq(feedPosts.authorId, bot.id),
-      orderBy: [desc(feedPosts.createdAt)],
-    }).then((p) => p ? [p] : []);
-
-    if (docPost) {
-      await tx.insert(postAttachments).values({
-        postId: docPost.id,
-        type: "DOCUMENT",
-        url: "https://picsum.photos/seed/docs/600/800",
-        meta: {
+    if (docMoment) {
+      const [docAsset] = await tx
+        .insert(assets)
+        .values({
+          userId: bot.id,
+          type: "file",
+          url: "https://picsum.photos/seed/docs/600/800",
+          fileName: "Clawme 架构白皮书.pdf",
+          mimeType: "application/pdf",
           width: 600,
           height: 800,
-          title: "Clawme 架构白皮书.pdf",
-          subtitle: "PDF Document · 2.4 MB",
-          icon: "i-lucide-file-text",
-          accent: "from-sky-100 to-cyan-50",
-        },
-        order: 0,
-      });
+          coverUrl: "https://picsum.photos/seed/docs/600/800",
+        })
+        .returning();
+
+      if (docAsset) {
+        await tx.insert(momentAssets).values({
+          momentId: docMoment.id,
+          assetId: docAsset.id,
+          usage: "attachment",
+          sort: 0,
+        });
+      }
     }
 
-    await tx.insert(feedPosts).values({
-      title: "极简工作台的第一次迭代",
-      text: "今天我们把原型页推进成了可运行骨架。现在它已经有首次引导、共享状态、SSE 会话占位和 Prisma 接入点，不再只是展示用静态稿。",
-      authorId: owner.id,
-      context: "联合呈现",
-      publishedLabel: "2 小时前",
-      likeCount: 13,
-    });
+    const [imageMoment] = await tx
+      .insert(moments)
+      .values({
+        title: "极简工作台的第一次迭代",
+        content:
+          "今天我们把原型页推进成了可运行骨架。现在它已经有首次引导、共享状态、SSE 会话占位和 Prisma 接入点，不再只是展示用静态稿。",
+        userId: owner.id,
+        context: "联合呈现",
+        likeCount: 13,
+        type: "image",
+      })
+      .returning();
 
-    const [imagePost] = await db.query.feedPosts.findFirst({
-      where: eq(feedPosts.authorId, owner.id),
-      orderBy: [desc(feedPosts.createdAt)],
-    }).then((p) => p ? [p] : []);
-
-    if (imagePost) {
-      await tx.insert(postAttachments).values({
-        postId: imagePost.id,
-        type: "IMAGE",
-        url: "https://picsum.photos/seed/workbench/600/400",
-        meta: {
+    if (imageMoment) {
+      const [imageAsset] = await tx
+        .insert(assets)
+        .values({
+          userId: owner.id,
+          type: "image",
+          url: "https://picsum.photos/seed/workbench/600/400",
+          fileName: "Phase 1 工作台预览.png",
+          mimeType: "image/png",
           width: 600,
           height: 400,
-          title: "Phase 1 工作台预览",
-          subtitle: "UI Snapshot · Seeded Preview",
-          icon: "i-lucide-image",
-          accent: "from-amber-100 to-rose-50",
-        },
-        order: 0,
-      });
+        })
+        .returning();
+
+      if (imageAsset) {
+        await tx.insert(momentAssets).values({
+          momentId: imageMoment.id,
+          assetId: imageAsset.id,
+          usage: "media",
+          sort: 0,
+        });
+      }
     }
 
     return {
-      sessionId: session.id,
+      roomId: room.id,
       botId: bot.id,
       provider,
     };
@@ -359,27 +363,27 @@ export async function initializeSystem(input: BootstrapRequest) {
     });
 
     // Step 3: 存储 AI 响应
-    await db.insert(chatMessages).values({
-      sessionId,
-      userId: botId,
-      role: "ASSISTANT",
+    await db.insert(roomMessages).values({
+      roomId,
+      senderId: botId,
+      role: "assistant",
       parts: [{ type: "text", text }],
-      status: "DONE",
+      status: "done",
     });
   } catch (error) {
     console.error("Failed to generate AI response:", error);
     // 如果 LLM 调用失败，存储一个默认响应
-    await db.insert(chatMessages).values({
-      sessionId,
-      userId: botId,
-      role: "ASSISTANT",
+    await db.insert(roomMessages).values({
+      roomId,
+      senderId: botId,
+      role: "assistant",
       parts: [
         {
           type: "text",
           text: "系统已经点亮。我们先从 Phase 1 的底座开始，把引导、对话链路和数据边界稳稳立住。",
         },
       ],
-      status: "DONE",
+      status: "done",
     });
   }
 
@@ -389,12 +393,12 @@ export async function initializeSystem(input: BootstrapRequest) {
 export function toPublicStateResponse(
   state: StoredClawmeAppState,
   isOwnerAuthenticated: boolean,
-  feedPostsLimit?: number,
+  momentsLimit?: number,
 ): PublicStateResponse {
-  let initialFeedPosts = state.feedPosts;
+  let initialMoments = state.moments;
 
-  if (feedPostsLimit !== undefined) {
-    initialFeedPosts = initialFeedPosts.slice(0, feedPostsLimit);
+  if (momentsLimit !== undefined) {
+    initialMoments = initialMoments.slice(0, momentsLimit);
   }
 
   return {
@@ -403,9 +407,9 @@ export function toPublicStateResponse(
       owner: state.owner,
       bot: state.bot,
       providers: state.providers,
-      sessions: state.sessions,
-      messages: state.messages,
-      feedPosts: initialFeedPosts,
+      rooms: state.rooms,
+      roomMessages: state.roomMessages,
+      moments: initialMoments,
     },
     viewer: {
       isOwnerAuthenticated,

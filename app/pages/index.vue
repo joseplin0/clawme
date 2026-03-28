@@ -9,5 +9,5 @@ definePageMeta({
   layout: false,
 });
 
-await navigateTo("/feed");
+await navigateTo("/moment");
 </script>

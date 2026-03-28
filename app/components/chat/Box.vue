@@ -2,7 +2,7 @@
   <section
     class="absolute inset-0 z-20 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-surface transition-transform duration-300 md:relative border-l border-default"
   >
-    <template v-if="activeSessionId">
+    <template v-if="activeRoomId">
       <header
         class="flex h-16 shrink-0 items-center justify-between gap-4 px-4 bg-surface"
       >
@@ -12,15 +12,15 @@
             variant="ghost"
             size="sm"
             class="md:hidden"
-            @click="activeSessionId = null"
+            @click="activeRoomId = null"
           />
           <h2 class="truncate text-lg font-semibold text-highlighted">
-            {{ selectedSession?.title || "默认会话" }}
+            {{ selectedRoom?.title || "默认房间" }}
           </h2>
         </div>
         <div class="flex shrink-0 items-center gap-2">
           <UButton variant="outline" color="neutral" icon="i-lucide-shell">
-            Feed Draft
+            Moment Draft
           </UButton>
         </div>
       </header>
@@ -82,7 +82,7 @@
 
       <div class="shrink-0 border-t border-muted/50 pb-safe">
         <ChatComposer
-          :key="activeSessionId"
+          :key="activeRoomId"
           :ready="isChatReady"
           :status="chatStatus"
           :placeholder="composerPlaceholder"
@@ -116,8 +116,8 @@ import {
 } from "ai";
 import type {
   ActorProfile,
-  ChatSessionRecord,
-  ChatSessionDetailResponse,
+  ChatRoomRecord,
+  ChatRoomDetailResponse,
   ClawmeUIMessage,
 } from "~~/shared/types/clawme";
 
@@ -132,25 +132,25 @@ import type { EditorMentionMenuItem } from "@nuxt/ui";
 const toast = useToast();
 
 const props = defineProps<{
-  activeSessionId: string | null;
-  sessions: ChatSessionRecord[];
+  activeRoomId: string | null;
+  rooms: ChatRoomRecord[];
 }>();
 
-const activeSessionId = ref<string | null>(props.activeSessionId);
+const activeRoomId = ref<string | null>(props.activeRoomId);
 
 // Use global actors cache
 const { getActor, fetchActors, setActors } = useActors();
 const { transport, onIncomingMessage } = useGlobalChatClient();
 
 watch(
-  () => props.activeSessionId,
+  () => props.activeRoomId,
   (value) => {
-    activeSessionId.value = value;
+    activeRoomId.value = value;
   },
   { immediate: true },
 );
 
-const sessionParticipants = ref<ActorProfile[]>([]);
+const roomParticipants = ref<ActorProfile[]>([]);
 
 // Initialize Chat instance
 const chat = shallowRef<Chat<ClawmeUIMessage> | null>(null);
@@ -162,23 +162,23 @@ const lastMessageId = computed(
   () => chatMessages.value[chatMessages.value.length - 1]?.id,
 );
 const isChatReady = computed(() =>
-  Boolean(activeSessionId.value && chat.value),
+  Boolean(activeRoomId.value && chat.value),
 );
 
 onMounted(async () => {
-  if (activeSessionId.value) {
+  if (activeRoomId.value) {
     await initializeChat();
   }
 });
 
-watch(activeSessionId, async (id) => {
+watch(activeRoomId, async (id) => {
   await stopActiveChat();
 
   if (id) {
     await initializeChat();
   } else {
     chat.value = null;
-    sessionParticipants.value = [];
+    roomParticipants.value = [];
   }
 });
 
@@ -219,24 +219,24 @@ async function stopActiveChat() {
 }
 
 async function initializeChat() {
-  if (!activeSessionId.value) return;
+  if (!activeRoomId.value) return;
 
-  sessionParticipants.value = [];
+  roomParticipants.value = [];
 
   try {
-    const response = await $fetch<ChatSessionDetailResponse>(
-      `/api/chat/session/${activeSessionId.value}`,
+    const response = await $fetch<ChatRoomDetailResponse>(
+      `/api/chat/room/${activeRoomId.value}`,
     );
 
-    sessionParticipants.value = response.participants;
+    roomParticipants.value = response.participants;
     setActors(response.participants);
 
     const messages = response.messages as ClawmeUIMessage[];
-    console.log("Fetched messages for session", messages);
+    console.log("Fetched messages for room", messages);
 
     chat.value = markRaw(
       new Chat({
-        id: activeSessionId.value,
+        id: activeRoomId.value,
         messages,
         transport,
         onError(error) {
@@ -252,7 +252,7 @@ async function initializeChat() {
   } catch (error) {
     console.error("Failed to initialize chat:", error);
     toast.add({
-      title: "加载会话失败",
+      title: "加载房间失败",
       description: error instanceof Error ? error.message : "未知错误",
       color: "error",
       icon: "i-lucide-triangle-alert",
@@ -294,16 +294,16 @@ function handleStop() {
 
 // Get current user session
 const { user: currentUser } = useUserSession();
-const selectedSession = computed(
-  () => props.sessions.find((s) => s.id === activeSessionId.value) ?? null,
+const selectedRoom = computed(
+  () => props.rooms.find((s) => s.id === activeRoomId.value) ?? null,
 );
 const composerPlaceholder = computed(() =>
-  activeSessionId.value ? "告诉虾米接下来该先做什么..." : "请先选择会话...",
+  activeRoomId.value ? "告诉虾米接下来该先做什么..." : "请先选择房间...",
 );
 
 const mentionActors = computed<ActorProfile[]>(() => {
   const currentUserId = currentUser.value?.id;
-  return sessionParticipants.value.filter(
+  return roomParticipants.value.filter(
     (actor) => actor.id !== currentUserId,
   );
 });
@@ -312,7 +312,7 @@ const mentionItems = computed<EditorMentionMenuItem[]>(() =>
   mentionActors.value.map((actor) => ({
     id: actor.id,
     label: actor.username,
-    description: `${actor.nickname}${actor.type === "BOT" ? " · BOT" : ""}`,
+    description: `${actor.nickname}${actor.type === "bot" ? " · BOT" : ""}`,
     avatar: {
       src: actor.avatar ?? undefined,
       alt: actor.nickname,

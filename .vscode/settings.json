@@ -3,6 +3,9 @@
     "autoresize",
     "clawme",
     "maxrows",
-    "openspec"
+    "mbti",
+    "openspec",
+    "pgvector",
+    "varchar"
   ]
 }

@@ -57,7 +57,7 @@ export default defineEventHandler(async (event) => {
 
   // Get the owner from database for full user info
   const owner = await db.query.users.findFirst({
-    where: and(eq(users.role, "OWNER"), eq(users.type, "HUMAN")),
+    where: and(eq(users.role, "OWNER"), eq(users.type, "human")),
   });
 
   if (!owner) {

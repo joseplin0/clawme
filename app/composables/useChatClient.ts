@@ -7,7 +7,6 @@ import {
   useToast,
   useUserSession,
 } from "#imports";
-import { toUIMessageRole } from "~~/shared/types/clawme";
 import {
   WebSocketChatTransport,
   type WebSocketConnectionState,
@@ -97,10 +96,10 @@ export function useChatClient() {
   });
 
   /**
-   * 发送消息到指定会话
+   * 发送消息到指定房间
    */
   async function sendMessage(
-    sessionId: string,
+    roomId: string,
     content: string,
   ): Promise<ReadableStream<any> | null> {
     if (!loggedIn.value) {
@@ -116,11 +115,11 @@ export function useChatClient() {
     try {
       const stream = await transport.sendMessages({
         trigger: "submit-message",
-        chatId: sessionId,
+        chatId: roomId,
         messageId: undefined,
         messages: [{
           id: crypto.randomUUID(),
-          role: toUIMessageRole("USER"),
+          role: "user",
           parts: [{ type: "text", text: content }],
         }] as any,
         abortSignal: undefined,
@@ -139,12 +138,12 @@ export function useChatClient() {
   }
 
   /**
-   * 创建新会话并发送首条消息
+   * 创建新房间并发送首条消息
    */
-  async function createSessionAndSend(
+  async function createRoomAndSend(
     targetUserId: string,
     content: string,
-  ): Promise<{ stream: ReadableStream<any> | null; sessionId: Promise<string | null> }> {
+  ): Promise<{ stream: ReadableStream<any> | null; roomId: Promise<string | null> }> {
     if (!loggedIn.value) {
       toast.add({
         title: "未登录",
@@ -152,44 +151,44 @@ export function useChatClient() {
         color: "error",
         icon: "i-lucide-log-in",
       });
-      return { stream: null, sessionId: Promise.resolve(null) };
+      return { stream: null, roomId: Promise.resolve(null) };
     }
 
     try {
       const result = await transport.sendMessageToUser({ targetUserId, content });
-      return { stream: result.stream, sessionId: result.sessionId };
+      return { stream: result.stream, roomId: result.roomId };
     } catch (error) {
       toast.add({
-        title: "创建会话失败",
-        description: error instanceof Error ? error.message : "会话创建失败",
+        title: "创建房间失败",
+        description: error instanceof Error ? error.message : "房间创建失败",
         color: "error",
         icon: "i-lucide-alert-circle",
       });
-      return { stream: null, sessionId: Promise.resolve(null) };
+      return { stream: null, roomId: Promise.resolve(null) };
     }
   }
 
   /**
    * 发送正在输入状态
    */
-  async function sendTyping(sessionId: string): Promise<void> {
+  async function sendTyping(roomId: string): Promise<void> {
     if (!loggedIn.value) return;
-    await transport.sendTyping(sessionId);
+    await transport.sendTyping(roomId);
   }
 
   /**
    * 发送消息已读状态
    */
-  async function sendRead(sessionId: string, messageId: string): Promise<void> {
+  async function sendRead(roomId: string, messageId: string): Promise<void> {
     if (!loggedIn.value) return;
-    await transport.sendRead(sessionId, messageId);
+    await transport.sendRead(roomId, messageId);
   }
 
   /**
    * 监听来自其他用户的消息
    */
   function onIncomingMessage(
-    callback: (chatId: string, message: any, sessionId?: string) => void,
+    callback: (chatId: string, message: any, roomId?: string) => void,
   ): () => void {
     return transport.onIncomingMessage(callback);
   }
@@ -224,7 +223,7 @@ export function useChatClient() {
 
     // 方法
     sendMessage,
-    createSessionAndSend,
+    createRoomAndSend,
     sendTyping,
     sendRead,
     onIncomingMessage,

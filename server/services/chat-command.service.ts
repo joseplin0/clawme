@@ -1,19 +1,19 @@
 import { type UIMessage } from "ai";
 import { eq } from "drizzle-orm";
-import { toUIMessageRole, type MessagePart } from "~~/shared/types/clawme";
+import { type MessagePart } from "~~/shared/types/clawme";
 import { createMessage } from "~~/server/services/chat.service";
 import { db, schema } from "~~/server/utils/db";
 
-const { users, chatSessions, sessionParticipants, chatMessages } = schema;
+const { users, roomMembers, roomMessages, rooms } = schema;
 
 export type UserWithProvider = typeof users.$inferSelect & {
   llmProvider: typeof schema.llmProviders.$inferSelect | null;
 };
 
 export interface PreparedChatCommand {
-  activeSessionId: string;
-  createdSessionId?: string;
-  userMessage: typeof chatMessages.$inferSelect;
+  activeRoomId: string;
+  createdRoomId?: string;
+  userMessage: typeof roomMessages.$inferSelect;
   uiMessage: UIMessage;
   targetUser: UserWithProvider;
 }
@@ -29,12 +29,12 @@ export class ChatCommandError extends Error {
   }
 }
 
-export async function getSessionParticipantsForUser(
-  sessionId: string,
+export async function getRoomMembersForUser(
+  roomId: string,
   userId: string,
 ) {
-  const participants = await db.query.sessionParticipants.findMany({
-    where: eq(sessionParticipants.sessionId, sessionId),
+  const participants = await db.query.roomMembers.findMany({
+    where: eq(roomMembers.roomId, roomId),
   });
 
   const isParticipant = participants.some((participant) => participant.userId === userId);
@@ -45,22 +45,22 @@ export async function getSessionParticipantsForUser(
   return participants;
 }
 
-export async function prepareDirectChatMessage(input: {
+export async function prepareDirectRoomMessage(input: {
   senderId: string;
   content: string;
-  sessionId?: string;
+  roomId?: string;
   targetUserId?: string;
 }): Promise<PreparedChatCommand> {
   const content = input.content.trim();
   if (!content) {
-    throw new ChatCommandError("EMPTY_CONTENT", "消息内容不能为空", input.sessionId);
+    throw new ChatCommandError("EMPTY_CONTENT", "消息内容不能为空", input.roomId);
   }
 
-  if (input.sessionId) {
-    const session = await db.query.chatSessions.findFirst({
-      where: eq(chatSessions.id, input.sessionId),
+  if (input.roomId) {
+    const session = await db.query.rooms.findFirst({
+      where: eq(rooms.id, input.roomId),
       with: {
-        participants: {
+        members: {
           with: {
             user: {
               with: {
@@ -75,41 +75,41 @@ export async function prepareDirectChatMessage(input: {
     if (!session) {
       throw new ChatCommandError(
         "SESSION_NOT_FOUND",
-        "会话不存在",
-        input.sessionId,
+        "房间不存在",
+        input.roomId,
       );
     }
 
-    const senderParticipant = session.participants.find(
+    const senderParticipant = session.members.find(
       (participant) => participant.userId === input.senderId,
     );
 
     if (!senderParticipant?.user) {
-      throw new ChatCommandError("FORBIDDEN", "无权访问该会话", input.sessionId);
+      throw new ChatCommandError("FORBIDDEN", "无权访问该房间", input.roomId);
     }
 
-    if (session.type !== "DIRECT") {
+    if (session.type !== "single") {
       throw new ChatCommandError(
         "UNSUPPORTED_SESSION_TYPE",
-        "当前实时聊天仅支持 DIRECT 会话，GROUP_CHAT 后续走生态事件管线。",
-        input.sessionId,
+        "当前实时聊天仅支持 single 房间，group 后续再走扩展链路。",
+        input.roomId,
       );
     }
 
     const targetUser =
-      session.participants.find((participant) => participant.userId !== input.senderId)?.user ?? null;
+      session.members.find((participant) => participant.userId !== input.senderId)?.user ?? null;
     if (!targetUser) {
-      throw new ChatCommandError("TARGET_NOT_FOUND", "未找到会话目标", input.sessionId);
+      throw new ChatCommandError("TARGET_NOT_FOUND", "未找到房间目标", input.roomId);
     }
 
     const userMessage = await createUserMessage({
-      sessionId: session.id,
+      roomId: session.id,
       senderId: input.senderId,
       content,
     });
 
     return {
-      activeSessionId: session.id,
+      activeRoomId: session.id,
       userMessage,
       uiMessage: toChatUiMessage(userMessage),
       targetUser,
@@ -119,7 +119,7 @@ export async function prepareDirectChatMessage(input: {
   if (!input.targetUserId) {
     throw new ChatCommandError(
       "MISSING_SESSION_OR_TARGET",
-      "需要提供 sessionId 或 targetUserId",
+      "需要提供 roomId 或 targetUserId",
     );
   }
 
@@ -141,30 +141,30 @@ export async function prepareDirectChatMessage(input: {
 
   const creation = await db.transaction(async (tx) => {
     const [newSession] = await tx
-      .insert(chatSessions)
+      .insert(rooms)
       .values({
-        type: "DIRECT",
-        title: `${sender.nickname} x ${targetUser.nickname}`,
+        type: "single",
+        name: `${sender.nickname} x ${targetUser.nickname}`,
       })
       .returning();
 
     if (!newSession) {
-      throw new ChatCommandError("SESSION_CREATE_FAILED", "会话创建失败");
+      throw new ChatCommandError("SESSION_CREATE_FAILED", "房间创建失败");
     }
 
-    await tx.insert(sessionParticipants).values([
-      { sessionId: newSession.id, userId: sender.id, role: "OWNER" },
-      { sessionId: newSession.id, userId: targetUser.id, role: "MEMBER" },
+    await tx.insert(roomMembers).values([
+      { roomId: newSession.id, userId: sender.id, role: "owner" },
+      { roomId: newSession.id, userId: targetUser.id, role: "member" },
     ]);
 
     const [userMessage] = await tx
-      .insert(chatMessages)
+      .insert(roomMessages)
       .values({
-        sessionId: newSession.id,
-        userId: input.senderId,
-        role: "USER",
+        roomId: newSession.id,
+        senderId: input.senderId,
+        role: "user",
         parts: [{ type: "text", text: content }],
-        status: "DONE",
+        status: "done",
       })
       .returning();
 
@@ -177,8 +177,8 @@ export async function prepareDirectChatMessage(input: {
     }
 
     return {
-      activeSessionId: newSession.id,
-      createdSessionId: newSession.id,
+      activeRoomId: newSession.id,
+      createdRoomId: newSession.id,
       userMessage,
     };
   });
@@ -191,47 +191,47 @@ export async function prepareDirectChatMessage(input: {
 }
 
 async function createUserMessage(input: {
-  sessionId: string;
+  roomId: string;
   senderId: string;
   content: string;
 }) {
   try {
     const message = await createMessage({
-      sessionId: input.sessionId,
-      userId: input.senderId,
-      role: "USER",
+      roomId: input.roomId,
+      senderId: input.senderId,
+      role: "user",
       parts: [{ type: "text", text: input.content }],
-      status: "DONE",
+      status: "done",
     });
 
     return {
       id: message.id,
-      sessionId: message.sessionId,
-      userId: message.userId,
+      roomId: message.roomId,
+      senderId: message.senderId,
       role: message.role,
       parts: message.parts,
       status: message.status,
       createdAt: new Date(message.createdAt),
-    } as typeof chatMessages.$inferSelect;
+    } as typeof roomMessages.$inferSelect;
   } catch {
     throw new ChatCommandError(
       "MESSAGE_CREATE_FAILED",
       "消息保存失败",
-      input.sessionId,
+      input.roomId,
     );
   }
 }
 
 function toChatUiMessage(
-  message: typeof chatMessages.$inferSelect,
+  message: typeof roomMessages.$inferSelect,
 ): UIMessage {
   return {
     id: message.id,
-    role: toUIMessageRole(message.role),
+    role: message.role,
     parts: ((message.parts as MessagePart[]) ?? []) as UIMessage["parts"],
     metadata: {
       createdAt: message.createdAt.getTime(),
-      userId: message.userId,
+      userId: message.senderId,
     },
   };
 }

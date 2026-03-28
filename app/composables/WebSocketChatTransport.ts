@@ -22,8 +22,8 @@ type PendingStream = {
   abortController: AbortController;
 };
 
-type PendingSessionRequest = {
-  resolve: (sessionId: string) => void;
+type PendingRoomRequest = {
+  resolve: (roomId: string) => void;
   reject: (error: Error) => void;
 };
 
@@ -38,9 +38,9 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
   private reconnectAllowed = true;
   private connectionCloseError: Error | null = null;
   private pendingStreams = new Map<string, PendingStream>();
-  private pendingSessionRequests = new Map<string, PendingSessionRequest>();
+  private pendingRoomRequests = new Map<string, PendingRoomRequest>();
   private messageCallbacks = new Set<
-    (chatId: string, message: UIMessage, sessionId?: string) => void
+    (chatId: string, message: UIMessage, roomId?: string) => void
   >();
   private stateChangeCallbacks = new Set<(state: WebSocketConnectionState) => void>();
   private connectionPromise: Promise<WebSocket> | null = null;
@@ -79,7 +79,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
 
   private cleanupPendingRequest(requestId: string): void {
     this.pendingStreams.delete(requestId);
-    this.pendingSessionRequests.delete(requestId);
+    this.pendingRoomRequests.delete(requestId);
   }
 
   private rejectPendingRequest(requestId: string, error: Error): void {
@@ -93,8 +93,8 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
       stream.abortController.abort();
     }
 
-    const pendingSession = this.pendingSessionRequests.get(requestId);
-    pendingSession?.reject(error);
+    const pendingRoom = this.pendingRoomRequests.get(requestId);
+    pendingRoom?.reject(error);
 
     this.cleanupPendingRequest(requestId);
   }
@@ -102,7 +102,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
   private closeAllPendingRequests(error: Error): void {
     const requestIds = new Set([
       ...this.pendingStreams.keys(),
-      ...this.pendingSessionRequests.keys(),
+      ...this.pendingRoomRequests.keys(),
     ]);
 
     for (const requestId of requestIds) {
@@ -110,14 +110,14 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
     }
   }
 
-  private resolvePendingSessionRequest(requestId: string, sessionId: string): void {
-    const pendingSession = this.pendingSessionRequests.get(requestId);
-    if (!pendingSession) {
+  private resolvePendingRoomRequest(requestId: string, roomId: string): void {
+    const pendingRoom = this.pendingRoomRequests.get(requestId);
+    if (!pendingRoom) {
       return;
     }
 
-    pendingSession.resolve(sessionId);
-    this.pendingSessionRequests.delete(requestId);
+    pendingRoom.resolve(roomId);
+    this.pendingRoomRequests.delete(requestId);
   }
 
   private updateConnectionState(state: WebSocketConnectionState): void {
@@ -262,13 +262,13 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
       const rawData =
         typeof event.data === "string" ? event.data : String(event.data);
       const data: ChatWsServerMessage = JSON.parse(rawData);
-      const { type, requestId, chatId, chunk, message, sessionId, userId, code, text } =
+      const { type, requestId, chatId, chunk, message, roomId, userId, code, text } =
         data;
 
       switch (type) {
         case "ack":
-          if (requestId && sessionId) {
-            this.resolvePendingSessionRequest(requestId, sessionId);
+          if (requestId && roomId) {
+            this.resolvePendingRoomRequest(requestId, roomId);
           }
           break;
 
@@ -280,7 +280,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
 
         case "message":
           if (chatId && message) {
-            this.handleIncomingMessage(chatId, message, sessionId);
+            this.handleIncomingMessage(chatId, message, roomId);
           }
           break;
 
@@ -325,10 +325,10 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
   private handleIncomingMessage(
     chatId: string,
     message: UIMessage,
-    sessionId?: string,
+    roomId?: string,
   ): void {
     for (const callback of this.messageCallbacks) {
-      callback(chatId, message, sessionId);
+      callback(chatId, message, roomId);
     }
   }
 
@@ -386,7 +386,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
     const payload: ChatWsClientMessage = {
       type: "send",
       requestId,
-      sessionId: chatId,
+      roomId: chatId,
       content,
       messageId,
     };
@@ -406,7 +406,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
     abortSignal?: AbortSignal;
   }): Promise<{
     stream: ReadableStream<UIMessageChunk>;
-    sessionId: Promise<string>;
+    roomId: Promise<string>;
   }> {
     const requestId = this.createRequestId();
     const ws = await this.connect();
@@ -426,8 +426,8 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
       );
     }
 
-    const sessionIdPromise = new Promise<string>((resolve, reject) => {
-      this.pendingSessionRequests.set(requestId, { resolve, reject });
+    const roomIdPromise = new Promise<string>((resolve, reject) => {
+      this.pendingRoomRequests.set(requestId, { resolve, reject });
     });
 
     const stream = new ReadableStream<UIMessageChunk>({
@@ -449,7 +449,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
 
     ws.send(JSON.stringify(payload));
 
-    return { stream, sessionId: sessionIdPromise };
+    return { stream, roomId: roomIdPromise };
   }
 
   async reconnectToStream(): Promise<ReadableStream<UIMessageChunk> | null> {
@@ -457,23 +457,23 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
   }
 
   onIncomingMessage(
-    callback: (chatId: string, message: UIMessage, sessionId?: string) => void,
+    callback: (chatId: string, message: UIMessage, roomId?: string) => void,
   ): () => void {
     this.messageCallbacks.add(callback);
     return () => this.messageCallbacks.delete(callback);
   }
 
-  async sendTyping(sessionId: string): Promise<void> {
+  async sendTyping(roomId: string): Promise<void> {
     const ws = await this.connect();
-    ws.send(JSON.stringify({ type: "typing", sessionId } satisfies ChatWsClientMessage));
+    ws.send(JSON.stringify({ type: "typing", roomId } satisfies ChatWsClientMessage));
   }
 
-  async sendRead(sessionId: string, messageId: string): Promise<void> {
+  async sendRead(roomId: string, messageId: string): Promise<void> {
     const ws = await this.connect();
     ws.send(
       JSON.stringify({
         type: "read",
-        sessionId,
+        roomId,
         messageId,
       } satisfies ChatWsClientMessage),
     );

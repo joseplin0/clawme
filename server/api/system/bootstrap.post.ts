@@ -42,9 +42,9 @@ export default defineEventHandler(async (event) => {
 
   await setOwnerSession(event, sessionUser, result.ownerAuthToken);
 
-  // 返回 PublicStateResponse，同时包含 sessionId
+  // 返回 PublicStateResponse，同时包含 roomId
   return {
     ...toPublicStateResponse(result, true),
-    sessionId: result.sessions[0]?.id,
+    roomId: result.rooms[0]?.id,
   };
 });

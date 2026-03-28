@@ -1,44 +1,11 @@
 import type { UIMessage } from "ai";
 
-export type UserType = "HUMAN" | "BOT";
-export type SessionType = "DIRECT" | "GROUP";
-export type DbMessageRole = "USER" | "ASSISTANT" | "SYSTEM";
-export type UIMessageRole = "user" | "assistant" | "system";
+export type UserType = "human" | "bot";
+export type SessionType = "single" | "group";
+export type DbMessageRole = "user" | "assistant" | "system";
 export type MessageRole = DbMessageRole;
-export type MessageStatus = "GENERATING" | "DONE" | "ERROR";
-export type FeedAttachmentKind = "DOCUMENT" | "IMAGE" | "LINK";
-
-const DB_TO_UI_MESSAGE_ROLE_MAP: Record<DbMessageRole, UIMessageRole> = {
-  USER: "user",
-  ASSISTANT: "assistant",
-  SYSTEM: "system",
-};
-
-const UI_TO_DB_MESSAGE_ROLE_MAP: Record<UIMessageRole, DbMessageRole> = {
-  user: "USER",
-  assistant: "ASSISTANT",
-  system: "SYSTEM",
-};
-
-export function toUIMessageRole(
-  role: DbMessageRole | UIMessageRole,
-): UIMessageRole {
-  if (role in UI_TO_DB_MESSAGE_ROLE_MAP) {
-    return role as UIMessageRole;
-  }
-
-  return DB_TO_UI_MESSAGE_ROLE_MAP[role as DbMessageRole];
-}
-
-export function toDbMessageRole(
-  role: DbMessageRole | UIMessageRole,
-): DbMessageRole {
-  if (role in DB_TO_UI_MESSAGE_ROLE_MAP) {
-    return role as DbMessageRole;
-  }
-
-  return UI_TO_DB_MESSAGE_ROLE_MAP[role as UIMessageRole];
-}
+export type MessageStatus = "generating" | "done" | "error";
+export type MomentAttachmentKind = "DOCUMENT" | "IMAGE" | "LINK";
 
 // AI SDK message metadata
 export interface MessageMetadata {
@@ -79,7 +46,7 @@ export interface ActorProfile {
   username: string;
   nickname: string;
   avatar: string | null;
-  bio: string | null;
+  intro: string | null;
   role: string | null;
   catchphrase: string | null;
   createdAt: string;
@@ -95,30 +62,29 @@ export interface LlmProviderRecord {
   createdAt: string;
 }
 
-export interface ChatSessionRecord {
+export interface ChatRoomRecord {
   id: string;
   type: SessionType;
   title: string;
-  participantIds: string[];
-  isArchived: boolean;
+  memberIds: string[];
   lastMessage?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ChatMessageRecord {
+export interface RoomMessageRecord {
   id: string;
-  sessionId: string;
-  userId: string;
+  roomId: string;
+  senderId: string;
   role: MessageRole;
   parts: MessagePart[];
   status: MessageStatus;
   createdAt: string;
 }
 
-export interface FeedAttachmentRecord {
+export interface MomentAttachmentRecord {
   id: string;
-  kind: FeedAttachmentKind;
+  kind: MomentAttachmentKind;
   url?: string | null;
   width?: number;
   height?: number;
@@ -128,17 +94,16 @@ export interface FeedAttachmentRecord {
   accent: string;
 }
 
-export interface FeedPostRecord {
+export interface MomentRecord {
   id: string;
   primaryAuthorId: string;
   coAuthorIds: string[];
   title: string | null;
   text: string;
   context: string;
-  publishedLabel: string;
   likeCount: number;
   commentCount: number;
-  attachments: FeedAttachmentRecord[];
+  attachments: MomentAttachmentRecord[];
   createdAt: string;
   updatedAt: string;
 }
@@ -148,9 +113,9 @@ export interface ClawmeAppState {
   owner: ActorProfile | null;
   bot: ActorProfile | null;
   providers: LlmProviderRecord[];
-  sessions: ChatSessionRecord[];
-  messages: ChatMessageRecord[];
-  feedPosts: FeedPostRecord[];
+  rooms: ChatRoomRecord[];
+  roomMessages: RoomMessageRecord[];
+  moments: MomentRecord[];
 }
 
 export interface PublicStateResponse {
@@ -162,7 +127,7 @@ export interface PublicStateResponse {
 }
 
 export interface BootstrapResponse extends PublicStateResponse {
-  sessionId?: string;
+  roomId?: string;
 }
 
 export interface BootstrapRequest {
@@ -171,29 +136,29 @@ export interface BootstrapRequest {
   ownerPassword: string;
   assistantNickname: string;
   assistantRole: string;
-  assistantBio: string;
+  assistantIntro: string;
   providerName: string;
   providerBaseUrl: string;
   apiKey: string;
   modelId: string;
 }
 
-export interface ChatSessionState {
+export interface ChatRoomState {
   owner: ActorProfile | null;
   bot: ActorProfile | null;
-  sessions: ChatSessionRecord[];
+  rooms: ChatRoomRecord[];
 }
 
-export interface ChatSessionResponse {
-  state: ChatSessionState;
-  activeSessionId: string | null;
+export interface ChatRoomResponse {
+  state: ChatRoomState;
+  activeRoomId: string | null;
 }
 
 // AI SDK compatible message types
 
 export type ClawmeUIMessage = UIMessage<MessageMetadata>;
 
-export interface ChatSessionDetailResponse {
+export interface ChatRoomDetailResponse {
   id: string;
   title: string;
   participants: ActorProfile[];

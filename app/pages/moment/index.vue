@@ -31,7 +31,7 @@
       <UScrollArea
         ref="scrollArea"
         v-slot="{ item }"
-        :items="feedPosts"
+        :items="moments"
         :virtualize="{
           gap,
           lanes,
@@ -40,8 +40,8 @@
         }"
         class="w-full h-[calc(100vh-200px)] p-4 bg-surface"
       >
-        <FeedPostCard
-          :post="item"
+        <MomentCard
+          :moment="item"
           :actors-by-id="actorsById"
           class="break-inside-avoid"
         />
@@ -58,7 +58,7 @@
 
       <!-- 没有更多数据提示 -->
       <div
-        v-if="!hasMore && feedPosts.length > 0"
+        v-if="!hasMore && moments.length > 0"
         class="text-center text-gray-500 py-4"
       >
         没有更多内容了
@@ -70,16 +70,16 @@
 <script setup lang="ts">
 import { useInfiniteScroll } from "@vueuse/core";
 import { useElementSize } from "@vueuse/core";
-import type { ActorProfile, FeedPostRecord } from "~~/shared/types/clawme";
+import type { ActorProfile, MomentRecord } from "~~/shared/types/clawme";
 
 const page = ref(0);
 const limit = 15;
-const feedPosts = ref<FeedPostRecord[]>([]);
+const moments = ref<MomentRecord[]>([]);
 const actors = ref<ActorProfile[]>([]);
 const hasMore = ref(true);
 const isLoading = ref(false);
 
-// actorsById 用于 FeedPostCard
+// actorsById 用于 MomentCard
 const actorsById = computed<Record<string, ActorProfile>>(() => {
   return Object.fromEntries(actors.value.map((a) => [a.id, a]));
 });
@@ -105,11 +105,11 @@ const loadMore = async () => {
   page.value++;
 
   try {
-    const response = (await $fetch("/api/feed/posts", {
+    const response = (await $fetch("/api/moment", {
       query: { page: page.value, limit },
     })) as any;
 
-    const newPosts = response.list || [];
+    const newMoments = response.list || [];
 
     // 第一页时保存 actors 信息
     if (response.actors) {
@@ -117,15 +117,15 @@ const loadMore = async () => {
     }
 
     // De-duplicate elements
-    const existingIds = new Set(feedPosts.value.map((p) => p.id));
-    const uniqueNewPosts = newPosts.filter(
-      (p: FeedPostRecord) => !existingIds.has(p.id),
+    const existingIds = new Set(moments.value.map((p) => p.id));
+    const uniqueNewMoments = newMoments.filter(
+      (p: MomentRecord) => !existingIds.has(p.id),
     );
 
-    feedPosts.value.push(...uniqueNewPosts);
-    hasMore.value = newPosts.length >= limit;
+    moments.value.push(...uniqueNewMoments);
+    hasMore.value = newMoments.length >= limit;
   } catch (err) {
-    console.error("Failed to load more posts", err);
+    console.error("Failed to load more moments", err);
     page.value--; // revert
   } finally {
     isLoading.value = false;

@@ -86,7 +86,7 @@ async function handleSubmit(event: {
       icon: "i-lucide-check",
     });
 
-    await navigateTo("/feed");
+    await navigateTo("/moment");
   } catch (error) {
     toast.add({
       title: "登录失败",

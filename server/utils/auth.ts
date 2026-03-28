@@ -39,8 +39,13 @@ type RawOwnerSession = {
   };
 } | null;
 
-declare const setUserSession: (event: H3Event, data: OwnerSessionData) => Promise<unknown>;
-declare const getUserSession: (event: H3Event | OwnerAuthTarget) => Promise<RawOwnerSession>;
+declare const setUserSession: (
+  event: H3Event,
+  data: OwnerSessionData,
+) => Promise<unknown>;
+declare const getUserSession: (
+  event: H3Event | OwnerAuthTarget,
+) => Promise<RawOwnerSession>;
 declare const clearUserSession: (event: H3Event) => Promise<boolean>;
 
 function extractBearerToken(rawHeader?: string | null) {
@@ -68,7 +73,9 @@ function getOwnerContext(target: OwnerAuthTarget) {
   return target.context;
 }
 
-function isH3EventTarget(target: OwnerAuthTarget): target is H3Event & OwnerAuthTarget {
+function isH3EventTarget(
+  target: OwnerAuthTarget,
+): target is H3Event & OwnerAuthTarget {
   return "node" in (target as Record<string, unknown>);
 }
 
@@ -102,7 +109,7 @@ async function readValidatedOwnerById(userId: string) {
     where: and(
       eq(users.id, userId),
       eq(users.role, "OWNER"),
-      eq(users.type, "HUMAN"),
+      eq(users.type, "human"),
     ),
   });
 }
@@ -128,7 +135,9 @@ async function getExistingOwnerSession(
   }
 }
 
-async function resolveOwnerUser(target: OwnerAuthTarget): Promise<OwnerSessionUser | null> {
+async function resolveOwnerUser(
+  target: OwnerAuthTarget,
+): Promise<OwnerSessionUser | null> {
   const context = getOwnerContext(target);
   if (isOwnerSessionUser(context.user)) {
     return normalizeOwnerUser(context.user);
@@ -172,8 +181,8 @@ async function resolveOwnerUser(target: OwnerAuthTarget): Promise<OwnerSessionUs
   const owner = await db.query.users.findFirst({
     where: and(
       eq(users.role, "OWNER"),
-      eq(users.type, "HUMAN"),
-      eq(users.apiSecret, bearer)
+      eq(users.type, "human"),
+      eq(users.apiSecret, bearer),
     ),
   });
   if (!owner) {
@@ -193,7 +202,11 @@ async function resolveOwnerUser(target: OwnerAuthTarget): Promise<OwnerSessionUs
 /**
  * Set owner session using nuxt-auth-utils
  */
-export async function setOwnerSession(event: H3Event, user: OwnerSessionUser, apiSecret: string) {
+export async function setOwnerSession(
+  event: H3Event,
+  user: OwnerSessionUser,
+  apiSecret: string,
+) {
   await setUserSession(event, {
     user,
     secure: {
@@ -210,7 +223,7 @@ export async function getOwnerSession(
 ): Promise<OwnerSessionData | null> {
   const session = await getUserSession(event);
 
-  if (!session?.user || !('id' in session.user)) {
+  if (!session?.user || !("id" in session.user)) {
     return null;
   }
 

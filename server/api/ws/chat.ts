@@ -6,10 +6,10 @@ import type {
 } from "~~/shared/types/chat-ws";
 import {
   ChatCommandError,
-  getSessionParticipantsForUser,
-  prepareDirectChatMessage,
+  getRoomMembersForUser,
+  prepareDirectRoomMessage,
 } from "~~/server/services/chat-command.service";
-import { createAssistantMessageStreamFromSession } from "~~/server/ecosystem/core/AssistantInstant";
+import { createAssistantMessageStreamFromRoom } from "~~/server/ecosystem/core/AssistantInstant";
 import { resolveOwnerSocketUser } from "~~/server/utils/auth";
 
 type WSMessage = ChatWsClientMessage;
@@ -107,7 +107,7 @@ export default defineWebSocketHandler({
       console.error("[WS] Message handling error:", error);
       sendChatCommandError(peer, error, {
         requestId: data?.requestId,
-        chatId: data?.sessionId,
+        chatId: data?.roomId,
       });
     }
   },
@@ -201,67 +201,67 @@ function sendFinishedStream(peer: any, chatId: string, requestId?: string) {
   sendStreamChunk(peer, chatId, requestId, { type: "finish" });
 }
 
-function sendSessionAck(
+function sendRoomAck(
   peer: any,
   chatId: string,
   requestId: string,
-  sessionId: string,
+  roomId: string,
 ) {
   peer.send(
     JSON.stringify({
       type: "ack",
       requestId,
       chatId,
-      sessionId,
+      roomId,
     } satisfies WSResponse),
   );
 }
 
 async function handleMessageSend(peer: any, data: WSMessage, senderId: string) {
   const requestId = data.requestId;
-  let chatId = data.sessionId;
+  let chatId = data.roomId;
 
   try {
-    const prepared = await prepareDirectChatMessage({
+    const prepared = await prepareDirectRoomMessage({
       senderId,
-      sessionId: data.sessionId,
+      roomId: data.roomId,
       targetUserId: data.targetUserId,
       content: data.content ?? "",
     });
 
-    chatId = prepared.activeSessionId;
+    chatId = prepared.activeRoomId;
 
-    if (requestId && prepared.createdSessionId) {
-      sendSessionAck(
+    if (requestId && prepared.createdRoomId) {
+      sendRoomAck(
         peer,
-        prepared.activeSessionId,
+        prepared.activeRoomId,
         requestId,
-        prepared.createdSessionId,
+        prepared.createdRoomId,
       );
     }
 
-    if (prepared.targetUser.type !== "BOT") {
+    if (prepared.targetUser.type !== "bot") {
       peer.publish(
         `user:${prepared.targetUser.id}`,
         JSON.stringify({
           type: "message",
-          chatId: prepared.activeSessionId,
+          chatId: prepared.activeRoomId,
           message: prepared.uiMessage,
-          sessionId: prepared.createdSessionId,
+          roomId: prepared.createdRoomId,
         } satisfies WSResponse),
       );
 
-      sendFinishedStream(peer, prepared.activeSessionId, requestId);
+      sendFinishedStream(peer, prepared.activeRoomId, requestId);
       return;
     }
 
-    const assistantReply = await createAssistantMessageStreamFromSession({
-      sessionId: prepared.activeSessionId,
+    const assistantReply = await createAssistantMessageStreamFromRoom({
+      roomId: prepared.activeRoomId,
       assistantUser: prepared.targetUser,
     });
 
     for await (const chunk of assistantReply.stream) {
-      sendStreamChunk(peer, prepared.activeSessionId, requestId, chunk);
+      sendStreamChunk(peer, prepared.activeRoomId, requestId, chunk);
     }
 
     await assistantReply.completed;
@@ -275,16 +275,16 @@ async function handleMessageSend(peer: any, data: WSMessage, senderId: string) {
 }
 
 async function handleTyping(peer: any, data: WSMessage, senderId: string) {
-  const sessionId = data.sessionId;
+  const roomId = data.roomId;
 
-  if (!sessionId) {
+  if (!roomId) {
     return;
   }
 
-  const participants = await getSessionParticipantsForUser(sessionId, senderId);
+  const participants = await getRoomMembersForUser(roomId, senderId);
   if (!participants) {
-    sendWsError(peer, "FORBIDDEN", "无权访问该会话", {
-      chatId: sessionId,
+    sendWsError(peer, "FORBIDDEN", "无权访问该房间", {
+      chatId: roomId,
     });
     return;
   }
@@ -298,7 +298,7 @@ async function handleTyping(peer: any, data: WSMessage, senderId: string) {
       `user:${participant.userId}`,
       JSON.stringify({
         type: "typing",
-        chatId: sessionId,
+        chatId: roomId,
         userId: senderId,
       } satisfies WSResponse),
     );
@@ -306,22 +306,22 @@ async function handleTyping(peer: any, data: WSMessage, senderId: string) {
 }
 
 async function handleRead(peer: any, data: WSMessage, senderId: string) {
-  const sessionId = data.sessionId;
+  const roomId = data.roomId;
   const messageId = data.messageId;
 
-  if (!sessionId || !messageId) {
+  if (!roomId || !messageId) {
     return;
   }
 
-  const participants = await getSessionParticipantsForUser(sessionId, senderId);
+  const participants = await getRoomMembersForUser(roomId, senderId);
   if (!participants) {
-    sendWsError(peer, "FORBIDDEN", "无权访问该会话", {
-      chatId: sessionId,
+    sendWsError(peer, "FORBIDDEN", "无权访问该房间", {
+      chatId: roomId,
     });
     return;
   }
 
   console.log(
-    `[WS] User ${senderId} read message ${messageId} in session ${sessionId}`,
+    `[WS] User ${senderId} read message ${messageId} in room ${roomId}`,
   );
 }

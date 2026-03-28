@@ -48,7 +48,7 @@ const isChatRoute = computed(() => route.path === "/chat");
 const navLinks = [
   {
     label: "首页",
-    to: "/feed",
+    to: "/moment",
     icon: "cm-waterfalls-h",
     activeIcon: "cm-waterfalls-h-fill",
   },

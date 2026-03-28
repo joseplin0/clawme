@@ -5,6 +5,6 @@ export default defineEventHandler(async (event) => {
   const state = await readStoredState();
   const ownerAuthenticated = await isOwnerAuthenticated(event);
 
-  // Default to sending only the first 15 feed posts 
+  // Default to sending only the first 15 moments
   return toPublicStateResponse(state, ownerAuthenticated, 15);
 });

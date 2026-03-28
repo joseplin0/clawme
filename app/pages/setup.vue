@@ -1,178 +1,169 @@
 <template>
   <div class="px-4 py-6 md:px-6 md:py-10">
     <div class="mx-auto max-w-3xl">
-      <UCard>
-        <template #header>
-          <div class="space-y-1">
-            <h1>首次设置</h1>
-            <p>按步骤填写必要信息后即可启动 Clawme。</p>
-          </div>
-        </template>
-
-        <UForm :state="form" class="space-y-6" @submit="handleSubmit">
-          <UStepper
-            ref="stepper"
-            v-model="currentStep"
-            :items="stepItems"
-            class="gap-6"
-          >
-            <template #owner>
-              <div class="space-y-4">
-                <UFormField name="ownerNickname" label="昵称" required>
-                  <UInput
-                    v-model="form.ownerNickname"
-                    class="w-full"
-                    placeholder="例如：林"
-                    required
-                  />
-                </UFormField>
-
-                <UFormField name="ownerUsername" label="用户名" required>
-                  <UInput
-                    v-model="form.ownerUsername"
-                    class="w-full"
-                    placeholder="例如：linqiang"
-                    required
-                  />
-                </UFormField>
-
-                <UFormField name="ownerPassword" label="密码" required>
-                  <UInput
-                    v-model="form.ownerPassword"
-                    class="w-full"
-                    type="password"
-                    placeholder="至少 6 位"
-                    required
-                  />
-                </UFormField>
-              </div>
-            </template>
-
-            <template #assistant>
-              <div class="space-y-4">
-                <UFormField
-                  name="assistantNickname"
-                  label="默认助理昵称"
+      <UForm :state="form" class="space-y-6" @submit="handleSubmit">
+        <UStepper
+          ref="stepper"
+          v-model="currentStep"
+          :items="stepItems"
+          class="gap-6"
+        >
+          <template #owner>
+            <div class="space-y-4">
+              <UFormField name="ownerNickname" label="昵称" required>
+                <UInput
+                  v-model="form.ownerNickname"
+                  class="w-full"
+                  placeholder="例如：林"
                   required
-                >
-                  <UInput
-                    v-model="form.assistantNickname"
-                    class="w-full"
-                    placeholder="例如：虾米"
-                    required
-                  />
-                </UFormField>
+                />
+              </UFormField>
 
-                <UFormField name="assistantRole" label="默认助理角色" required>
-                  <UInput
-                    v-model="form.assistantRole"
-                    class="w-full"
-                    placeholder="例如：本地助理"
-                    required
-                  />
-                </UFormField>
-
-                <UFormField
-                  name="assistantBio"
-                  label="助理 System Prompt"
+              <UFormField name="ownerUsername" label="用户名" required>
+                <UInput
+                  v-model="form.ownerUsername"
+                  class="w-full"
+                  placeholder="例如：linqiang"
                   required
-                >
-                  <UTextarea
-                    v-model="form.assistantBio"
-                    class="w-full"
-                    :rows="5"
-                    :maxrows="8"
-                    autoresize
-                    required
-                  />
-                </UFormField>
-              </div>
-            </template>
+                />
+              </UFormField>
 
-            <template #provider>
-              <div class="space-y-4">
-                <UFormField name="providerName" label="Provider" required>
-                  <UInput
-                    v-model="form.providerName"
-                    class="w-full"
-                    placeholder="例如：oMLX"
-                    required
-                  />
-                </UFormField>
-
-                <UFormField name="providerBaseUrl" label="Base URL" required>
-                  <UInput
-                    v-model="form.providerBaseUrl"
-                    class="w-full"
-                    placeholder="http://localhost:8000/v1"
-                    required
-                  />
-                </UFormField>
-
-                <UFormField name="apiKey" label="API Key" required>
-                  <UInput
-                    v-model="form.apiKey"
-                    class="w-full"
-                    type="password"
-                    placeholder="sk-..."
-                    required
-                  />
-                </UFormField>
-
-                <UFormField name="modelId" label="Model ID" required>
-                  <UInput
-                    v-model="form.modelId"
-                    class="w-full"
-                    placeholder="例如：qwen3.5-8b-instruct"
-                    required
-                  />
-                </UFormField>
-              </div>
-            </template>
-          </UStepper>
-
-          <USeparator />
-
-          <div class="space-y-4">
-            <div class="flex items-center justify-between gap-4">
-              <p>{{ statusMessage }}</p>
-              <p class="shrink-0">
-                步骤 {{ stepIndex + 1 }} / {{ stepItems.length }}
-              </p>
+              <UFormField name="ownerPassword" label="密码" required>
+                <UInput
+                  v-model="form.ownerPassword"
+                  class="w-full"
+                  type="password"
+                  placeholder="至少 6 位"
+                  required
+                />
+              </UFormField>
             </div>
+          </template>
 
-            <div class="flex justify-center gap-3">
-              <UButton
-                type="button"
-                icon="i-lucide-arrow-left"
-                :disabled="stepIndex === 0 || submitting"
-                @click="prevStep"
+          <template #assistant>
+            <div class="space-y-4">
+              <UFormField
+                name="assistantNickname"
+                label="默认助理昵称"
+                required
               >
-                上一步
-              </UButton>
+                <UInput
+                  v-model="form.assistantNickname"
+                  class="w-full"
+                  placeholder="例如：虾米"
+                  required
+                />
+              </UFormField>
 
-              <UButton
-                v-if="!isLastStep"
-                type="button"
-                trailing-icon="i-lucide-arrow-right"
-                :disabled="submitting"
-                @click="nextStep"
-              >
-                下一步
-              </UButton>
+              <UFormField name="assistantRole" label="默认助理角色" required>
+                <UInput
+                  v-model="form.assistantRole"
+                  class="w-full"
+                  placeholder="例如：本地助理"
+                  required
+                />
+              </UFormField>
 
-              <UButton
-                v-else
-                type="submit"
-                icon="i-lucide-rocket"
-                :loading="submitting"
+              <UFormField
+                name="assistantIntro"
+                label="助理 System Prompt"
+                required
               >
-                启动 Clawme
-              </UButton>
+                <UTextarea
+                  v-model="form.assistantIntro"
+                  class="w-full"
+                  :rows="5"
+                  :maxrows="8"
+                  autoresize
+                  required
+                />
+              </UFormField>
             </div>
+          </template>
+
+          <template #provider>
+            <div class="space-y-4">
+              <UFormField name="providerName" label="Provider" required>
+                <UInput
+                  v-model="form.providerName"
+                  class="w-full"
+                  placeholder="例如：oMLX"
+                  required
+                />
+              </UFormField>
+
+              <UFormField name="providerBaseUrl" label="Base URL" required>
+                <UInput
+                  v-model="form.providerBaseUrl"
+                  class="w-full"
+                  placeholder="http://localhost:8000/v1"
+                  required
+                />
+              </UFormField>
+
+              <UFormField name="apiKey" label="API Key" required>
+                <UInput
+                  v-model="form.apiKey"
+                  class="w-full"
+                  type="password"
+                  placeholder="sk-..."
+                  required
+                />
+              </UFormField>
+
+              <UFormField name="modelId" label="Model ID" required>
+                <UInput
+                  v-model="form.modelId"
+                  class="w-full"
+                  placeholder="例如：qwen3.5-8b-instruct"
+                  required
+                />
+              </UFormField>
+            </div>
+          </template>
+        </UStepper>
+
+        <USeparator />
+
+        <div class="space-y-4">
+          <div class="flex items-center justify-between gap-4">
+            <p>{{ statusMessage }}</p>
+            <p class="shrink-0">
+              步骤 {{ stepIndex + 1 }} / {{ stepItems.length }}
+            </p>
           </div>
-        </UForm>
-      </UCard>
+
+          <div class="flex justify-center gap-3">
+            <UButton
+              type="button"
+              icon="i-lucide-arrow-left"
+              :disabled="stepIndex === 0 || submitting"
+              @click="prevStep"
+            >
+              上一步
+            </UButton>
+
+            <UButton
+              v-if="!isLastStep"
+              type="button"
+              trailing-icon="i-lucide-arrow-right"
+              :disabled="submitting"
+              @click="nextStep"
+            >
+              下一步
+            </UButton>
+
+            <UButton
+              v-else
+              type="submit"
+              icon="i-lucide-rocket"
+              :loading="submitting"
+            >
+              启动 Clawme
+            </UButton>
+          </div>
+        </div>
+      </UForm>
     </div>
   </div>
 </template>
@@ -232,7 +223,7 @@ const form = reactive<BootstrapRequest>({
   ownerPassword: "",
   assistantNickname: "",
   assistantRole: "",
-  assistantBio: "",
+  assistantIntro: "",
   providerName: "",
   providerBaseUrl: "",
   apiKey: "",
@@ -254,10 +245,10 @@ async function handleSubmit() {
   }
 
   submitting.value = true;
-  statusMessage.value = "正在写入系统状态、默认会话与初始动态...";
+  statusMessage.value = "正在写入系统状态、默认房间与初始动态...";
 
   try {
-    const response = await $fetch<PublicStateResponse>(
+    await $fetch<BootstrapResponse>(
       "/api/system/bootstrap",
       {
         method: "POST",
@@ -267,7 +258,7 @@ async function handleSubmit() {
 
     // Refresh session state from server
     await refreshSession();
-    statusMessage.value = "初始化完成，正在跳转到 Feed。";
+    statusMessage.value = "初始化完成，正在跳转到 Moment。";
     toast.add({
       title: "Clawme 已点亮",
       description: "默认管理员、助理和模型网关已经初始化。",
@@ -275,7 +266,7 @@ async function handleSubmit() {
       icon: "i-lucide-check",
     });
 
-    await navigateTo("/feed");
+    await navigateTo("/moment");
   } catch (error) {
     const message =
       error instanceof Error

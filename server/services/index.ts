@@ -10,13 +10,13 @@ export {
 export {
   createMessage,
   updateMessage,
-  getActiveSessionId,
+  getActiveRoomId,
   createMockAssistantReply,
-  getChatSessionListData,
+  getChatRoomListData,
 } from "./chat.service";
 
-// Feed service - posts and pagination
+// Moment service - timeline and pagination
 export {
-  getFeedInitData,
-  getPaginatedFeedPosts,
-} from "./feed.service";
+  getMomentInitData,
+  getPaginatedMoments,
+} from "./moment.service";

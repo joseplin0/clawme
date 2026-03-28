@@ -9,7 +9,7 @@
         <UInput
           v-model="searchQuery"
           icon="i-lucide-search"
-          placeholder="搜索会话..."
+          placeholder="搜索房间..."
           variant="none"
           class="flex-1"
         />
@@ -17,7 +17,7 @@
           icon="i-lucide-plus"
           color="neutral"
           variant="link"
-          @click="handleCreateSession"
+          @click="handleCreateRoom"
         />
       </div>
     </div>
@@ -25,7 +25,7 @@
     <UScrollArea
       ref="scrollArea"
       v-slot="{ item }"
-      :items="filteredSessions"
+      :items="filteredRooms"
       :virtualize="{
         estimateSize: 72,
         skipMeasurement: true,
@@ -58,11 +58,11 @@
 </template>
 
 <script setup lang="ts">
-import type { ChatSessionRecord } from "~~/shared/types/clawme";
+import type { ChatRoomRecord } from "~~/shared/types/clawme";
 
 const props = defineProps<{
   modelValue: string | null;
-  sessions: ChatSessionRecord[];
+  rooms: ChatRoomRecord[];
   hasMore?: boolean;
   isLoading?: boolean;
 }>();
@@ -75,13 +75,13 @@ const emit = defineEmits<{
 
 const searchQuery = ref("");
 
-const filteredSessions = computed(() => {
-  if (!searchQuery.value) return props.sessions;
+const filteredRooms = computed(() => {
+  if (!searchQuery.value) return props.rooms;
   const query = searchQuery.value.toLowerCase();
-  return props.sessions.filter((s) => s.title.toLowerCase().includes(query));
+  return props.rooms.filter((s) => s.title.toLowerCase().includes(query));
 });
 
-function handleCreateSession() {
+function handleCreateRoom() {
   emit("create");
 }
 

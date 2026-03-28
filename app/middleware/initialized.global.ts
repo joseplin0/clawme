@@ -29,6 +29,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
   }
 
   if (isInitialized && isOwnerAuthenticated && (to.path === "/setup" || to.path === "/login")) {
-    return navigateTo("/feed");
+    return navigateTo("/moment");
   }
 });

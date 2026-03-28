@@ -33,7 +33,7 @@
           系统还没有完成首次引导。
         </p>
         <p class="mt-2 text-sm text-muted">
-          先去创建管理员与默认助理，后面的会话、导入器和生态系统才有稳定地基。
+          先去创建管理员与默认助理，后面的房间、导入器和生态系统才有稳定地基。
         </p>
       </div>
 
@@ -90,7 +90,7 @@
                     {{ state.bot?.role || "本地助理" }}
                   </p>
                   <p class="pt-1 text-sm leading-6 text-default">
-                    {{ state.bot?.bio || "还没有系统提示词。" }}
+                    {{ state.bot?.intro || "还没有系统提示词。" }}
                   </p>
                 </div>
               </div>
@@ -137,15 +137,15 @@
 
             <div class="space-y-3 text-sm">
               <div class="flex items-center justify-between border px-4 py-3">
-                <span class="text-muted">会话数</span>
+                <span class="text-muted">房间数</span>
                 <span class="font-semibold text-highlighted">{{
-                  state.sessions.length
+                  state.rooms.length
                 }}</span>
               </div>
               <div class="flex items-center justify-between border px-4 py-3">
                 <span class="text-muted">消息数</span>
                 <span class="font-semibold text-highlighted">{{
-                  state.messages.length
+                  state.roomMessages.length
                 }}</span>
               </div>
               <div class="flex items-center justify-between border px-4 py-3">
@@ -212,9 +212,9 @@ const defaultState: PublicStateResponse["state"] = {
   owner: null,
   bot: null,
   providers: [],
-  sessions: [],
-  messages: [],
-  feedPosts: [],
+  rooms: [],
+  roomMessages: [],
+  moments: [],
 };
 
 const defaultViewer: PublicStateResponse["viewer"] = {

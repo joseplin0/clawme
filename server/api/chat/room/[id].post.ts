@@ -13,7 +13,7 @@ import { db, schema } from "~~/server/utils/db";
 import { resolveUserLlmProvider } from "~~/server/utils/llm";
 import { eq } from "drizzle-orm";
 
-const { users, chatSessions } = schema;
+const { rooms, users } = schema;
 
 const paramsSchema = z.object({
   id: z.uuid(),
@@ -28,24 +28,22 @@ export default defineEventHandler(async (event) => {
   const ownerUser = await requireOwnerSession(event);
 
   const rawId = getRouterParam(event, "id");
-  const { id: sessionId } = paramsSchema.parse({ id: rawId });
+  const { id: roomId } = paramsSchema.parse({ id: rawId });
   const body = await readBody(event);
   const { messages, receiverId } = bodySchema.parse(body);
   const userId = ownerUser.id;
 
-  // Verify session exists
-  const chatSession = await db.query.chatSessions.findFirst({
-    where: eq(chatSessions.id, sessionId),
+  const room = await db.query.rooms.findFirst({
+    where: eq(rooms.id, roomId),
   });
 
-  if (!chatSession) {
+  if (!room) {
     throw createError({
       statusCode: 404,
-      statusMessage: "Chat session not found",
+      statusMessage: "Chat room not found",
     });
   }
 
-  // Get receiver with llmProvider
   const receiver = await db.query.users.findFirst({
     where: eq(users.id, receiverId),
     with: { llmProvider: true },
@@ -58,7 +56,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  if (receiver.type !== "BOT") {
+  if (receiver.type !== "bot") {
     throw createError({
       statusCode: 400,
       statusMessage: "HTTP streaming chat only supports bot receivers",
@@ -74,20 +72,19 @@ export default defineEventHandler(async (event) => {
   }
 
   const assistantReply = await createAssistantMessageStream({
-    sessionId,
+    roomId,
     assistantUser: receiver,
     modelMessages: await convertToModelMessages(messages),
   });
 
-  // Save user message if it's a follow-up
   const lastMessage = messages[messages.length - 1];
   if (lastMessage?.role === "user" && messages.length > 1) {
     await createMessage({
-      sessionId,
-      userId,
-      role: "USER",
+      roomId,
+      senderId: userId,
+      role: "user",
       parts: lastMessage.parts as MessagePart[],
-      status: "DONE",
+      status: "done",
     });
   }
 

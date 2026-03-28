@@ -1,6 +1,5 @@
 import { streamText, type ModelMessage } from "ai";
 import { eq } from "drizzle-orm";
-import { toUIMessageRole } from "~~/shared/types/clawme";
 import {
   ChatCommandError,
   type UserWithProvider,
@@ -11,10 +10,10 @@ import {
   resolveUserLlmProvider,
 } from "~~/server/utils/llm";
 
-const { chatMessages } = schema;
+const { roomMessages } = schema;
 
 export async function createAssistantMessageStream(input: {
-  sessionId: string;
+  roomId: string;
   assistantUser: UserWithProvider;
   modelMessages: ModelMessage[];
 }) {
@@ -23,7 +22,7 @@ export async function createAssistantMessageStream(input: {
     throw new ChatCommandError(
       "NO_LLM_PROVIDER",
       "AI 助理未配置 LLM 提供商",
-      input.sessionId,
+      input.roomId,
     );
   }
 
@@ -49,12 +48,12 @@ export async function createAssistantMessageStream(input: {
       }),
       onFinish: async ({ responseMessage }) => {
         try {
-          await db.insert(chatMessages).values({
-            sessionId: input.sessionId,
-            userId: input.assistantUser.id,
-            role: "ASSISTANT",
+          await db.insert(roomMessages).values({
+            roomId: input.roomId,
+            senderId: input.assistantUser.id,
+            role: "assistant",
             parts: responseMessage.parts,
-            status: "DONE",
+            status: "done",
           });
           resolveCompleted?.();
         } catch (error) {
@@ -67,22 +66,22 @@ export async function createAssistantMessageStream(input: {
   };
 }
 
-export async function createAssistantMessageStreamFromSession(input: {
-  sessionId: string;
+export async function createAssistantMessageStreamFromRoom(input: {
+  roomId: string;
   assistantUser: UserWithProvider;
 }) {
   return createAssistantMessageStream({
-    sessionId: input.sessionId,
+    roomId: input.roomId,
     assistantUser: input.assistantUser,
-    modelMessages: await buildSessionModelMessages(input.sessionId),
+    modelMessages: await buildRoomModelMessages(input.roomId),
   });
 }
 
-async function buildSessionModelMessages(
-  sessionId: string,
+async function buildRoomModelMessages(
+  roomId: string,
 ): Promise<ModelMessage[]> {
-  const history = await db.query.chatMessages.findMany({
-    where: eq(chatMessages.sessionId, sessionId),
+  const history = await db.query.roomMessages.findMany({
+    where: eq(roomMessages.roomId, roomId),
     orderBy: (messages, { asc }) => [asc(messages.createdAt)],
   });
 
@@ -98,7 +97,7 @@ async function buildSessionModelMessages(
     }
 
     modelMessages.push({
-      role: toUIMessageRole(message.role),
+      role: message.role,
       content: text,
     });
   }
