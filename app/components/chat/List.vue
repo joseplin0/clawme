@@ -1,10 +1,21 @@
 <template>
-  <div
-    :class="[
-      'absolute inset-y-0 left-0 z-10 flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden bg-white md:relative md:w-80 dark:bg-[#111111]',
-    ]"
+  <UDashboardSidebar
+    v-model:open="sidebarOpen"
+    side="left"
+    mode="slideover"
+    :toggle="false"
+    :auto-close="true"
+    :resizable="true"
+    :default-size="24"
+    :min-size="13"
+    :max-size="70"
+    :ui="{
+      root: '!min-h-0',
+      header: 'h-16 px-3',
+      body: '!min-h-0 !overflow-hidden p-1',
+    }"
   >
-    <div class="flex h-16 shrink-0 items-center px-3">
+    <template #header>
       <div class="flex w-full items-center gap-2">
         <UInput
           v-model="searchQuery"
@@ -20,41 +31,41 @@
           @click="handleCreateRoom"
         />
       </div>
-    </div>
+    </template>
 
     <UScrollArea
-      ref="scrollArea"
       v-slot="{ item }"
       :items="filteredRooms"
       :virtualize="{
         estimateSize: 72,
         skipMeasurement: true,
       }"
-      class="min-h-0 flex-1 w-full p-1"
+      class="min-h-0 flex-1 w-full"
     >
       <UUser
         size="xl"
-        class="p-3 rounded"
+        class="cursor-pointer rounded p-3"
         :class="{ 'bg-gray-100': item.id === modelValue }"
         :description="item.lastMessage"
         :ui="{
           wrapper: 'flex-1 min-w-0',
           description: 'truncate',
         }"
+        @click="handleSelectRoom(item.id)"
       >
         <template #name>
           <div class="flex items-center justify-between gap-3">
             <span class="truncate">
               {{ item.title }}
             </span>
-            <span class="text-xs text-muted shrink-0">
+            <span class="shrink-0 text-xs text-muted">
               {{ formatRelativeTime(item.updatedAt) }}
             </span>
           </div>
         </template>
       </UUser>
     </UScrollArea>
-  </div>
+  </UDashboardSidebar>
 </template>
 
 <script setup lang="ts">
@@ -62,6 +73,7 @@ import type { ChatRoomRecord } from "~~/shared/types/clawme";
 
 const props = defineProps<{
   modelValue: string | null;
+  open?: boolean;
   rooms: ChatRoomRecord[];
   hasMore?: boolean;
   isLoading?: boolean;
@@ -69,11 +81,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update:modelValue": [value: string | null];
+  "update:open": [value: boolean];
   create: [];
   loadMore: [];
 }>();
 
 const searchQuery = ref("");
+const sidebarOpen = computed({
+  get: () => props.open ?? false,
+  set: (value: boolean) => emit("update:open", value),
+});
 
 const filteredRooms = computed(() => {
   if (!searchQuery.value) return props.rooms;
@@ -83,6 +100,11 @@ const filteredRooms = computed(() => {
 
 function handleCreateRoom() {
   emit("create");
+}
+
+function handleSelectRoom(roomId: string) {
+  emit("update:modelValue", roomId);
+  sidebarOpen.value = false;
 }
 
 function formatRelativeTime(value?: string) {

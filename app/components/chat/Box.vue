@@ -1,98 +1,80 @@
 <template>
   <section
-    class="absolute inset-0 z-20 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-surface transition-transform duration-300 md:relative border-l border-default"
+    class="relative flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-surface"
   >
-    <template v-if="activeRoomId">
-      <header
-        class="flex h-16 shrink-0 items-center justify-between gap-4 px-4 bg-surface"
-      >
-        <div class="flex min-w-0 items-center gap-3">
-          <UButton
-            icon="i-lucide-arrow-left"
-            variant="ghost"
-            size="sm"
-            class="md:hidden"
-            @click="activeRoomId = null"
-          />
-          <h2 class="truncate text-lg font-semibold text-highlighted">
-            {{ selectedRoom?.title || "默认房间" }}
-          </h2>
-        </div>
-        <div class="flex shrink-0 items-center gap-2">
-          <UButton variant="outline" color="neutral" icon="i-lucide-shell">
-            Moment Draft
-          </UButton>
-        </div>
-      </header>
-
-      <div class="min-h-0 flex-1 overflow-y-auto py-4 sm:py-6">
-        <UContainer class="flex min-h-0 flex-1 flex-col">
-          <UChatMessages
-            :messages="chatMessages"
-            :status="chatStatus"
-            should-auto-scroll
-            should-scroll-to-bottom
-            :spacing-offset="80"
-            class="space-y-4"
+    <UDashboardNavbar
+      :title="selectedRoom?.title || '默认房间'"
+      icon="i-lucide-message-square-text"
+      class="border-b border-default/70"
+    >
+      <template #right>
+        <UButton variant="outline" color="neutral" icon="i-lucide-shell">
+          Moment Draft
+        </UButton>
+      </template>
+    </UDashboardNavbar>
+    <div class="flex min-h-0 flex-1 relative">
+      <UContainer class="flex min-h-0 flex-1 overflow-y-auto">
+        <UChatMessages
+          :messages="chatMessages"
+          :status="chatStatus"
+          should-auto-scroll
+        >
+          <template #indicator>
+            <UChatShimmer text="思考中..." />
+          </template>
+          <UChatMessage
+            v-for="message in chatMessages"
+            :key="message.id"
+            :id="message.id"
+            :role="message.role"
+            :parts="message.parts"
+            v-bind="getMessageDisplayProps(message)"
           >
-            <template #indicator>
-              <UChatShimmer text="思考中。。。" />
-            </template>
-            <UChatMessage
-              v-for="message in chatMessages"
-              :key="message.id"
-              :id="message.id"
-              :role="message.role"
-              :parts="message.parts"
-              v-bind="getMessageDisplayProps(message)"
-            >
-              <template #content>
-                <template
-                  v-for="(part, index) in message.parts"
-                  :key="`${message.id}-${part.type}-${index}`"
+            <template #content>
+              <template
+                v-for="(part, index) in message.parts"
+                :key="`${message.id}-${part.type}-${index}`"
+              >
+                <UChatReasoning
+                  v-if="isReasoningUIPart(part)"
+                  :text="part.text"
+                  :streaming="getReasoningStreaming(message, index)"
                 >
-                  <UChatReasoning
-                    v-if="isReasoningUIPart(part)"
-                    :text="part.text"
-                    :streaming="getReasoningStreaming(message, index)"
-                  >
-                    <MDC
-                      :value="part.text"
-                      :cache-key="`reasoning-${message.id}-${index}`"
-                      class="*:first:mt-0 *:last:mb-0"
-                    />
-                  </UChatReasoning>
-                  <UChatTool
-                    v-else-if="isToolUIPart(part)"
-                    :text="getToolName(part)"
-                    :streaming="isToolStreaming(part)"
-                  />
-                  <MDCCached
-                    v-else-if="isTextUIPart(part)"
+                  <MDC
                     :value="part.text"
-                    :cache-key="`${message.id}-${index}`"
+                    :cache-key="`reasoning-${message.id}-${index}`"
                     class="*:first:mt-0 *:last:mb-0"
                   />
-                </template>
+                </UChatReasoning>
+                <UChatTool
+                  v-else-if="isToolUIPart(part)"
+                  :text="getToolName(part)"
+                  :streaming="isToolStreaming(part)"
+                />
+                <MDCCached
+                  v-else-if="isTextUIPart(part)"
+                  :value="part.text"
+                  :cache-key="`${message.id}-${index}`"
+                  class="*:first:mt-0 *:last:mb-0"
+                />
               </template>
-            </UChatMessage>
-          </UChatMessages>
-        </UContainer>
-      </div>
+            </template>
+          </UChatMessage>
+        </UChatMessages>
+      </UContainer>
+    </div>
 
-      <div class="shrink-0 border-t border-muted/50 pb-safe">
-        <ChatComposer
-          :key="activeRoomId"
-          :ready="isChatReady"
-          :status="chatStatus"
-          :placeholder="composerPlaceholder"
-          :mention-items="mentionItems"
-          @submit="handleSubmit"
-          @stop="handleStop"
-          @reload="handleReload"
-        />
-      </div>
-    </template>
+    <ChatComposer
+      :key="activeRoomId || 'empty'"
+      :ready="isChatReady"
+      :status="chatStatus"
+      :placeholder="composerPlaceholder"
+      :mention-items="mentionItems"
+      @submit="handleSubmit"
+      @stop="handleStop"
+      @reload="handleReload"
+    />
   </section>
 </template>
 
@@ -158,12 +140,7 @@ const chatMessages = computed<ClawmeUIMessage[]>(
   () => chat.value?.messages ?? [],
 );
 const chatStatus = computed<ChatStatus>(() => chat.value?.status ?? "ready");
-const lastMessageId = computed(
-  () => chatMessages.value[chatMessages.value.length - 1]?.id,
-);
-const isChatReady = computed(() =>
-  Boolean(activeRoomId.value && chat.value),
-);
+const isChatReady = computed(() => Boolean(activeRoomId.value && chat.value));
 
 onMounted(async () => {
   if (activeRoomId.value) {
@@ -303,9 +280,7 @@ const composerPlaceholder = computed(() =>
 
 const mentionActors = computed<ActorProfile[]>(() => {
   const currentUserId = currentUser.value?.id;
-  return roomParticipants.value.filter(
-    (actor) => actor.id !== currentUserId,
-  );
+  return roomParticipants.value.filter((actor) => actor.id !== currentUserId);
 });
 
 const mentionItems = computed<EditorMentionMenuItem[]>(() =>

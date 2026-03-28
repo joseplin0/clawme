@@ -1,13 +1,19 @@
 <template>
-  <div class="absolute inset-0 flex min-h-0 w-full overflow-hidden">
+  <UDashboardGroup
+    storage-key="chat-layout"
+    :ui="{
+      base: '!relative !inset-auto min-h-0 flex-1',
+    }"
+  >
     <ChatList
       v-model="activeRoomId"
+      v-model:open="sidebarOpen"
       :rooms="rooms"
       @create="handleCreateRoom"
     />
 
     <ChatBox :active-room-id="activeRoomId" :rooms="rooms" />
-  </div>
+  </UDashboardGroup>
 </template>
 
 <script setup lang="ts">
@@ -26,6 +32,7 @@ const { data: roomData, refresh } = useFetch<RoomListResponse>(
 );
 
 const activeRoomId = ref<string | null>(null);
+const sidebarOpen = ref(false);
 
 // Set activeRoomId when data loads
 watch(
@@ -38,6 +45,12 @@ watch(
   },
   { immediate: true },
 );
+
+watch(activeRoomId, (value) => {
+  if (value) {
+    sidebarOpen.value = false;
+  }
+});
 
 const rooms = computed(() => roomData.value?.rooms ?? []);
 

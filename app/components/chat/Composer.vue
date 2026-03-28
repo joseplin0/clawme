@@ -1,5 +1,8 @@
 <template>
-  <div class="px-3 py-3">
+  <div
+    class="shrink-0 border-t border-default px-3 pt-3.5"
+    :style="{ paddingBottom: 'max(0.875rem, env(safe-area-inset-bottom))' }"
+  >
     <UEditor
       ref="editorRef"
       v-model="editorContent"
@@ -10,9 +13,10 @@
       :starter-kit="editorStarterKit"
       :editor-props="editorInputProps"
       :ui="{
-        base: 'w-full text-sm leading-7 outline-none [&_p]:my-0 [&_.mention]:font-medium sm:px-0',
+        content: 'min-h-[6.5rem]',
+        base: 'min-h-[6.5rem] w-full text-sm leading-7 outline-none [&_p]:my-0 [&_.mention]:font-medium sm:px-0',
       }"
-      class="w-full"
+      class="flex w-full flex-col"
       @update:model-value="syncInputMessage"
     >
       <template #default="{ editor }">
