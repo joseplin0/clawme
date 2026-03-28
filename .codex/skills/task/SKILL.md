@@ -80,12 +80,15 @@ git worktree add "/tmp/clawme-issue-$ISSUE_ID" "${TYPE}-${ISSUE_ID}"
 
 ```md
 ## Discovery
+
 发现了什么
 
 ## Impact
+
 是否影响当前验收
 
 ## Decision
+
 本次纳入 / 延后处理 / 后续跟进
 ```
 
@@ -95,6 +98,7 @@ git worktree add "/tmp/clawme-issue-$ISSUE_ID" "${TYPE}-${ISSUE_ID}"
 - issue / PR / comment 禁止暴露本机路径、用户名、主机名、代理地址、端口、token 或环境变量值；引用错误信息前先手工脱敏。
 - 废弃内容优先局部编辑：只对失效句子或条目加删除线，保留有效上下文并补更正说明；不要整段全文删除线，也不要直接删除。
 - GitHub 远程写操作若因沙箱或代理失败，按环境错误重试放行，不视为业务失败。
+- GitHub 评论优先使用 `gh issue comment` / `gh pr comment`；不确定参数用 `-h` 查，CLI 不支持时再用 `gh api`。
 - 代码改动完成后读取 `docs/content/DOCS_GUIDE.md`，按指南更新对应文档或新增 ADR。
 
 ## 4. 主 Agent 审核
@@ -111,12 +115,15 @@ git worktree add "/tmp/clawme-issue-$ISSUE_ID" "${TYPE}-${ISSUE_ID}"
 
 ```md
 ## Result
+
 本次完成了什么
 
 ## Verification
+
 怎么验证的
 
 ## Follow-up
+
 还剩什么后续项
 ```
 

@@ -42,6 +42,7 @@ chore: setup commitlint and husky
 - issue / PR / comment 禁止暴露本机路径、用户名、主机名、代理地址、端口、token 或其他敏感环境信息；引用错误信息前先手工脱敏。
 - 废弃内容优先局部编辑：只对失效句子或条目加删除线，保留有效上下文并补更正说明；不要整段全文删除线，也不要直接删除。
 - GitHub 远程写操作若因沙箱或代理失败，按环境错误重试放行，不视为业务失败。
+- GitHub 评论优先使用 `gh issue comment` / `gh pr comment`；不确定参数用 `-h` 查，CLI 不支持时再用 `gh api`。
 
 ## 评论模板建议
 
