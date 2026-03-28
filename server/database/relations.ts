@@ -5,9 +5,9 @@ import {
   comments,
   llm,
   mcp,
+  likes,
   momentAssets,
   momentCollections,
-  momentLikes,
   momentTags,
   moments,
   roomMembers,
@@ -41,7 +41,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   moments: many(moments),
   assets: many(assets),
-  likes: many(momentLikes),
+  likes: many(likes),
   collections: many(momentCollections),
   comments: many(comments, {
     relationName: "CommentAuthor",
@@ -122,7 +122,6 @@ export const momentsRelations = relations(moments, ({ one, many }) => ({
   }),
   assets: many(momentAssets),
   tags: many(momentTags),
-  likes: many(momentLikes),
   collections: many(momentCollections),
   comments: many(comments),
 }));
@@ -145,6 +144,14 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
   }),
   replies: many(comments, {
     relationName: "CommentThread",
+  }),
+}));
+
+// Like relations
+export const likesRelations = relations(likes, ({ one }) => ({
+  user: one(users, {
+    fields: [likes.userId],
+    references: [users.id],
   }),
 }));
 
@@ -183,18 +190,6 @@ export const momentTagsRelations = relations(momentTags, ({ one }) => ({
   tag: one(tags, {
     fields: [momentTags.tagId],
     references: [tags.id],
-  }),
-}));
-
-// MomentLike relations
-export const momentLikesRelations = relations(momentLikes, ({ one }) => ({
-  user: one(users, {
-    fields: [momentLikes.userId],
-    references: [users.id],
-  }),
-  moment: one(moments, {
-    fields: [momentLikes.momentId],
-    references: [moments.id],
   }),
 }));
 

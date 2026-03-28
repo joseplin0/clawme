@@ -41,7 +41,7 @@ COMMENT ON TABLE "public"."tag" IS '可复用的动态标签表。';
 
 COMMENT ON TABLE "public"."moment_tag" IS '动态与标签的多对多关联表。';
 
-COMMENT ON TABLE "public"."moment_like" IS '动态点赞关系表。';
+COMMENT ON TABLE "public"."likes" IS '通用点赞表：支持动态和评论。';
 
 COMMENT ON TABLE "public"."moment_collection" IS '动态收藏关系表。';
 

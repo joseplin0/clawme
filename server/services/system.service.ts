@@ -27,8 +27,8 @@ const {
   comments,
   momentAssets,
   momentCollections,
-  momentLikes,
   momentTags,
+  likes,
   moments,
   tags,
 } = schema;
@@ -175,7 +175,7 @@ export async function initializeSystem(input: BootstrapRequest) {
     // 0. Clean slate
     await tx.delete(momentAssets);
     await tx.delete(momentCollections);
-    await tx.delete(momentLikes);
+    await tx.delete(likes);
     await tx.delete(momentTags);
     await tx.delete(comments);
     await tx.delete(assets);

@@ -64,11 +64,12 @@ CREATE TABLE "moment_collection" (
 	CONSTRAINT "moment_collection_user_id_moment_id_pk" PRIMARY KEY("user_id","moment_id")
 );
 --> statement-breakpoint
-CREATE TABLE "moment_like" (
+CREATE TABLE "likes" (
 	"user_id" uuid NOT NULL,
-	"moment_id" uuid NOT NULL,
+	"target_type" varchar NOT NULL,
+	"target_id" uuid NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "moment_like_user_id_moment_id_pk" PRIMARY KEY("user_id","moment_id")
+	CONSTRAINT "likes_user_id_target_type_target_id_pk" PRIMARY KEY("user_id","target_type","target_id")
 );
 --> statement-breakpoint
 CREATE TABLE "moment_tag" (
@@ -185,8 +186,7 @@ ALTER TABLE "moment_asset" ADD CONSTRAINT "moment_asset_moment_id_moment_id_fk" 
 ALTER TABLE "moment_asset" ADD CONSTRAINT "moment_asset_asset_id_asset_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."asset"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "moment_collection" ADD CONSTRAINT "moment_collection_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "moment_collection" ADD CONSTRAINT "moment_collection_moment_id_moment_id_fk" FOREIGN KEY ("moment_id") REFERENCES "public"."moment"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "moment_like" ADD CONSTRAINT "moment_like_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "moment_like" ADD CONSTRAINT "moment_like_moment_id_moment_id_fk" FOREIGN KEY ("moment_id") REFERENCES "public"."moment"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "likes" ADD CONSTRAINT "likes_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "moment_tag" ADD CONSTRAINT "moment_tag_moment_id_moment_id_fk" FOREIGN KEY ("moment_id") REFERENCES "public"."moment"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "moment_tag" ADD CONSTRAINT "moment_tag_tag_id_tag_id_fk" FOREIGN KEY ("tag_id") REFERENCES "public"."tag"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "moment" ADD CONSTRAINT "moment_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -206,6 +206,8 @@ CREATE INDEX "moment_created_at_idx" ON "moment" USING btree ("created_at");--> 
 CREATE INDEX "idx_room_members_room_id" ON "room_members" USING btree ("room_id");--> statement-breakpoint
 CREATE INDEX "idx_room_members_user_id" ON "room_members" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "idx_room_messages_room_id" ON "room_messages" USING btree ("room_id");--> statement-breakpoint
+CREATE INDEX "idx_likes_target" ON "likes" USING btree ("target_type","target_id");--> statement-breakpoint
+CREATE INDEX "idx_likes_user" ON "likes" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "idx_follows_from_user" ON "user_follows" USING btree ("from_user_id");--> statement-breakpoint
 CREATE INDEX "idx_follows_to_user" ON "user_follows" USING btree ("to_user_id");--> statement-breakpoint
 CREATE INDEX "idx_follows_intimacy" ON "user_follows" USING btree ("intimacy" DESC);--> statement-breakpoint

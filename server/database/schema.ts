@@ -198,19 +198,28 @@ export const momentTags = pgTable(
   (table) => [primaryKey({ columns: [table.momentId, table.tagId] })],
 );
 
-/** 动态点赞关系表。 */
-export const momentLikes = pgTable(
-  "moment_like",
+/** 通用点赞表：支持动态和评论。 */
+export const likes = pgTable(
+  "likes",
   {
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    momentId: uuid("moment_id")
-      .notNull()
-      .references(() => moments.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull(),
+    targetType: varchar("target_type", {
+      enum: ["moment", "comment"],
+    }).notNull(),
+    targetId: uuid("target_id").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [primaryKey({ columns: [table.userId, table.momentId] })],
+  (table) => [
+    primaryKey({
+      columns: [table.userId, table.targetType, table.targetId],
+    }),
+    index("idx_likes_target").on(table.targetType, table.targetId),
+    index("idx_likes_user").on(table.userId),
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.id],
+    }).onDelete("cascade"),
+  ],
 );
 
 /** 动态收藏关系表。 */
@@ -399,8 +408,10 @@ export type Tag = typeof tags.$inferSelect;
 export type NewTag = typeof tags.$inferInsert;
 export type MomentTag = typeof momentTags.$inferSelect;
 export type NewMomentTag = typeof momentTags.$inferInsert;
-export type MomentLike = typeof momentLikes.$inferSelect;
-export type NewMomentLike = typeof momentLikes.$inferInsert;
+export type Like = typeof likes.$inferSelect;
+export type NewLike = typeof likes.$inferInsert;
+export type MomentLike = Like;
+export type NewMomentLike = NewLike;
 export type MomentCollection = typeof momentCollections.$inferSelect;
 export type NewMomentCollection = typeof momentCollections.$inferInsert;
 export type Comment = typeof comments.$inferSelect;
