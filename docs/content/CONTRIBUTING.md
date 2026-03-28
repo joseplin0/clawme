@@ -36,7 +36,7 @@ chore: setup commitlint and husky
 - 当前工作区干净且就是本次任务目录时，可直接用 `gh issue develop <id> -c` 进入 issue 分支。
 - 当前工作区已有未提交改动、仍停留在 `main`，或不适合直接切分支时，先用 `gh issue develop <id> -n <branch>` 创建关联分支，再用 `git worktree add <path> <branch>` 进入独立工作区。
 - 本地提交默认使用 `Refs #<issue-id>` 保持关联；推荐在 PR 描述中使用 `Closes #<issue-id>` 统一收口。
-- 允许 `git push -u origin <issue-branch>` 推送 issue 分支，但不要直接 push `main`；随后继续创建 Draft PR。
+- 后续统一显式执行 `git push origin <issue-branch>`；不要使用裸 `git push`，也不要直接 push `main`，随后继续创建 Draft PR。
 - PR 创建成功后等待用户 review / merge，不自动合并，也不手动关闭 issue。
 - issue / PR comment 引用仓库文件时，优先使用 `../blob/<ref>/<path>`，并保留路径文本；不要硬编码仓库归属或本机绝对路径。
 - issue / PR / comment 禁止暴露本机路径、用户名、主机名、代理地址、端口、token 或其他敏感环境信息；引用错误信息前先手工脱敏。

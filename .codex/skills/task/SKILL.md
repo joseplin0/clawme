@@ -130,11 +130,11 @@ git commit -m "<type>: <title>" -m "refs #$ISSUE_ID"
 - 本地提交后继续在 issue 分支上 push，并创建 Draft PR：
 
 ```bash
-git push -u origin <issue-branch>
+git push origin <issue-branch>
 gh pr create -d
 ```
 
-- 允许 `git push -u origin <issue-branch>` 推送非 `main` 的 issue 分支；不要直接 push `main`。
+- 后续统一显式执行 `git push origin <issue-branch>`；不要使用裸 `git push`，也不要直接 push `main`。
 - PR 描述使用 `Closes #$ISSUE_ID` 收口；主 agent 在 PR 创建成功后停止自动推进，等待用户 review / merge，不自动合并，也不手动关闭 issue。
 
 ## 规则
