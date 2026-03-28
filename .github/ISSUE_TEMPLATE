@@ -1,15 +1,17 @@
 ---
 name: 🚀 研发任务 (Task)
 about: 配合 AI 智能体的标准研发任务流
-title: ''
-labels: ''
-assignees: ''
+title: ""
+labels: ""
+assignees: ""
 ---
 
 ### 🎯 任务目标 (Objective)
-- 
+
+-
 
 ### 💡 核心逻辑 / 验收标准 (Checklist)
+
 - [ ] 核心要求 1：
 - [ ] 核心要求 2：
 - [ ] 确保在 `docs/content/` 中覆盖更新相关说明或用法。
