@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
-    "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
+    "db:comments": "node ./scripts/sync-db-comments.mjs --write",
+    "db:comments:apply": "node ./scripts/sync-db-comments.mjs --write --apply",
+    "db:generate": "drizzle-kit generate && node ./scripts/sync-db-comments.mjs --write",
+    "db:push": "drizzle-kit push && node ./scripts/sync-db-comments.mjs --write --apply",
     "db:studio": "drizzle-kit studio",
     "dev": "nuxt dev",
     "generate": "nuxt generate",

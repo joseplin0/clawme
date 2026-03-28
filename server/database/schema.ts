@@ -12,9 +12,11 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-// Tables
+/** 系统初始化与全局状态配置。 */
 export const systemConfig = pgTable("SystemConfig", {
+  /** 配置主键，固定为 global。 */
   id: text("id").primaryKey().default("global"),
+  /** 系统是否已经完成首次引导。 */
   isInitialized: boolean("isInitialized").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt")
@@ -23,24 +25,33 @@ export const systemConfig = pgTable("SystemConfig", {
     .notNull(),
 });
 
-// 用户表：承载真人与 Bot 的基础资料。
+/** 用户表：承载真人与 Bot 的基础资料。 */
 export const users = pgTable("user", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /** 用户类型，human 或 bot。 */
   type: varchar("type", { enum: ["human", "bot"] })
     .default("human")
     .notNull(),
   username: text("username").notNull().unique(),
   nickname: text("nickname").notNull(),
   avatar: text("avatar"),
+  /** 人物简介或系统提示词摘要。 */
   intro: text("intro"),
+  /** 业务角色标识。 */
   role: text("role"),
+  /** 人物口头禅或默认宣言。 */
   catchphrase: text("catchphrase"),
   mbti: text("mbti"),
+  /** 当前情绪描述。 */
   currentMood: text("current_mood").default("平静"),
+  /** 创建该用户的操作者 ID。 */
   createdById: uuid("created_by_id"),
   passwordHash: text("password_hash"),
+  /** 服务端鉴权密钥。 */
   apiSecret: text("api_secret").unique(),
+  /** 绑定的模型提供商 ID。 */
   llmProviderId: uuid("llm_provider_id"),
+  /** 外部回调地址。 */
   webhookUrl: text("webhook_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
@@ -49,28 +60,23 @@ export const users = pgTable("user", {
     .notNull(),
 });
 
-// ======================================
-// 用户关注关系表（绝对不混淆命名）
-// ======================================
+/** 用户关注关系表，表示 from_user 关注 to_user。 */
 export const userFollows = pgTable(
   "user_follows",
   {
-    // 【发起人】谁主动发起关注 (我关注别人 → 填我的ID)
+    /** 发起关注的一方。 */
     fromUserId: uuid("from_user_id").notNull(),
-    // 【目标人】被关注的人/Bot (我关注你 → 填你的ID)
+    /** 被关注的一方。 */
     toUserId: uuid("to_user_id").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
+    /** 亲密度或互动强度分值。 */
     intimacy: integer("intimacy").default(0).notNull(),
   },
   (table) => [
-    // 复合主键：防重复关注
     primaryKey({ columns: [table.fromUserId, table.toUserId] }),
-    // 索引：查「我关注了谁」
     index("idx_follows_from_user").on(table.fromUserId),
-    // 索引：查「谁关注了我」
     index("idx_follows_to_user").on(table.toUserId),
     index("idx_follows_intimacy").on(table.intimacy.desc()),
-    // 外键关联
     foreignKey({
       columns: [table.fromUserId],
       foreignColumns: [users.id],
@@ -86,7 +92,7 @@ export const userFollows = pgTable(
  * 动态相关
  */
 
-// 主动态表：承载用户发布的内容主体。
+/** 主动态表：承载用户发布的内容主体。 */
 export const moments = pgTable(
   "moment",
   {
@@ -96,8 +102,11 @@ export const moments = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title"),
     content: text("content"),
+    /** 点赞数缓存。 */
     likeCount: integer("like_count").default(0).notNull(),
+    /** 动态语境或来源说明。 */
     context: text("context"),
+    /** 动态类型，如 mixed、image、video、diary。 */
     type: varchar("type", { enum: ["mixed", "image", "video", "diary"] })
       .default("mixed")
       .notNull(),
@@ -113,7 +122,7 @@ export const moments = pgTable(
   ],
 );
 
-// 资源表：抽象图片、视频、音频、文件等可复用素材。
+/** 资源表：抽象图片、视频、音频和文件等素材。 */
 export const assets = pgTable(
   "asset",
   {
@@ -121,6 +130,7 @@ export const assets = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** 资源类型。 */
     type: varchar("type", {
       enum: ["image", "video", "audio", "file", "avatar", "cover"],
     }).notNull(),
@@ -130,8 +140,11 @@ export const assets = pgTable(
     mimeType: text("mime_type"),
     width: integer("width"),
     height: integer("height"),
+    /** 媒体时长，单位秒或毫秒，按业务约定解释。 */
     duration: integer("duration"),
+    /** 封面图地址。 */
     coverUrl: text("cover_url"),
+    /** 下载次数缓存。 */
     downloadCount: integer("download_count").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
@@ -141,7 +154,7 @@ export const assets = pgTable(
   ],
 );
 
-// 动态与资源关联表：定义资源在动态中的用途和顺序。
+/** 动态与资源的关联表，定义资源在动态中的用途和顺序。 */
 export const momentAssets = pgTable(
   "moment_asset",
   {
@@ -152,7 +165,9 @@ export const momentAssets = pgTable(
     assetId: uuid("asset_id")
       .notNull()
       .references(() => assets.id, { onDelete: "cascade" }),
+    /** 资源用途，如 media 或 attachment。 */
     usage: varchar("usage", { enum: ["media", "attachment"] }).notNull(),
+    /** 同一动态内的展示顺序。 */
     sort: integer("sort").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
@@ -162,14 +177,14 @@ export const momentAssets = pgTable(
   ],
 );
 
-// 标签表：管理可复用的内容标签。
+/** 可复用的动态标签表。 */
 export const tags = pgTable("tag", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").unique().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// 动态标签关联表：维护动态与标签的多对多关系。
+/** 动态与标签的多对多关联表。 */
 export const momentTags = pgTable(
   "moment_tag",
   {
@@ -183,7 +198,7 @@ export const momentTags = pgTable(
   (table) => [primaryKey({ columns: [table.momentId, table.tagId] })],
 );
 
-// 动态点赞关联表：记录用户对动态的点赞关系。
+/** 动态点赞关系表。 */
 export const momentLikes = pgTable(
   "moment_like",
   {
@@ -198,7 +213,7 @@ export const momentLikes = pgTable(
   (table) => [primaryKey({ columns: [table.userId, table.momentId] })],
 );
 
-// 动态收藏关联表：记录用户对动态的收藏关系。
+/** 动态收藏关系表。 */
 export const momentCollections = pgTable(
   "moment_collection",
   {
@@ -213,7 +228,7 @@ export const momentCollections = pgTable(
   (table) => [primaryKey({ columns: [table.userId, table.momentId] })],
 );
 
-// 评论表：挂载在动态下，并支持父子回复结构。
+/** 动态评论表，支持父子回复结构。 */
 export const comments = pgTable(
   "Comment",
   {
@@ -225,6 +240,7 @@ export const comments = pgTable(
     authorId: uuid("author_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** 父评论 ID，用于回复链。 */
     parentId: uuid("parent_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
@@ -235,11 +251,12 @@ export const comments = pgTable(
  * 聊天相关
  */
 
-// 房间表：承载单聊与群聊的顶层空间。
+/** 聊天房间表，承载单聊与群聊空间。 */
 export const rooms = pgTable(
   "rooms",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** 房间类型，single 或 group。 */
     type: varchar("type", { enum: ["single", "group"] })
       .default("single")
       .notNull(),
@@ -254,7 +271,7 @@ export const rooms = pgTable(
   (table) => [index("idx_rooms_type").on(table.type)],
 );
 
-// 房间成员表：记录用户加入的房间及房间内角色。
+/** 房间成员表，记录用户加入房间及其角色。 */
 export const roomMembers = pgTable(
   "room_members",
   {
@@ -264,9 +281,11 @@ export const roomMembers = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** 房间内角色，如 owner 或 member。 */
     role: varchar("role", { enum: ["owner", "member"] })
       .default("member")
       .notNull(),
+    /** 最后已读消息 ID。 */
     lastReadMessageId: uuid("last_read_message_id"),
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
   },
@@ -277,7 +296,7 @@ export const roomMembers = pgTable(
   ],
 );
 
-// 房间消息表：保留 AI 结构化消息 parts，不回退到纯文本 content。
+/** 房间消息表，保存结构化消息 parts。 */
 export const roomMessages = pgTable(
   "room_messages",
   {
@@ -288,10 +307,13 @@ export const roomMessages = pgTable(
     senderId: uuid("sender_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** 消息角色，user、assistant 或 system。 */
     role: varchar("role", { enum: ["user", "assistant", "system"] })
       .default("user")
       .notNull(),
+    /** 结构化消息内容数组。 */
     parts: json("parts").notNull().$type<unknown[]>(),
+    /** 消息状态，generating、done 或 error。 */
     status: varchar("status", { enum: ["generating", "done", "error"] })
       .default("done")
       .notNull(),
@@ -300,44 +322,58 @@ export const roomMessages = pgTable(
   (table) => [index("idx_room_messages_room_id").on(table.roomId)],
 );
 
+/** 工作流定义表。 */
 export const workflows = pgTable("workflows", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   description: text("description"),
   ownerId: uuid("ownerId").notNull(),
+  /** 节点定义数组。 */
   nodes: json("nodes").notNull().$type<unknown[]>(),
+  /** 边定义数组。 */
   edges: json("edges").notNull().$type<unknown[]>(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+/** 工作流触发表。 */
 export const workflowTriggers = pgTable("workflow_trigger", {
   id: uuid("id").primaryKey().defaultRandom(),
   workflowId: uuid("workflow_id").notNull(),
+  /** 触发类型。 */
   type: varchar("type", {
     enum: ["manual", "schedule", "feed_event", "webhook"],
   }).notNull(),
+  /** 触发配置 JSON。 */
   config: json("config").$type<Record<string, unknown>>(),
 });
 
+/** 大模型提供商配置表。 */
 export const llmProviders = pgTable("LlmProvider", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  /** 提供商类型标识。 */
   provider: text("provider").notNull(),
+  /** OpenAI 兼容接口基地址。 */
   baseUrl: text("baseUrl"),
   apiKey: text("apiKey"),
   modelId: text("modelId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+/** MCP 服务端配置表。 */
 export const mcpServers = pgTable("McpServer", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  /** 传输方式。 */
   transport: text("transport").notNull(),
+  /** 本地命令入口。 */
   command: text("command"),
+  /** 命令参数数组。 */
   args: json("args").$type<unknown[]>(),
   url: text("url"),
 });
 
+/** Bot 与 MCP 服务的绑定关系表。 */
 export const botMcpConnections = pgTable(
   "BotMcpConnection",
   {
