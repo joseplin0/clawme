@@ -78,10 +78,10 @@ ISSUE_ID=$(bash ./scripts/create-issue.sh <type> "<title>" <USE_BRANCH> "$TMP_PA
 
 - 如果新问题与当前任务强相关但不应并入当前验收，直接创建相关 follow-up issue；如果无直接关联，创建独立 issue。
 - 这些 follow-up issue 用于沉淀发现，不走当前 `/task` 流程；只有后续真正开始处理时，才对对应 issue 进入 `/task`。
-- 在 issue / PR comment 中引用仓库文件时，默认使用 `../blob/<ref>/<path>` 相对 GitHub 链接，并附带路径文本；默认 `ref=main`，讨论某次固定快照时再改成 commit SHA。
-- 在 issue / PR / comment 中禁止暴露本机绝对路径、用户名、主机名、代理地址、端口、token 或环境变量值；引用错误信息时，必须先手工脱敏。
-- 如果已有 issue 正文或 comment 中的内容已经废弃，优先编辑原内容并用 Markdown 删除线标明废弃状态，例如 `~~旧内容~~`，不要直接删除，避免上下文断裂。
-- GitHub 远程写操作（`gh issue create/comment/edit`、`gh pr create/comment/edit`）如果命中沙箱/代理限制，按环境错误处理：优先复用已批准前缀自动升级重试，不把它当成业务失败直接吞掉。
+- 在 issue / PR comment 中引用仓库文件时，默认使用 `../blob/<ref>/<path>`，并附带路径文本；默认 `ref=main`，固定快照再改用 commit SHA。
+- issue / PR / comment 禁止暴露本机路径、用户名、主机名、代理地址、端口、token 或环境变量值；引用错误信息前先手工脱敏。
+- 废弃内容优先局部编辑：只对失效句子或条目加删除线，保留有效上下文并补更正说明；不要整段全文删除线，也不要直接删除。
+- GitHub 远程写操作若因沙箱或代理失败，按环境错误重试放行，不视为业务失败。
 - 代码改动完成后读取 `docs/content/DOCS_GUIDE.md`，按指南更新对应文档或新增 ADR。
 
 ## 4. 主 Agent 审核
