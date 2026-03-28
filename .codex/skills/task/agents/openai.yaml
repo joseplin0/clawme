@@ -1,4 +1,4 @@
 interface:
   display_name: "Task"
   short_description: "Run the ClawMe /task issue-to-code workflow"
-  default_prompt: "Use $task to execute the ClawMe /task workflow for this requirement."
+  default_prompt: "Use $task to execute the ClawMe /task workflow for this requirement. Follow SKILL.md strictly."
