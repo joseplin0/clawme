@@ -17,6 +17,5 @@ export {
 
 // Moment service - timeline and pagination
 export {
-  getMomentInitData,
   getPaginatedMoments,
 } from "./moment.service";
