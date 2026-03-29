@@ -1,0 +1,134 @@
+import { mountSuspended, mockComponent } from "@nuxt/test-utils/runtime";
+import { describe, expect, it } from "vitest";
+import MomentCard from "~~/app/components/MomentCard.vue";
+import { createActor, createMoment } from "../helpers/factories";
+
+mockComponent("UBlogPost", {
+  props: {
+    title: {
+      type: String,
+      default: "",
+    },
+    description: {
+      type: String,
+      default: "",
+    },
+    date: {
+      type: String,
+      default: "",
+    },
+    badge: {
+      type: Object,
+      default: undefined,
+    },
+    authors: {
+      type: Array,
+      default: () => [],
+    },
+    image: {
+      type: Object,
+      default: undefined,
+    },
+  },
+  template: `
+    <article
+      data-testid="blog-post"
+      :data-title="title"
+      :data-description="description"
+      :data-badge-label="badge?.label"
+      :data-badge-color="badge?.color"
+      :data-authors="authors.map((author) => author.name).join('|')"
+      :data-author-descriptions="authors.map((author) => author.description).join('|')"
+      :data-image-src="image?.src || ''"
+      :data-image-alt="image?.alt || ''"
+    />
+  `,
+});
+
+describe("MomentCard", () => {
+  it("把作者、徽标和首图映射给卡片组件", async () => {
+    const primaryAuthor = createActor({
+      id: "bot-1",
+      type: "bot",
+      username: "clawme",
+      nickname: "虾米",
+      role: "主理助理",
+    });
+    const coAuthor = createActor({
+      id: "human-1",
+      username: "linqiang",
+      nickname: "林",
+    });
+
+    const wrapper = await mountSuspended(MomentCard, {
+      props: {
+        moment: createMoment({
+          primaryAuthorId: primaryAuthor.id,
+          coAuthorIds: [coAuthor.id],
+          title: "夜间灵感",
+          text: "补一条新的灵感记录。",
+          context: "创作",
+          attachments: [
+            {
+              id: "asset-1",
+              kind: "IMAGE",
+              url: "https://example.com/cover.png",
+              width: 960,
+              height: 720,
+              title: "封面图",
+              subtitle: "",
+              icon: "i-lucide-image",
+              accent: "blue",
+            },
+          ],
+        }),
+        actorsById: {
+          [primaryAuthor.id]: primaryAuthor,
+          [coAuthor.id]: coAuthor,
+        },
+      },
+    });
+
+    const card = wrapper.get('[data-testid="blog-post"]');
+
+    expect(card.attributes("data-title")).toBe("夜间灵感");
+    expect(card.attributes("data-description")).toBe("补一条新的灵感记录。");
+    expect(card.attributes("data-badge-label")).toBe("创作");
+    expect(card.attributes("data-badge-color")).toBe("info");
+    expect(card.attributes("data-authors")).toBe("虾米|林");
+    expect(card.attributes("data-author-descriptions")).toContain(
+      "主理助理 · @clawme",
+    );
+    expect(card.attributes("data-image-src")).toBe(
+      "https://example.com/cover.png",
+    );
+    expect(card.attributes("data-image-alt")).toBe("夜间灵感");
+  });
+
+  it("在缺少标题和首图时使用作者昵称回退", async () => {
+    const author = createActor({
+      id: "human-1",
+      username: "linqiang",
+      nickname: "林",
+    });
+
+    const wrapper = await mountSuspended(MomentCard, {
+      props: {
+        moment: createMoment({
+          primaryAuthorId: author.id,
+          title: null,
+          attachments: [],
+        }),
+        actorsById: {
+          [author.id]: author,
+        },
+      },
+    });
+
+    const card = wrapper.get('[data-testid="blog-post"]');
+
+    expect(card.attributes("data-title")).toBe("林");
+    expect(card.attributes("data-badge-color")).toBe("neutral");
+    expect(card.attributes("data-image-src")).toBe("");
+  });
+});

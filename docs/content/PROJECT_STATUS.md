@@ -1,14 +1,16 @@
 # 项目现状
 
-更新时间：2026-03-27
+更新时间：2026-03-29
 
 ## 一句话结论
 
-当前仓库已经从静态原型推进到可运行的 Nuxt 4 全栈应用，具备首次引导、管理员登录、Drizzle + PostgreSQL 持久化、Feed、设置页、会话列表/详情、HTTP 流式聊天和 WebSocket 实时聊天基础链路。
+当前仓库已经从静态原型推进到可运行的 Nuxt 4 全栈应用，具备首次引导、管理员登录、Drizzle + PostgreSQL 持久化、Moment 流、设置页、会话列表/详情、HTTP 流式聊天和 WebSocket 实时聊天基础链路，并已补上组件级单元测试与登录页端到端冒烟测试。
 
 ## 机器校验
 
-- 2026-03-27 执行 `pnpm exec nuxi typecheck`，通过。
+- 2026-03-29 执行 `pnpm exec nuxi typecheck`，通过。
+- 2026-03-29 执行 `pnpm test:unit`，通过。
+- 2026-03-29 执行 `pnpm test:e2e`，通过。
 
 ## 已完成能力
 
@@ -16,7 +18,8 @@
 
 - Nuxt 4、`@nuxt/ui`、Nitro WebSocket、`nuxt-auth-utils` 已接入。
 - 全局 `UApp`、默认布局和登录布局已接通。
-- 全局路由中间件会根据系统初始化状态和登录状态自动跳转 `/setup`、`/login`、`/feed`。
+- 全局路由中间件会根据系统初始化状态和登录状态自动跳转 `/setup`、`/login`、`/moment`。
+- 已接入 `@nuxt/test-utils + vitest`；`app/components` 下现有组件已有单元测试，`/login` 已有 host 模式端到端冒烟测试。
 
 ### 数据与初始化
 
@@ -30,7 +33,7 @@
 - `/setup`：首次引导页面已可用。
 - `/login`：管理员登录已可用。
 - `/settings`：可查看初始化状态、管理员、默认助理、Provider 和基础系统统计。
-- `/feed`：支持分页加载和瀑布流展示 Feed 卡片。
+- `/moment`：支持分页加载和瀑布流展示 Moment 卡片。
 
 ### 聊天链路
 
@@ -70,4 +73,3 @@
 2. 为 `useActors()` 补上 `/api/actors/:id` 或移除这条未完成依赖。
 3. 实现导入器和外部写入 API，把系统从“可聊天”推进到“可归档、可接入”。
 4. 增补部署文档和运行文档，为 GitHub Wiki 或公开协作做准备。
-

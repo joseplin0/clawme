@@ -25,6 +25,13 @@ chore: setup commitlint and husky
 - 非规范提交会在 `commit-msg` 阶段被阻止，例如 `git commit -m "随便测试"`。
 - 提交描述建议保持单一意图，避免把多个无关改动塞进同一条 commit。
 
+## 本地验证
+
+- `pnpm exec nuxi typecheck`：运行 Nuxt/TypeScript 类型检查。
+- `pnpm test:unit`：运行 `tests/components/**/*.nuxt.spec.ts` 下的 Nuxt 运行时单元测试。
+- `pnpm test:e2e`：先构建产物，再启动本地服务，并用 `@nuxt/test-utils` 的 `host` 模式执行 `tests/e2e` 冒烟测试。
+- `pnpm test`：串行执行单元测试和端到端测试。
+
 ## Issue 与 PR 协作建议
 
 - 先区分讨论态和执行态：讨论方案、评估影响时先不要建单；明确要求开始实现时再创建 Issue 并进入执行流。
