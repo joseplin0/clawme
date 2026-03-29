@@ -5,6 +5,7 @@
 
 ## Scope
 
+- Closing issue：`Closes #<issue-id>`
 - 关联 Issue：
 - 主要改动文件：
 - 明确不包含的内容：
