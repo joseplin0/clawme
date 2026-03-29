@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { MessagePart } from "~~/shared/types/clawme";
 import { createAssistantMessageStream } from "~~/server/ecosystem/core/AssistantInstant";
 import { createMessage } from "~~/server/services/chat.service";
+import { normalizeRoomType } from "~~/server/services/room.service";
 import { requireOwnerSession } from "~~/server/utils/auth";
 import { db, schema } from "~~/server/utils/db";
 import { resolveUserLlmProvider } from "~~/server/utils/llm";
@@ -41,6 +42,13 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 404,
       statusMessage: "Chat room not found",
+    });
+  }
+
+  if (normalizeRoomType(room.type) !== "direct") {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "HTTP streaming chat only supports direct rooms",
     });
   }
 

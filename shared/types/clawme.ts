@@ -1,7 +1,7 @@
 import type { UIMessage } from "ai";
 
 export type UserType = "human" | "bot";
-export type SessionType = "single" | "group";
+export type SessionType = "direct" | "group";
 export type DbMessageRole = "user" | "assistant" | "system";
 export type MessageRole = DbMessageRole;
 export type MessageStatus = "generating" | "done" | "error";
@@ -129,6 +129,12 @@ export interface PublicStateResponse {
 export interface BootstrapResponse extends PublicStateResponse {
   roomId?: string;
 }
+
+export interface CreateRoomRequest {
+  memberIds: string[];
+}
+
+export type CreateRoomResponse = ChatRoomRecord;
 
 export interface BootstrapRequest {
   ownerNickname: string;

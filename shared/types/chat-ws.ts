@@ -4,7 +4,7 @@ export interface ChatWsClientMessage {
   type: "send" | "typing" | "read";
   requestId?: string;
   roomId?: string;
-  targetUserId?: string;
+  memberIds?: string[];
   content?: string;
   messageId?: string;
 }

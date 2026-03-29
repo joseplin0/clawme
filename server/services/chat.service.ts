@@ -7,6 +7,7 @@ import type {
 } from "~~/shared/types/clawme";
 import { db, schema } from "~~/server/utils/db";
 import type { StoredClawmeAppState } from "./system.service";
+import { normalizeRoomType } from "./room.service";
 
 const { roomMessages, rooms } = schema;
 
@@ -102,6 +103,7 @@ export function createMockAssistantReply(
 export async function getChatRoomListData() {
   const roomsList = await db.query.rooms.findMany({
     with: {
+      members: true,
       messages: {
         limit: 1,
         orderBy: [desc(roomMessages.createdAt)],
@@ -119,9 +121,9 @@ export async function getChatRoomListData() {
     }
     return {
       id: s.id,
-      type: s.type,
+      type: normalizeRoomType(s.type),
       title: s.name || "",
-      memberIds: [],
+      memberIds: s.members.map((member) => member.userId),
       lastMessage: lastMessageText,
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),

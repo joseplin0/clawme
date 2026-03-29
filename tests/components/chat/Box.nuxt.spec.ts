@@ -1,4 +1,8 @@
-import { mountSuspended, mockComponent, mockNuxtImport } from "@nuxt/test-utils/runtime";
+import {
+  mountSuspended,
+  mockComponent,
+  mockNuxtImport,
+} from "@nuxt/test-utils/runtime";
 import { flushPromises } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Box from "~~/app/components/chat/Box.vue";
@@ -89,7 +93,7 @@ mockComponent("UDashboardNavbar", {
     },
   },
   template:
-    "<header data-testid=\"navbar\" :data-title=\"title\"><slot name=\"right\" /></header>",
+    '<header data-testid="navbar" :data-title="title"><slot name="right" /></header>',
 });
 
 mockComponent("UButton", {
@@ -97,20 +101,20 @@ mockComponent("UButton", {
 });
 
 mockComponent("UContainer", {
-  template: "<div data-testid=\"container\"><slot /></div>",
+  template: '<div data-testid="container"><slot /></div>',
 });
 
 mockComponent("UChatMessages", {
   template:
-    "<div data-testid=\"messages\"><slot name=\"indicator\" /><slot /></div>",
+    '<div data-testid="messages"><slot name="indicator" /><slot /></div>',
 });
 
 mockComponent("UChatShimmer", {
-  template: "<div data-testid=\"shimmer\" />",
+  template: '<div data-testid="shimmer" />',
 });
 
 mockComponent("UChatMessage", {
-  template: "<article data-testid=\"message\"><slot name=\"content\" /></article>",
+  template: '<article data-testid="message"><slot name="content" /></article>',
 });
 
 mockComponent("UChatReasoning", {
@@ -170,10 +174,14 @@ mockComponent("ChatComposer", {
 });
 
 describe("ChatBox", () => {
+  const createRoomTriggerStub = {
+    template: '<div data-testid="create-room-trigger"><slot /></div>',
+  };
+
   beforeEach(() => {
     const owner = createActor({
       id: "owner-1",
-      username: "linqiang",
+      username: "lin",
       nickname: "林",
     });
     const assistant = createActor({
@@ -223,6 +231,11 @@ describe("ChatBox", () => {
 
   it("初始化房间后向 ChatComposer 传递上下文并转发提交动作", async () => {
     const wrapper = await mountSuspended(Box, {
+      global: {
+        stubs: {
+          CreateRoomTrigger: createRoomTriggerStub,
+        },
+      },
       props: {
         activeRoomId: "room-1",
         rooms: [
@@ -262,5 +275,70 @@ describe("ChatBox", () => {
 
     await wrapper.get('[data-testid="stop"]').trigger("click");
     expect(boxState.chatInstances[0].stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("group 房间展示禁发状态并阻止提交", async () => {
+    boxState.fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/chat/room/room-group") {
+        const owner = createActor({
+          id: "owner-1",
+          username: "lin",
+          nickname: "林",
+        });
+        const assistant = createActor({
+          id: "bot-1",
+          type: "bot",
+          username: "clawme",
+          nickname: "虾米",
+          role: "本地助理",
+        });
+
+        return {
+          id: "room-group",
+          title: "多人讨论",
+          participants: [owner, assistant],
+          messages: [],
+        };
+      }
+
+      throw new Error(`Unexpected fetch in test: ${url}`);
+    });
+
+    const wrapper = await mountSuspended(Box, {
+      global: {
+        stubs: {
+          CreateRoomTrigger: createRoomTriggerStub,
+        },
+      },
+      props: {
+        activeRoomId: "room-group",
+        rooms: [
+          createRoom({
+            id: "room-group",
+            type: "group",
+            title: "多人讨论",
+            memberIds: ["owner-1", "bot-1", "actor-2"],
+          }),
+        ],
+      },
+    });
+
+    await flushPromises();
+
+    const composer = wrapper.get('[data-testid="composer"]');
+    expect(wrapper.text()).toContain("当前房间是 group");
+    expect(composer.attributes("data-ready")).toBe("false");
+    expect(composer.attributes("data-placeholder")).toContain(
+      "group 房间暂不支持发送消息",
+    );
+
+    await wrapper.get('[data-testid="submit"]').trigger("click");
+
+    expect(boxState.chatInstances[0].sendMessage).not.toHaveBeenCalled();
+    expect(boxState.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "当前房间暂不支持发送消息",
+      }),
+    );
   });
 });

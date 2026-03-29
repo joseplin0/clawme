@@ -1,54 +1,28 @@
-import { createError, defineEventHandler } from "h3";
-import { eq } from "drizzle-orm";
+import { createError, defineEventHandler, readBody } from "h3";
+import { z } from "zod";
+import type { CreateRoomRequest, CreateRoomResponse } from "~~/shared/types/clawme";
 import { requireOwnerSession } from "~~/server/utils/auth";
-import { db, schema } from "~~/server/utils/db";
+import { createRoom } from "~~/server/services/room.service";
 
-const { roomMembers, rooms, users } = schema;
+const bodySchema = z.object({
+  memberIds: z.array(z.uuid()).min(1),
+});
 
 export default defineEventHandler(async (event) => {
   const ownerUser = await requireOwnerSession(event);
+  const body = await readBody<CreateRoomRequest>(event);
+  const { memberIds } = bodySchema.parse(body);
 
-  const [owner, bot] = await Promise.all([
-    db.query.users.findFirst({
-      where: eq(users.id, ownerUser.id),
-    }),
-    db.query.users.findFirst({
-      where: eq(users.type, "bot"),
-    }),
-  ]);
-
-  if (!owner) {
+  try {
+    return (await createRoom({
+      creatorId: ownerUser.id,
+      memberIds,
+    })) as CreateRoomResponse;
+  } catch (error) {
     throw createError({
-      statusCode: 404,
-      statusMessage: "Owner not found",
+      statusCode: 400,
+      statusMessage:
+        error instanceof Error ? error.message : "Failed to create room",
     });
   }
-
-  const [room] = await db
-    .insert(rooms)
-    .values({
-      type: "single",
-      name: `${owner.nickname ?? "用户"} x ${bot?.nickname ?? "助手"}`,
-    })
-    .returning();
-
-  if (!room) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Failed to create room",
-    });
-  }
-
-  await db.insert(roomMembers).values([
-    { roomId: room.id, userId: owner.id, role: "owner" },
-    ...(bot ? [{ roomId: room.id, userId: bot.id, role: "member" as const }] : []),
-  ]);
-
-  return {
-    id: room.id,
-    title: room.name,
-    type: room.type,
-    createdAt: room.createdAt.toISOString(),
-    updatedAt: room.updatedAt.toISOString(),
-  };
 });

@@ -13,6 +13,7 @@
 - 复用单条 WebSocket 连接
 - 用 `requestId` 追踪单次发送请求
 - 支持已有会话发送与新建会话发送
+- 新建会话时统一使用 `memberIds`，不再沿用 `targetUserId`
 - 对 Bot 会话返回 AI SDK 标准 `UIMessageChunk`
 - 对普通用户会话主动补发 `finish`，避免流悬空
 - 错误回包可精确关联到当前请求
@@ -26,18 +27,18 @@ type ClientWSMessage =
   | {
       type: "send";
       requestId: string;
-      sessionId?: string;
-      targetUserId?: string;
+      roomId?: string;
+      memberIds?: string[];
       content: string;
       messageId?: string;
     }
   | {
       type: "typing";
-      sessionId: string;
+      roomId: string;
     }
   | {
       type: "read";
-      sessionId: string;
+      roomId: string;
       messageId: string;
     };
 ```
@@ -50,14 +51,14 @@ type ServerWSMessage =
       type: "ack";
       requestId: string;
       chatId: string;
-      sessionId: string;
+      roomId: string;
     }
   | {
       type: "message";
       requestId?: string;
       chatId: string;
       message: UIMessage;
-      sessionId?: string;
+      roomId?: string;
     }
   | {
       type: "stream-chunk";
@@ -82,8 +83,9 @@ type ServerWSMessage =
 约束说明：
 
 - `requestId` 只用于定位一次发送请求，不用于标识会话。
-- `sessionId` 只在“首次创建会话”时，由服务端回给发起方。
+- `roomId` 只在“首次创建会话”时，由服务端回给发起方。
 - `chatId` 表示当前会话 ID。
+- `memberIds` 表示“除当前用户外”要参与新会话的成员列表；当前这条旧链只接受 1 个成员，因此仍只会创建 `direct`。
 - `stream-chunk` 的 `chunk` 必须是 AI SDK 标准 `UIMessageChunk`。
 
 ## 核心状态
@@ -92,7 +94,7 @@ type ServerWSMessage =
 
 - `ws`: 当前 WebSocket 连接实例
 - `pendingStreams`: `requestId -> ReadableStream controller`
-- `pendingSessionRequests`: `requestId -> sessionId Promise resolver`
+- `pendingRoomRequests`: `requestId -> roomId Promise resolver`
 
 服务端 `chat.ts` 维护两类上下文：
 
@@ -122,7 +124,7 @@ type ServerWSMessage =
 
 ```mermaid
 flowchart TD
-    A[前端调用 sendMessages / sendMessageToUser] --> B[生成 requestId]
+    A[前端调用 sendMessages / sendMessageToMembers] --> B[生成 requestId]
     B --> C[建立或复用 WebSocket 连接]
     C --> D[创建 ReadableStream 并登记 pendingStreams]
     D --> E[发送 ClientWSMessage]
@@ -132,7 +134,7 @@ flowchart TD
     F -- 是 --> H{sessionId 是否存在?}
 
     H -- 是 --> I[校验发送者是否属于该会话]
-    H -- 否 --> J[根据 targetUserId 创建新会话]
+    H -- 否 --> J[根据 memberIds 创建新会话]
 
     I --> K[写入用户消息]
     J --> K
@@ -190,7 +192,7 @@ sequenceDiagram
     DB-->>WS: ok
 ```
 
-### 新建会话 -> 普通用户会话
+### 新建会话 -> direct 会话
 
 ```mermaid
 sequenceDiagram
@@ -200,22 +202,22 @@ sequenceDiagram
     participant DB as Database
     participant Target as target user channel
 
-    UI->>T: createSessionAndSend(targetUserId, content)
+    UI->>T: createRoomAndSend(memberIds, content)
     T->>T: 生成 requestId
     T->>T: pendingStreams.set(requestId)
-    T->>T: pendingSessionRequests.set(requestId)
-    T->>WS: {type:"send", requestId, targetUserId, content}
+    T->>T: pendingRoomRequests.set(requestId)
+    T->>WS: {type:"send", requestId, memberIds, content}
 
-    WS->>DB: 创建 ChatSession
-    WS->>DB: 插入 SessionParticipant x2
+    WS->>DB: 创建 direct 房间
+    WS->>DB: 插入 room_members x2
     WS->>DB: 插入 USER 消息
-    DB-->>WS: sessionId + userMessage
+    DB-->>WS: roomId + userMessage
 
-    WS-->>T: {type:"ack", requestId, chatId, sessionId}
-    T->>T: resolve pendingSessionRequests(requestId)
-    T-->>UI: sessionId Promise resolved
+    WS-->>T: {type:"ack", requestId, chatId, roomId}
+    T->>T: resolve pendingRoomRequests(requestId)
+    T-->>UI: roomId Promise resolved
 
-    WS-->>Target: publish {type:"message", chatId, message, sessionId}
+    WS-->>Target: publish {type:"message", chatId, message, roomId}
     WS-->>T: {type:"stream-chunk", requestId, chatId, chunk:{type:"finish"}}
     T-->>UI: stream.close()
 ```
@@ -231,7 +233,7 @@ sequenceDiagram
     WS-->>T: {type:"error", requestId, chatId?, code, text}
     T->>T: 按 requestId 定位 pendingStreams
     T->>T: controller.error(Error(text))
-    T->>T: 清理 pendingStreams / pendingSessionRequests
+    T->>T: 清理 pendingStreams / pendingRoomRequests
 ```
 
 ## 客户端处理规则
@@ -241,12 +243,13 @@ sequenceDiagram
 - `sendMessages` 只支持 `submit-message`
 - 当前不支持 `regenerate-message`
 - 最后一条消息从 `message.parts` 中提取纯文本，而不是访问不存在的 `message.content`
+- “无 `roomId` 首发消息”当前改为使用 `memberIds`；为避免越过当前边界，这条旧链只接受 1 个成员并创建 `direct`
 
 ### 2. ACK 与广播分离
 
 客户端收到服务端回包时分三类处理：
 
-- `type: "ack"`：只用于解析新建会话返回的 `sessionId`
+- `type: "ack"`：只用于解析新建会话返回的 `roomId`
 - `type: "message"`：只作为频道广播，分发给聊天 UI
 - `type: "stream-chunk"`：只推进当前请求的流式输出
 
@@ -284,8 +287,8 @@ sequenceDiagram
 
 新建会话：
 
-- 根据 `targetUserId` 找到目标用户
-- 创建会话
+- 根据 `memberIds` 找到目标用户
+- 当前只接受 1 个成员，因此只创建 `direct`
 - 写入双方参与者
 - 写入用户消息
 

@@ -2,6 +2,7 @@ import { type UIMessage } from "ai";
 import { eq } from "drizzle-orm";
 import { type MessagePart } from "~~/shared/types/clawme";
 import { createMessage } from "~~/server/services/chat.service";
+import { createRoom, normalizeRoomType } from "~~/server/services/room.service";
 import { db, schema } from "~~/server/utils/db";
 
 const { users, roomMembers, roomMessages, rooms } = schema;
@@ -49,7 +50,7 @@ export async function prepareDirectRoomMessage(input: {
   senderId: string;
   content: string;
   roomId?: string;
-  targetUserId?: string;
+  memberIds?: string[];
 }): Promise<PreparedChatCommand> {
   const content = input.content.trim();
   if (!content) {
@@ -88,10 +89,10 @@ export async function prepareDirectRoomMessage(input: {
       throw new ChatCommandError("FORBIDDEN", "无权访问该房间", input.roomId);
     }
 
-    if (session.type !== "single") {
+    if (normalizeRoomType(session.type) !== "direct") {
       throw new ChatCommandError(
         "UNSUPPORTED_SESSION_TYPE",
-        "当前实时聊天仅支持 single 房间，group 后续再走扩展链路。",
+        "当前实时聊天仅支持 direct 房间，group 后续再走扩展链路。",
         input.roomId,
       );
     }
@@ -116,10 +117,29 @@ export async function prepareDirectRoomMessage(input: {
     };
   }
 
-  if (!input.targetUserId) {
+  const memberIds = Array.from(
+    new Set((input.memberIds ?? []).filter((memberId) => memberId !== input.senderId)),
+  );
+
+  if (memberIds.length === 0) {
     throw new ChatCommandError(
-      "MISSING_SESSION_OR_TARGET",
-      "需要提供 roomId 或 targetUserId",
+      "MISSING_SESSION_OR_MEMBERS",
+      "需要提供 roomId 或 memberIds",
+    );
+  }
+
+  if (memberIds.length !== 1) {
+    throw new ChatCommandError(
+      "UNSUPPORTED_MEMBER_COUNT",
+      "当前实时聊天仅支持通过 memberIds 创建 direct 房间，memberIds 需要且只能包含 1 个成员。",
+    );
+  }
+
+  const [targetUserId] = memberIds;
+  if (!targetUserId) {
+    throw new ChatCommandError(
+      "MISSING_SESSION_OR_MEMBERS",
+      "需要提供 roomId 或 memberIds",
     );
   }
 
@@ -128,7 +148,7 @@ export async function prepareDirectRoomMessage(input: {
       where: eq(users.id, input.senderId),
     }),
     db.query.users.findFirst({
-      where: eq(users.id, input.targetUserId),
+      where: eq(users.id, targetUserId),
       with: {
         llmProvider: true,
       },
@@ -139,49 +159,27 @@ export async function prepareDirectRoomMessage(input: {
     throw new ChatCommandError("USER_NOT_FOUND", "用户不存在");
   }
 
-  const creation = await db.transaction(async (tx) => {
-    const [newSession] = await tx
-      .insert(rooms)
-      .values({
-        type: "single",
-        name: `${sender.nickname} x ${targetUser.nickname}`,
-      })
-      .returning();
-
-    if (!newSession) {
-      throw new ChatCommandError("SESSION_CREATE_FAILED", "房间创建失败");
-    }
-
-    await tx.insert(roomMembers).values([
-      { roomId: newSession.id, userId: sender.id, role: "owner" },
-      { roomId: newSession.id, userId: targetUser.id, role: "member" },
-    ]);
-
-    const [userMessage] = await tx
-      .insert(roomMessages)
-      .values({
-        roomId: newSession.id,
-        senderId: input.senderId,
-        role: "user",
-        parts: [{ type: "text", text: content }],
-        status: "done",
-      })
-      .returning();
-
-    if (!userMessage) {
-      throw new ChatCommandError(
-        "MESSAGE_CREATE_FAILED",
-        "消息保存失败",
-        newSession.id,
-      );
-    }
-
-    return {
-      activeRoomId: newSession.id,
-      createdRoomId: newSession.id,
-      userMessage,
-    };
+  const createdRoom = await createRoom({
+    creatorId: sender.id,
+    memberIds: [targetUser.id],
+  }).catch((error) => {
+    throw new ChatCommandError(
+      "SESSION_CREATE_FAILED",
+      error instanceof Error ? error.message : "房间创建失败",
+    );
   });
+
+  const userMessage = await createUserMessage({
+    roomId: createdRoom.id,
+    senderId: input.senderId,
+    content,
+  });
+
+  const creation = {
+    activeRoomId: createdRoom.id,
+    createdRoomId: createdRoom.id,
+    userMessage,
+  };
 
   return {
     ...creation,

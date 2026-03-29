@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
 
   await setOwnerSession(event, sessionUser, result.ownerAuthToken);
 
-  // 返回 PublicStateResponse，同时包含 roomId
+  // 返回 PublicStateResponse；默认会话由后台继续生成
   return {
     ...toPublicStateResponse(result, true),
     roomId: result.rooms[0]?.id,

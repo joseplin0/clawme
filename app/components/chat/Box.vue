@@ -7,11 +7,22 @@
       class="border-b border-default/70"
     >
       <template #right>
-        <UButton variant="outline" color="neutral" icon="i-lucide-shell">
-          Moment Draft
-        </UButton>
+        <CreateRoomTrigger
+          :member-ids="quickCreateMemberIds"
+          @created="handleRoomCreated"
+        >
+          <UButton variant="outline" color="neutral" icon="i-lucide-plus">
+            新会话
+          </UButton>
+        </CreateRoomTrigger>
       </template>
     </UDashboardNavbar>
+    <div
+      v-if="selectedRoom && !isDirectRoom"
+      class="border-b border-warning/40 bg-warning/10 px-4 py-2 text-sm text-warning"
+    >
+      当前房间是 group，会话创建已支持，消息发送链路暂仅保留 direct。
+    </div>
     <div class="flex min-h-0 flex-1 relative">
       <UContainer class="flex min-h-0 flex-1 overflow-y-auto">
         <UChatMessages
@@ -101,7 +112,6 @@ import type {
   ChatRoomDetailResponse,
   ClawmeUIMessage,
 } from "~~/shared/types/clawme";
-
 import {
   isReasoningStreaming as getNuxtReasoningStreaming,
   isToolStreaming,
@@ -117,7 +127,12 @@ const props = defineProps<{
   rooms: ChatRoomRecord[];
 }>();
 
+const emit = defineEmits<{
+  created: [room: ChatRoomRecord];
+}>();
+
 const activeRoomId = ref<string | null>(props.activeRoomId);
+const { user: currentUser } = useUserSession();
 
 // Use global actors cache
 const { getActor, fetchActors, setActors } = useActors();
@@ -139,7 +154,18 @@ const chatMessages = computed<ClawmeUIMessage[]>(
   () => chat.value?.messages ?? [],
 );
 const chatStatus = computed<ChatStatus>(() => chat.value?.status ?? "ready");
-const isChatReady = computed(() => Boolean(activeRoomId.value && chat.value));
+const selectedRoom = computed(
+  () => props.rooms.find((s) => s.id === activeRoomId.value) ?? null,
+);
+const isDirectRoom = computed(() => selectedRoom.value?.type === "direct");
+const quickCreateMemberIds = computed(() =>
+  roomParticipants.value
+    .filter((actor) => actor.id !== currentUser.value?.id)
+    .map((actor) => actor.id),
+);
+const isChatReady = computed(
+  () => Boolean(activeRoomId.value && chat.value && isDirectRoom.value),
+);
 
 onMounted(async () => {
   if (activeRoomId.value) {
@@ -208,7 +234,6 @@ async function initializeChat() {
     setActors(response.participants);
 
     const messages = response.messages as ClawmeUIMessage[];
-    console.log("Fetched messages for room", messages);
 
     chat.value = markRaw(
       new Chat({
@@ -236,13 +261,26 @@ async function initializeChat() {
   }
 }
 
+function handleRoomCreated(room: ChatRoomRecord) {
+  emit("created", room);
+}
+
 function handleSubmit(text: string) {
   if (
     !text.trim() ||
     !chat.value ||
     !currentUser.value?.id ||
-    chatStatus.value !== "ready"
+    chatStatus.value !== "ready" ||
+    !isDirectRoom.value
   ) {
+    if (activeRoomId.value && !isDirectRoom.value) {
+      toast.add({
+        title: "当前房间暂不支持发送消息",
+        description: "group 房间只保留创建和浏览，发送链路后续再接通。",
+        color: "warning",
+        icon: "i-lucide-circle-alert",
+      });
+    }
     return;
   }
 
@@ -268,13 +306,12 @@ function handleStop() {
   chat.value?.stop();
 }
 
-// Get current user session
-const { user: currentUser } = useUserSession();
-const selectedRoom = computed(
-  () => props.rooms.find((s) => s.id === activeRoomId.value) ?? null,
-);
 const composerPlaceholder = computed(() =>
-  activeRoomId.value ? "告诉虾米接下来该先做什么..." : "请先选择房间...",
+  !activeRoomId.value
+    ? "请先选择房间..."
+    : isDirectRoom.value
+      ? "告诉虾米接下来该先做什么..."
+      : "group 房间暂不支持发送消息",
 );
 
 const mentionActors = computed<ActorProfile[]>(() => {
