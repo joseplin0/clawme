@@ -32,6 +32,14 @@ chore: setup commitlint and husky
 - `pnpm test:e2e`：先构建产物，再启动本地服务，并用 `@nuxt/test-utils` 的 `host` 模式执行 `tests/e2e` 冒烟测试。
 - `pnpm test`：串行执行单元测试和端到端测试。
 
+## PR 模板与合并检查
+
+- 仓库使用 `.github/pull_request_template.md` 统一收集 `Summary`、`Scope`、`Verification`、`Risk`、`Screenshots`。
+- `Merge Checklist` 不是额外文档，而是 PR 模板的一部分，用来在合并前确认证据是否充足。
+- UI 改动默认附截图或录屏；无 UI 改动明确写 `N/A`，避免 reviewer 猜测。
+- 如果某项验证不适用，必须在 PR 中写明原因，不要只取消勾选。
+- GitHub Actions 会在 `pull_request` 和 `push main` 时自动执行 `.github/workflows/ci.yml`，默认校验 `typecheck`、`test:unit`、`test:e2e`。
+
 ## Issue 与 PR 协作建议
 
 - 先区分讨论态和执行态：讨论方案、评估影响时先不要建单；明确要求开始实现时再创建 Issue 并进入执行流。
