@@ -56,7 +56,7 @@ describe("MomentCard", () => {
     });
     const coAuthor = createActor({
       id: "human-1",
-      username: "linqiang",
+      username: "lin",
       nickname: "林",
     });
 
@@ -108,7 +108,7 @@ describe("MomentCard", () => {
   it("在缺少标题和首图时使用作者昵称回退", async () => {
     const author = createActor({
       id: "human-1",
-      username: "linqiang",
+      username: "lin",
       nickname: "林",
     });
 

@@ -4,6 +4,24 @@ export default defineNuxtConfig({
   modules: ["@nuxt/ui", "@nuxt/image", "@nuxtjs/mdc", "nuxt-auth-utils"],
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
+  vite: {
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (
+              !id.includes("mdc") &&
+              /[\\/]node_modules[\\/](?:micromark|remark-|mdast-util-|decode-named-character-reference|parse-entities|ccount|markdown-table)/.test(
+                id,
+              )
+            ) {
+              return "vendor-remark";
+            }
+          },
+        },
+      },
+    },
+  },
   fonts: {
     provider: "local",
   },
@@ -18,6 +36,10 @@ export default defineNuxtConfig({
   mdc: {
     headings: {
       anchorLinks: false, // Disable anchor links in AI responses
+    },
+    highlight: false,
+    components: {
+      prose: false,
     },
   },
   nitro: {

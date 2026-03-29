@@ -5,6 +5,7 @@ const host = process.env.NUXT_TEST_SERVER_HOST || "127.0.0.1";
 const port = Number(process.env.NUXT_TEST_SERVER_PORT || 4010);
 const baseUrl = `http://${host}:${port}`;
 const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const shouldBootstrap = process.env.NUXT_E2E_BOOTSTRAP === "true";
 
 const sharedEnv = {
   ...process.env,
@@ -54,6 +55,50 @@ async function waitForServer(url) {
   throw new Error(`Timed out waiting for test server at ${url}`);
 }
 
+async function ensureSystemBootstrapped(url) {
+  if (!shouldBootstrap) {
+    return;
+  }
+
+  const statusResponse = await fetch(`${url}/api/system/status`);
+  if (!statusResponse.ok) {
+    throw new Error(
+      `Failed to read system status: ${statusResponse.status} ${statusResponse.statusText}`,
+    );
+  }
+
+  const status = await statusResponse.json();
+  if (status.isInitialized) {
+    return;
+  }
+
+  const bootstrapResponse = await fetch(`${url}/api/system/bootstrap`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      ownerNickname: "CI Owner",
+      ownerUsername: "ci_owner",
+      ownerPassword: "ci-owner-password",
+      assistantNickname: "Clawme",
+      assistantRole: "CI assistant",
+      assistantIntro: "Bootstrap fixture for end-to-end tests.",
+      providerName: "CI Mock Provider",
+      providerBaseUrl: "https://example.com/v1",
+      apiKey: "ci-test-key",
+      modelId: "gpt-4o-mini",
+    }),
+  });
+
+  if (!bootstrapResponse.ok) {
+    const errorText = await bootstrapResponse.text();
+    throw new Error(
+      `Failed to bootstrap test data: ${bootstrapResponse.status} ${errorText}`,
+    );
+  }
+}
+
 const serverEnv = {
   ...sharedEnv,
   HOST: host,
@@ -82,6 +127,7 @@ try {
   });
 
   await waitForServer(baseUrl);
+  await ensureSystemBootstrapped(baseUrl);
   await run(
     pnpmCommand,
     ["exec", "vitest", "run", "--project", "node", "tests/e2e"],

@@ -7,14 +7,14 @@
       class="border-b border-default/70"
     >
       <template #right>
-        <CreateRoomTrigger
+        <LazyCreateRoomTrigger
           :member-ids="quickCreateMemberIds"
           @created="handleRoomCreated"
         >
           <UButton variant="outline" color="neutral" icon="i-lucide-plus">
             新会话
           </UButton>
-        </CreateRoomTrigger>
+        </LazyCreateRoomTrigger>
       </template>
     </UDashboardNavbar>
     <div
@@ -51,7 +51,7 @@
                   :text="part.text"
                   :streaming="getReasoningStreaming(message, index)"
                 >
-                  <MDC
+                  <MDCCached
                     :value="part.text"
                     :cache-key="`reasoning-${message.id}-${index}`"
                     class="*:first:mt-0 *:last:mb-0"
@@ -75,7 +75,7 @@
       </UContainer>
     </div>
 
-    <ChatComposer
+    <LazyChatComposer
       :key="activeRoomId || 'empty'"
       :ready="isChatReady"
       :status="chatStatus"
@@ -163,8 +163,8 @@ const quickCreateMemberIds = computed(() =>
     .filter((actor) => actor.id !== currentUser.value?.id)
     .map((actor) => actor.id),
 );
-const isChatReady = computed(
-  () => Boolean(activeRoomId.value && chat.value && isDirectRoom.value),
+const isChatReady = computed(() =>
+  Boolean(activeRoomId.value && chat.value && isDirectRoom.value),
 );
 
 onMounted(async () => {

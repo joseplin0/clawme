@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
+    "analyze": "nuxt analyze",
     "db:comments": "node ./scripts/sync-db-comments.mjs --write",
     "db:comments:apply": "node ./scripts/sync-db-comments.mjs --write --apply",
     "db:generate": "drizzle-kit generate && node ./scripts/sync-db-comments.mjs --write",

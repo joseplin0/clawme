@@ -40,11 +40,12 @@ chore: setup commitlint and husky
 - `Merge Checklist` 不是额外文档，而是 PR 模板的一部分，用来在合并前确认证据是否充足。
 - UI 改动默认附截图或录屏；无 UI 改动明确写 `N/A`，避免 reviewer 猜测。
 - 如果某项验证不适用，必须在 PR 中写明原因，不要只取消勾选。
-- 当前 GitHub Actions 仅在 `push main` 和手动 `workflow_dispatch` 时执行 `.github/workflows/ci.yml`，默认校验 `typecheck`、`build`、`test:unit`、`test:e2e`。
-- 由于当前 GitHub 账户存在 billing 阻断，已临时关闭 `pull_request` 触发，避免 PR 更新时反复产生失败通知；恢复后再重新开启。
+- 当前 GitHub Actions 会在 `push main`、`pull_request -> main` 和手动 `workflow_dispatch` 时执行 `.github/workflows/ci.yml`，默认校验 `typecheck`、`build`、`test:unit`、`test:e2e`。
 - `build` warning 不会直接阻断合并，但会写入 workflow summary，并在 PR 中生成可覆盖更新的提醒评论，方便 review 时评估风险。
 - CI 会上传 `build.log` artifact 供 review 查看完整构建日志。
-- 当前 GitHub Actions 没有启动 PostgreSQL service；workflow 中的 `DATABASE_URL` 只是占位配置，不代表 CI 已覆盖真实数据库集成验证。
+- CI 使用 `actions/setup-node` 基于 `pnpm-lock.yaml` 缓存 pnpm store，`pnpm install` 会复用依赖缓存。
+- CI 会启动 PostgreSQL service，并在校验前执行 `pnpm db:push` 同步 schema。
+- `test:e2e` 在 CI 中会额外触发一次系统 bootstrap，准备 owner、bot 和 provider 等最小测试数据。
 
 ## 仓库元数据
 

@@ -5,14 +5,14 @@
       base: '!relative !inset-auto min-h-0 flex-1',
     }"
   >
-    <ChatList
+    <LazyChatList
       v-model="activeRoomId"
       v-model:open="sidebarOpen"
       :rooms="rooms"
       @created="handleRoomCreated"
     />
 
-    <ChatBox
+    <LazyChatBox
       :active-room-id="activeRoomId"
       :rooms="rooms"
       @created="handleRoomCreated"
