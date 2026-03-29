@@ -15,6 +15,7 @@ const sharedEnv = {
     process.env.NUXT_SESSION_PASSWORD ??
     "test-session-password-with-at-least-32-characters",
 };
+const skipBuild = process.env.NUXT_E2E_SKIP_BUILD === "true";
 
 function run(command, args, env = sharedEnv) {
   return new Promise((resolve, reject) => {
@@ -66,7 +67,9 @@ let server;
 let serverClosed = false;
 
 try {
-  await run(pnpmCommand, ["exec", "nuxt", "build"]);
+  if (!skipBuild) {
+    await run(pnpmCommand, ["exec", "nuxt", "build"]);
+  }
 
   server = spawn(process.execPath, [".output/server/index.mjs"], {
     cwd: process.cwd(),

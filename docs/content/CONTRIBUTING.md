@@ -28,6 +28,7 @@ chore: setup commitlint and husky
 ## 本地验证
 
 - `pnpm exec nuxi typecheck`：运行 Nuxt/TypeScript 类型检查。
+- `pnpm build`：验证生产构建链路可用，适合检查打包阶段错误和构建告警。
 - `pnpm test:unit`：运行 `tests/components/**/*.nuxt.spec.ts` 下的 Nuxt 运行时单元测试。
 - `pnpm test:e2e`：先构建产物，再启动本地服务，并用 `@nuxt/test-utils` 的 `host` 模式执行 `tests/e2e` 冒烟测试。
 - `pnpm test`：串行执行单元测试和端到端测试。
@@ -38,7 +39,8 @@ chore: setup commitlint and husky
 - `Merge Checklist` 不是额外文档，而是 PR 模板的一部分，用来在合并前确认证据是否充足。
 - UI 改动默认附截图或录屏；无 UI 改动明确写 `N/A`，避免 reviewer 猜测。
 - 如果某项验证不适用，必须在 PR 中写明原因，不要只取消勾选。
-- GitHub Actions 会在 `pull_request` 和 `push main` 时自动执行 `.github/workflows/ci.yml`，默认校验 `typecheck`、`test:unit`、`test:e2e`。
+- GitHub Actions 会在 `pull_request` 和 `push main` 时自动执行 `.github/workflows/ci.yml`，默认校验 `typecheck`、`build`、`test:unit`、`test:e2e`。
+- `build` warning 不会直接阻断合并，但会写入 workflow summary，并在 PR 中生成可覆盖更新的提醒评论，方便 review 时评估风险。
 
 ## Issue 与 PR 协作建议
 
