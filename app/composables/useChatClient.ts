@@ -141,7 +141,7 @@ export function useChatClient() {
    * 创建新房间并发送首条消息
    */
   async function createRoomAndSend(
-    targetUserId: string,
+    memberIds: string[],
     content: string,
   ): Promise<{ stream: ReadableStream<any> | null; roomId: Promise<string | null> }> {
     if (!loggedIn.value) {
@@ -155,7 +155,7 @@ export function useChatClient() {
     }
 
     try {
-      const result = await transport.sendMessageToUser({ targetUserId, content });
+      const result = await transport.sendMessageToMembers({ memberIds, content });
       return { stream: result.stream, roomId: result.roomId };
     } catch (error) {
       toast.add({

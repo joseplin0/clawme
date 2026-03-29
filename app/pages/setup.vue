@@ -23,7 +23,7 @@
                 <UInput
                   v-model="form.ownerUsername"
                   class="w-full"
-                  placeholder="例如：linqiang"
+                  placeholder="例如：lin"
                   required
                 />
               </UFormField>
@@ -245,16 +245,13 @@ async function handleSubmit() {
   }
 
   submitting.value = true;
-  statusMessage.value = "正在写入系统状态、默认房间与初始动态...";
+  statusMessage.value = "正在写入系统状态，默认会话会在后台继续生成...";
 
   try {
-    await $fetch<BootstrapResponse>(
-      "/api/system/bootstrap",
-      {
-        method: "POST",
-        body: form,
-      },
-    );
+    await $fetch<BootstrapResponse>("/api/system/bootstrap", {
+      method: "POST",
+      body: form,
+    });
 
     // Refresh session state from server
     await refreshSession();

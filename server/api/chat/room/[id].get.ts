@@ -1,9 +1,9 @@
 import { createError, defineEventHandler, getRouterParam } from "h3";
 import { z } from "zod";
-import type { ActorProfile } from "~~/shared/types/clawme";
 import { requireOwnerSession } from "~~/server/utils/auth";
 import { db, schema } from "~~/server/utils/db";
 import { eq, asc } from "drizzle-orm";
+import { mapUserToActorProfile, normalizeRoomType } from "~~/server/services/room.service";
 
 const { roomMessages, rooms } = schema;
 
@@ -38,29 +38,14 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const participants: ActorProfile[] = room.members.flatMap((member) =>
-    member.user
-      ? [
-          {
-            id: member.user.id,
-            type: member.user.type,
-            username: member.user.username,
-            nickname: member.user.nickname,
-            avatar: member.user.avatar,
-            intro: member.user.intro,
-            role: member.user.role,
-            catchphrase: member.user.catchphrase,
-            createdAt: member.user.createdAt.toISOString(),
-            updatedAt: member.user.updatedAt.toISOString(),
-          },
-        ]
-      : [],
+  const participants = room.members.flatMap((member) =>
+    member.user ? [mapUserToActorProfile(member.user)] : [],
   );
 
   return {
     id: room.id,
     title: room.name || "",
-    type: room.type,
+    type: normalizeRoomType(room.type),
     createdAt: room.createdAt.toISOString(),
     updatedAt: room.updatedAt.toISOString(),
     participants,

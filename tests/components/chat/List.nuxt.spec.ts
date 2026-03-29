@@ -1,4 +1,8 @@
-import { mountSuspended, mockComponent } from "@nuxt/test-utils/runtime";
+import {
+  mountSuspended,
+  mockComponent,
+  mockNuxtImport,
+} from "@nuxt/test-utils/runtime";
 import { describe, expect, it, vi } from "vitest";
 import List from "~~/app/components/chat/List.vue";
 import { createRoom } from "../../helpers/factories";
@@ -61,13 +65,35 @@ mockComponent("UUser", {
   `,
 });
 
+mockNuxtImport("useToast", () => () => ({
+  add: vi.fn(),
+}));
+
+mockNuxtImport("useUserSession", () => () => ({
+  user: {
+    value: {
+      id: "actor-1",
+    },
+  },
+  fetch: vi.fn(),
+}));
+
 describe("ChatList", () => {
+  const createRoomTriggerStub = {
+    template: '<div data-testid="create-room-trigger"><slot /></div>',
+  };
+
   it("按搜索词过滤房间并在选择后关闭侧栏", async () => {
     vi.spyOn(Date, "now").mockReturnValue(
       new Date("2026-03-29T12:00:00.000Z").getTime(),
     );
 
     const wrapper = await mountSuspended(List, {
+      global: {
+        stubs: {
+          CreateRoomTrigger: createRoomTriggerStub,
+        },
+      },
       props: {
         modelValue: null,
         open: true,

@@ -225,7 +225,7 @@ async function handleMessageSend(peer: any, data: WSMessage, senderId: string) {
     const prepared = await prepareDirectRoomMessage({
       senderId,
       roomId: data.roomId,
-      targetUserId: data.targetUserId,
+      memberIds: data.memberIds,
       content: data.content ?? "",
     });
 

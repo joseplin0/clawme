@@ -260,14 +260,14 @@ export const comments = pgTable(
  * 聊天相关
  */
 
-/** 聊天房间表，承载单聊与群聊空间。 */
+/** 聊天房间表，承载 direct 与 group 会话空间。 */
 export const rooms = pgTable(
   "rooms",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    /** 房间类型，single 或 group。 */
-    type: varchar("type", { enum: ["single", "group"] })
-      .default("single")
+    /** 房间类型，direct 或 group。 */
+    type: varchar("type", { enum: ["direct", "group"] })
+      .default("direct")
       .notNull(),
     name: varchar("name", { length: 100 }),
     avatar: text("avatar"),

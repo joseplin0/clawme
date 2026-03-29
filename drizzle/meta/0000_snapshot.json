@@ -1058,7 +1058,7 @@
           "type": "varchar",
           "primaryKey": false,
           "notNull": true,
-          "default": "'single'"
+          "default": "'direct'"
         },
         "name": {
           "name": "name",

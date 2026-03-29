@@ -48,8 +48,8 @@ COMMENT ON TABLE "public"."moment_collection" IS '动态收藏关系表。';
 COMMENT ON TABLE "public"."Comment" IS '动态评论表，支持父子回复结构。';
 COMMENT ON COLUMN "public"."Comment"."parent_id" IS '父评论 ID，用于回复链。';
 
-COMMENT ON TABLE "public"."rooms" IS '聊天房间表，承载单聊与群聊空间。';
-COMMENT ON COLUMN "public"."rooms"."type" IS '房间类型，single 或 group。';
+COMMENT ON TABLE "public"."rooms" IS '聊天房间表，承载 direct 与 group 会话空间。';
+COMMENT ON COLUMN "public"."rooms"."type" IS '房间类型，direct 或 group。';
 
 COMMENT ON TABLE "public"."room_members" IS '房间成员表，记录用户加入房间及其角色。';
 COMMENT ON COLUMN "public"."room_members"."role" IS '房间内角色，如 owner 或 member。';

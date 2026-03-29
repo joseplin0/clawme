@@ -111,7 +111,7 @@ CREATE TABLE "room_messages" (
 --> statement-breakpoint
 CREATE TABLE "rooms" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"type" varchar DEFAULT 'single' NOT NULL,
+	"type" varchar DEFAULT 'direct' NOT NULL,
 	"name" varchar(100),
 	"avatar" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,

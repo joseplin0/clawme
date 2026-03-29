@@ -26,12 +26,13 @@
           variant="none"
           class="flex-1"
         />
-        <UButton
-          icon="i-lucide-plus"
-          color="neutral"
-          variant="link"
-          @click="handleCreateRoom"
-        />
+        <CreateRoomTrigger @created="handleRoomCreated">
+          <UButton
+            icon="i-lucide-plus"
+            color="neutral"
+            variant="link"
+          />
+        </CreateRoomTrigger>
       </div>
     </template>
 
@@ -84,7 +85,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:modelValue": [value: string | null];
   "update:open": [value: boolean];
-  create: [];
+  created: [room: ChatRoomRecord];
   loadMore: [];
 }>();
 
@@ -100,8 +101,8 @@ const filteredRooms = computed(() => {
   return props.rooms.filter((s) => s.title.toLowerCase().includes(query));
 });
 
-function handleCreateRoom() {
-  emit("create");
+function handleRoomCreated(room: ChatRoomRecord) {
+  emit("created", room);
 }
 
 function handleSelectRoom(roomId: string) {

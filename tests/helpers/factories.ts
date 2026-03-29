@@ -12,7 +12,7 @@ export function createActor(
   return {
     id: "actor-1",
     type: "human",
-    username: "linqiang",
+    username: "lin",
     nickname: "林",
     avatar: null,
     intro: null,
@@ -48,7 +48,7 @@ export function createRoom(
 ): ChatRoomRecord {
   return {
     id: "room-1",
-    type: "single",
+    type: "direct",
     title: "默认房间",
     memberIds: ["actor-1"],
     lastMessage: "最近一条消息",

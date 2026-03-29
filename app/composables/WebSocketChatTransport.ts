@@ -396,12 +396,12 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
     return stream;
   }
 
-  async sendMessageToUser({
-    targetUserId,
+  async sendMessageToMembers({
+    memberIds,
     content,
     abortSignal,
   }: {
-    targetUserId: string;
+    memberIds: string[];
     content: string;
     abortSignal?: AbortSignal;
   }): Promise<{
@@ -443,7 +443,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
     const payload: ChatWsClientMessage = {
       type: "send",
       requestId,
-      targetUserId,
+      memberIds,
       content,
     };
 

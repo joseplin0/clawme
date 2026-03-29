@@ -9,17 +9,19 @@
       v-model="activeRoomId"
       v-model:open="sidebarOpen"
       :rooms="rooms"
-      @create="handleCreateRoom"
+      @created="handleRoomCreated"
     />
 
-    <ChatBox :active-room-id="activeRoomId" :rooms="rooms" />
+    <ChatBox
+      :active-room-id="activeRoomId"
+      :rooms="rooms"
+      @created="handleRoomCreated"
+    />
   </UDashboardGroup>
 </template>
 
 <script setup lang="ts">
 import type { ChatRoomRecord } from "~~/shared/types/clawme";
-
-const toast = useToast();
 
 interface RoomListResponse {
   rooms: ChatRoomRecord[];
@@ -54,13 +56,15 @@ watch(activeRoomId, (value) => {
 
 const rooms = computed(() => roomData.value?.rooms ?? []);
 
-async function handleCreateRoom() {
-  // TODO: Create new room
-  toast.add({
-    title: "创建房间",
-    description: "功能开发中...",
-    color: "info",
-    icon: "i-lucide-info",
-  });
+async function handleRoomCreated(room: ChatRoomRecord) {
+  activeRoomId.value = room.id;
+  sidebarOpen.value = false;
+  const current = roomData.value ?? { rooms: [], activeRoomId: null };
+  roomData.value = {
+    ...current,
+    rooms: [room, ...current.rooms.filter((item) => item.id !== room.id)],
+    activeRoomId: room.id,
+  };
+  await refresh();
 }
 </script>

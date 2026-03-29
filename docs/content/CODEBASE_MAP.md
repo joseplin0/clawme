@@ -23,7 +23,7 @@
 
 - `app/pages/setup.vue`: 首次初始化向导
 - `app/pages/login.vue`: 管理员登录
-- `app/pages/feed.vue`: Feed 列表与无限滚动
+- `app/pages/moment/index.vue`: Moment 列表与无限滚动
 - `app/pages/chat.vue`: 会话列表 + 聊天面板容器
 - `app/pages/settings.vue`: 系统管理和状态展示
 
@@ -37,6 +37,7 @@
 
 - `app/components/chat/List.vue`: 会话列表
 - `app/components/chat/Box.vue`: 会话详情、消息渲染、AI SDK Chat 接入
+- `app/components/chat/CreateRoomTrigger.vue`: 统一会话创建触发器，支持直建和选人创建
 - `app/components/chat/Composer.vue`: 输入框、mention 和发送控制
 - `app/composables/WebSocketChatTransport.ts`: AI SDK `ChatTransport` 的 WebSocket 适配层
 - `app/composables/useChatClient.ts`: WebSocket 客户端封装
@@ -56,15 +57,18 @@
 
 ### Feed
 
-- `server/api/feed/posts.get.ts`: Feed 分页接口
-- `server/services/feed.service.ts`: Feed 数据读取与映射
+- `server/api/moment/index.get.ts`: Moment 分页接口
+- `server/services/moment.service.ts`: Moment 数据读取与映射
 
 ### Chat
 
-- `server/api/chat/session.get.ts`: 会话列表
-- `server/api/chat/session/index.post.ts`: 新建会话
-- `server/api/chat/session/[id].get.ts`: 会话详情
-- `server/api/chat/session/[id].post.ts`: HTTP 流式聊天
+- `server/api/chat/room.get.ts`: 会话列表
+- `server/api/chat/room/index.post.ts`: 新建会话
+- `server/api/chat/room/[id].get.ts`: 会话详情
+- `server/api/chat/room/[id].post.ts`: HTTP 流式聊天
+- `server/api/actors/index.get.ts`: 创建会话时的成员候选列表
+- `server/api/actors/[id].get.ts`: 单个参与者详情
+- `server/services/room.service.ts`: 会话创建、类型归一化和参与者映射
 - `server/api/ws/chat.ts`: WebSocket 聊天协议入口
 - `server/services/chat.service.ts`: 消息与会话读写基础能力
 - `server/services/chat-command.service.ts`: 发送消息前的会话校验与准备
@@ -95,17 +99,20 @@
 -> `server/utils/auth.ts`
 -> `server/utils/jwt.ts`
 
-### Feed 链路
+### Moment 链路
 
-`app/pages/feed.vue`
--> `GET /api/feed/posts`
--> `server/services/feed.service.ts`
+`app/pages/moment/index.vue`
+-> `GET /api/moment`
+-> `server/services/moment.service.ts`
 
 ### 聊天链路
 
 `app/pages/chat.vue`
+-> `app/components/chat/List.vue`
+-> `app/components/chat/CreateRoomTrigger.vue`
+-> `POST /api/chat/room`
+-> `GET /api/chat/room/:id`
 -> `app/components/chat/Box.vue`
--> `GET /api/chat/session/:id`
 -> `app/composables/WebSocketChatTransport.ts`
 -> `WS /api/ws/chat`
 -> `server/services/chat-command.service.ts`
@@ -113,7 +120,7 @@
 
 ### HTTP 流式聊天链路
 
-`POST /api/chat/session/:id`
+`POST /api/chat/room/:id`
 -> `server/ecosystem/core/AssistantInstant.ts`
 
 ## 建议阅读顺序

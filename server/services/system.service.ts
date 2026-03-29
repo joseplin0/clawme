@@ -15,6 +15,12 @@ import type {
 import { db, schema } from "~~/server/utils/db";
 import { createModelFromProvider } from "~~/server/utils/llm";
 import { mapMomentToMomentRecord } from "./moment-record.mapper";
+import {
+  createRoomAsync,
+  mapUserToActorProfile,
+  normalizeRoomType,
+} from "./room.service";
+import { createMessage } from "./chat.service";
 
 const {
   assets,
@@ -79,33 +85,11 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
   const botModel = allUsers.find((u) => u.type === "bot");
 
   const owner: ActorProfile | null = ownerModel
-    ? {
-        id: ownerModel.id,
-        type: ownerModel.type,
-        username: ownerModel.username,
-        nickname: ownerModel.nickname,
-        avatar: ownerModel.avatar,
-        intro: ownerModel.intro,
-        role: ownerModel.role,
-        catchphrase: ownerModel.catchphrase,
-        createdAt: ownerModel.createdAt.toISOString(),
-        updatedAt: ownerModel.updatedAt.toISOString(),
-      }
+    ? mapUserToActorProfile(ownerModel)
     : null;
 
   const bot: ActorProfile | null = botModel
-    ? {
-        id: botModel.id,
-        type: botModel.type,
-        username: botModel.username,
-        nickname: botModel.nickname,
-        avatar: botModel.avatar,
-        intro: botModel.intro,
-        role: botModel.role,
-        catchphrase: botModel.catchphrase,
-        createdAt: botModel.createdAt.toISOString(),
-        updatedAt: botModel.updatedAt.toISOString(),
-      }
+    ? mapUserToActorProfile(botModel)
     : null;
 
   const mappedProviders = providers.map((p) => ({
@@ -119,7 +103,7 @@ export async function readStoredState(): Promise<StoredClawmeAppState> {
 
   const mappedRooms = sessions.map((s) => ({
     id: s.id,
-    type: s.type,
+    type: normalizeRoomType(s.type),
     title: s.name || "",
     memberIds: s.members.map((p) => p.userId),
     createdAt: s.createdAt.toISOString(),
@@ -170,8 +154,7 @@ export async function initializeSystem(input: BootstrapRequest) {
   const ownerPasswordHash = await hashPassword(input.ownerPassword);
   const botApiSecret = randomBytes(24).toString("hex");
 
-  // Step 1: 在事务中创建基础数据
-  const { roomId, botId, provider } = await db.transaction(async (tx) => {
+  const { owner, bot, provider } = await db.transaction(async (tx) => {
     // 0. Clean slate
     await tx.delete(momentAssets);
     await tx.delete(momentCollections);
@@ -238,17 +221,8 @@ export async function initializeSystem(input: BootstrapRequest) {
       })
       .returning();
 
-    // 4. Chat Room
-    const [room] = await tx
-      .insert(rooms)
-      .values({
-        type: "single",
-        name: `${owner.nickname} x ${bot.nickname}`,
-      })
-      .returning();
-
-    if (!room || !provider) {
-      throw new Error("Failed to create room or provider");
+    if (!provider) {
+      throw new Error("Failed to create provider");
     }
 
     await tx
@@ -258,21 +232,7 @@ export async function initializeSystem(input: BootstrapRequest) {
       })
       .where(eq(users.id, bot.id));
 
-    await tx.insert(roomMembers).values([
-      { roomId: room.id, userId: owner.id, role: "owner" },
-      { roomId: room.id, userId: bot.id, role: "member" },
-    ]);
-
-    // 5. 用户消息 "你好"
-    await tx.insert(roomMessages).values({
-      roomId: room.id,
-      senderId: owner.id,
-      role: "user",
-      parts: [{ type: "text", text: "你好" }],
-      status: "done",
-    });
-
-    // 6. First Moments
+    // 4. First Moments
     const [docMoment] = await tx
       .insert(moments)
       .values({
@@ -348,34 +308,61 @@ export async function initializeSystem(input: BootstrapRequest) {
     }
 
     return {
-      roomId: room.id,
-      botId: bot.id,
+      owner,
+      bot,
       provider,
     };
   });
 
-  // Step 2: 在事务外部调用 LLM 生成响应
+  void bootstrapDefaultRoom({
+    owner,
+    bot,
+    provider,
+  }).catch((error) => {
+    console.error("Failed to bootstrap default room:", error);
+  });
+
+  return await readStoredState();
+}
+
+async function bootstrapDefaultRoom(input: {
+  owner: typeof users.$inferSelect;
+  bot: typeof users.$inferSelect;
+  provider: typeof llm.$inferSelect;
+}) {
+  const room = await createRoomAsync({
+    creatorId: input.owner.id,
+    memberIds: [input.bot.id],
+    title: `${input.owner.nickname} x ${input.bot.nickname}`,
+  });
+
+  await createMessage({
+    roomId: room.id,
+    senderId: input.owner.id,
+    role: "user",
+    parts: [{ type: "text", text: "你好" }],
+    status: "done",
+  });
+
   try {
-    const model = createModelFromProvider(provider);
+    const model = createModelFromProvider(input.provider);
     const { text } = await generateText({
       model,
       messages: [{ role: "user", content: "你好" }],
     });
 
-    // Step 3: 存储 AI 响应
-    await db.insert(roomMessages).values({
-      roomId,
-      senderId: botId,
+    await createMessage({
+      roomId: room.id,
+      senderId: input.bot.id,
       role: "assistant",
       parts: [{ type: "text", text }],
       status: "done",
     });
   } catch (error) {
     console.error("Failed to generate AI response:", error);
-    // 如果 LLM 调用失败，存储一个默认响应
-    await db.insert(roomMessages).values({
-      roomId,
-      senderId: botId,
+    await createMessage({
+      roomId: room.id,
+      senderId: input.bot.id,
       role: "assistant",
       parts: [
         {
@@ -386,8 +373,6 @@ export async function initializeSystem(input: BootstrapRequest) {
       status: "done",
     });
   }
-
-  return await readStoredState();
 }
 
 export function toPublicStateResponse(
