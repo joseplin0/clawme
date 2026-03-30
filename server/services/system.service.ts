@@ -1,30 +1,24 @@
 import { randomBytes } from "node:crypto";
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { generateText } from "ai";
 import type {
   ActorProfile,
   BootstrapRequest,
-  RoomMessageRecord,
   ClawmeAppState,
-  MomentRecord,
-  MessagePart,
-  MessageRole,
-  MessageStatus,
   PublicStateResponse,
 } from "~~/shared/types/clawme";
 import { db, schema } from "~~/server/utils/db";
 import { createModelFromProvider } from "~~/server/utils/llm";
-import { mapMomentToMomentRecord } from "./moment-record.mapper";
 import {
-  createRoomAsync,
-  mapUserToActorProfile,
-  normalizeRoomType,
-} from "./room.service";
+  isSystemInitialized,
+  readSystemConfig,
+  setSystemInitialized,
+} from "~~/server/utils/system-config";
+import { createRoomAsync, mapUserToActorProfile } from "./room.service";
 import { createMessage } from "./chat.service";
 
 const {
   assets,
-  systemConfig,
   users,
   llm,
   roomMembers,
@@ -39,115 +33,18 @@ const {
   tags,
 } = schema;
 
-export interface StoredClawmeAppState extends ClawmeAppState {
-  ownerAuthToken: string | null;
-  ownerPasswordHash: string | null;
+interface PublicStateSource extends ClawmeAppState {
   botApiSecret: string | null;
 }
 
-export async function readStoredState(): Promise<StoredClawmeAppState> {
-  const [config, allUsers, providers, sessions, messages, momentList] =
-    await Promise.all([
-      db.query.systemConfig.findFirst({
-        where: eq(systemConfig.id, "global"),
-      }),
-      db.query.users.findMany({
-        where: inArray(users.type, ["human", "bot"]),
-      }),
-      db.query.llm.findMany(),
-      db.query.rooms.findMany({
-        with: { members: true },
-      }),
-      db.query.roomMessages.findMany({
-        orderBy: [asc(roomMessages.createdAt)],
-      }),
-      db.query.moments.findMany({
-        with: {
-          assets: {
-            with: {
-              asset: true,
-            },
-          },
-        },
-        orderBy: [desc(moments.createdAt)],
-      }),
-    ]);
-
-  const existingConfig = config || {
-    isInitialized: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  const ownerModel = allUsers.find(
-    (u) => u.type === "human" && u.role === "OWNER",
-  );
-  const botModel = allUsers.find((u) => u.type === "bot");
-
-  const owner: ActorProfile | null = ownerModel
-    ? mapUserToActorProfile(ownerModel)
-    : null;
-
-  const bot: ActorProfile | null = botModel
-    ? mapUserToActorProfile(botModel)
-    : null;
-
-  const mappedProviders = providers.map((p) => ({
-    id: p.id,
-    name: p.name,
-    provider: p.provider,
-    baseUrl: p.baseUrl || "",
-    modelId: p.modelId,
-    createdAt: p.createdAt.toISOString(),
-  }));
-
-  const mappedRooms = sessions.map((s) => ({
-    id: s.id,
-    type: normalizeRoomType(s.type),
-    title: s.name || "",
-    memberIds: s.members.map((p) => p.userId),
-    createdAt: s.createdAt.toISOString(),
-    updatedAt: s.updatedAt.toISOString(),
-  }));
-
-  const mappedRoomMessages: RoomMessageRecord[] = messages.map((m) => ({
-    id: m.id,
-    roomId: m.roomId,
-    senderId: m.senderId,
-    role: m.role as MessageRole,
-    parts: (m.parts as MessagePart[]) ?? [],
-    status: m.status as MessageStatus,
-    createdAt: m.createdAt.toISOString(),
-  }));
-
-  const mappedMoments: MomentRecord[] = momentList.map(
-    mapMomentToMomentRecord,
-  );
-
-  return {
-    system: {
-      isInitialized: existingConfig.isInitialized ?? false,
-      createdAt: existingConfig.createdAt.toISOString(),
-      updatedAt: existingConfig.updatedAt.toISOString(),
-    },
-    owner,
-    bot,
-    providers: mappedProviders,
-    rooms: mappedRooms,
-    roomMessages: mappedRoomMessages,
-    moments: mappedMoments,
-    ownerAuthToken: ownerModel?.apiSecret || null,
-    ownerPasswordHash: ownerModel?.passwordHash || null,
-    botApiSecret: botModel?.apiSecret || null,
-  };
+interface InitializedSystemState extends PublicStateSource {
+  ownerAuthToken: string | null;
+  ownerPasswordHash: string | null;
 }
 
 export async function initializeSystem(input: BootstrapRequest) {
-  const existing = await db.query.systemConfig.findFirst({
-    where: eq(systemConfig.id, "global"),
-  });
-  if (existing?.isInitialized) {
-    return await readStoredState();
+  if (await isSystemInitialized()) {
+    return await readInitializedSystemState();
   }
 
   const ownerApiSecret = randomBytes(24).toString("hex");
@@ -169,15 +66,8 @@ export async function initializeSystem(input: BootstrapRequest) {
     await tx.delete(rooms);
     await tx.delete(llm);
     await tx.delete(users);
-    await tx.delete(systemConfig);
 
-    // 1. Config
-    await tx.insert(systemConfig).values({
-      id: "global",
-      isInitialized: true,
-    });
-
-    // 2. Users (Owner + Bot)
+    // 1. Users (Owner + Bot)
     const [owner] = await tx
       .insert(users)
       .values({
@@ -209,7 +99,7 @@ export async function initializeSystem(input: BootstrapRequest) {
       throw new Error("Failed to create users");
     }
 
-    // 3. Provider
+    // 2. Provider
     const [provider] = await tx
       .insert(llm)
       .values({
@@ -232,7 +122,7 @@ export async function initializeSystem(input: BootstrapRequest) {
       })
       .where(eq(users.id, bot.id));
 
-    // 4. First Moments
+    // 3. First Moments
     const [docMoment] = await tx
       .insert(moments)
       .values({
@@ -314,6 +204,8 @@ export async function initializeSystem(input: BootstrapRequest) {
     };
   });
 
+  await setSystemInitialized(true);
+
   void bootstrapDefaultRoom({
     owner,
     bot,
@@ -322,7 +214,18 @@ export async function initializeSystem(input: BootstrapRequest) {
     console.error("Failed to bootstrap default room:", error);
   });
 
-  return await readStoredState();
+  return {
+    system: await readSystemConfig(),
+    owner: mapUserToActorProfile(owner),
+    bot: mapUserToActorProfile(bot),
+    providers: [mapProviderRecord(provider)],
+    rooms: [],
+    roomMessages: [],
+    moments: [],
+    ownerAuthToken: owner.apiSecret,
+    ownerPasswordHash: owner.passwordHash,
+    botApiSecret,
+  } satisfies InitializedSystemState;
 }
 
 async function bootstrapDefaultRoom(input: {
@@ -376,14 +279,17 @@ async function bootstrapDefaultRoom(input: {
 }
 
 export function toPublicStateResponse(
-  state: StoredClawmeAppState,
+  state: PublicStateSource,
   isOwnerAuthenticated: boolean,
-  momentsLimit?: number,
+  options: {
+    momentsLimit?: number;
+    stats?: PublicStateResponse["stats"];
+  } = {},
 ): PublicStateResponse {
   let initialMoments = state.moments;
 
-  if (momentsLimit !== undefined) {
-    initialMoments = initialMoments.slice(0, momentsLimit);
+  if (options.momentsLimit !== undefined) {
+    initialMoments = initialMoments.slice(0, options.momentsLimit);
   }
 
   return {
@@ -400,5 +306,85 @@ export function toPublicStateResponse(
       isOwnerAuthenticated,
       hasBotSecret: Boolean(state.botApiSecret),
     },
+    stats: options.stats,
+  };
+}
+
+export async function readBootstrapStateResponse(
+  isOwnerAuthenticated: boolean,
+): Promise<PublicStateResponse> {
+  const [system, ownerModel, botModel, providers, roomCount, messageCount] =
+    await Promise.all([
+      readSystemConfig(),
+      readOwnerModel(),
+      readBotModel(),
+      db.query.llm.findMany(),
+      db.select({ count: count() }).from(rooms),
+      db.select({ count: count() }).from(roomMessages),
+    ]);
+
+  return toPublicStateResponse(
+    {
+      system,
+      owner: ownerModel ? mapUserToActorProfile(ownerModel) : null,
+      bot: botModel ? mapUserToActorProfile(botModel) : null,
+      providers: providers.map(mapProviderRecord),
+      rooms: [],
+      roomMessages: [],
+      moments: [],
+      botApiSecret: botModel?.apiSecret ?? null,
+    },
+    isOwnerAuthenticated,
+    {
+      stats: {
+        roomCount: roomCount[0]?.count ?? 0,
+        messageCount: messageCount[0]?.count ?? 0,
+      },
+    },
+  );
+}
+
+async function readInitializedSystemState(): Promise<InitializedSystemState> {
+  const [system, ownerModel, botModel, providers] = await Promise.all([
+    readSystemConfig(),
+    readOwnerModel(),
+    readBotModel(),
+    db.query.llm.findMany(),
+  ]);
+
+  return {
+    system,
+    owner: ownerModel ? mapUserToActorProfile(ownerModel) : null,
+    bot: botModel ? mapUserToActorProfile(botModel) : null,
+    providers: providers.map(mapProviderRecord),
+    rooms: [],
+    roomMessages: [],
+    moments: [],
+    ownerAuthToken: ownerModel?.apiSecret ?? null,
+    ownerPasswordHash: ownerModel?.passwordHash ?? null,
+    botApiSecret: botModel?.apiSecret ?? null,
+  };
+}
+
+async function readOwnerModel() {
+  return await db.query.users.findFirst({
+    where: and(eq(users.role, "OWNER"), eq(users.type, "human")),
+  });
+}
+
+async function readBotModel() {
+  return await db.query.users.findFirst({
+    where: eq(users.type, "bot"),
+  });
+}
+
+function mapProviderRecord(provider: typeof llm.$inferSelect) {
+  return {
+    id: provider.id,
+    name: provider.name,
+    provider: provider.provider,
+    baseUrl: provider.baseUrl || "",
+    modelId: provider.modelId,
+    createdAt: provider.createdAt.toISOString(),
   };
 }

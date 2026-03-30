@@ -2,9 +2,21 @@ import { createError, getHeader } from "h3";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "~~/server/utils/db";
 import type { H3Event } from "h3";
+import { isSystemInitialized } from "./system-config";
 import { verifyJwtToken } from "./jwt";
 
-const { users, systemConfig } = schema;
+const { users } = schema;
+const OWNER_AUTH_CACHE_TTL_MS = 30_000;
+const SESSION_CACHE_KEY_PREFIX = "session-user";
+const JWT_CACHE_KEY_PREFIX = "jwt-user";
+const API_SECRET_CACHE_KEY_PREFIX = "api-secret";
+
+type OwnerAuthCacheEntry = {
+  user: OwnerSessionUser;
+  expiresAt: number;
+};
+
+const ownerAuthCache = new Map<string, OwnerAuthCacheEntry>();
 
 // Owner session user type
 export interface OwnerSessionUser {
@@ -104,6 +116,60 @@ function normalizeOwnerUser(user: OwnerSessionUser) {
   } satisfies OwnerSessionUser;
 }
 
+function buildSessionCacheKey(userId: string, apiSecret: string) {
+  return `${SESSION_CACHE_KEY_PREFIX}:${userId}:${apiSecret}`;
+}
+
+function buildJwtCacheKey(userId: string, bearer: string) {
+  return `${JWT_CACHE_KEY_PREFIX}:${userId}:${bearer}`;
+}
+
+function buildApiSecretCacheKey(bearer: string) {
+  return `${API_SECRET_CACHE_KEY_PREFIX}:${bearer}`;
+}
+
+function getCachedOwnerUser(cacheKey: string): OwnerSessionUser | null {
+  const cached = ownerAuthCache.get(cacheKey);
+  if (!cached) {
+    return null;
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    ownerAuthCache.delete(cacheKey);
+    return null;
+  }
+
+  return normalizeOwnerUser(cached.user);
+}
+
+function setCachedOwnerUser(cacheKey: string, user: OwnerSessionUser) {
+  ownerAuthCache.set(cacheKey, {
+    user: normalizeOwnerUser(user),
+    expiresAt: Date.now() + OWNER_AUTH_CACHE_TTL_MS,
+  });
+}
+
+function invalidateOwnerAuthCacheByPrefix(prefix: string) {
+  for (const key of ownerAuthCache.keys()) {
+    if (key.startsWith(prefix)) {
+      ownerAuthCache.delete(key);
+    }
+  }
+}
+
+function invalidateOwnerAuthCacheForUser(userId: string) {
+  invalidateOwnerAuthCacheByPrefix(`${SESSION_CACHE_KEY_PREFIX}:${userId}:`);
+  invalidateOwnerAuthCacheByPrefix(`${JWT_CACHE_KEY_PREFIX}:${userId}:`);
+  for (const [key, entry] of ownerAuthCache.entries()) {
+    if (
+      key.startsWith(`${API_SECRET_CACHE_KEY_PREFIX}:`) &&
+      entry.user.id === userId
+    ) {
+      ownerAuthCache.delete(key);
+    }
+  }
+}
+
 async function readValidatedOwnerById(userId: string) {
   return await db.query.users.findFirst({
     where: and(
@@ -144,7 +210,17 @@ async function resolveOwnerUser(
   }
 
   const session = await getExistingOwnerSession(target);
-  if (session?.user) {
+  if (session?.user && session.secure?.apiSecret) {
+    const sessionCacheKey = buildSessionCacheKey(
+      session.user.id,
+      session.secure.apiSecret,
+    );
+    const cachedUser = getCachedOwnerUser(sessionCacheKey);
+    if (cachedUser) {
+      context.user = cachedUser;
+      return cachedUser;
+    }
+
     const owner = await readValidatedOwnerById(session.user.id);
     if (owner && session.secure?.apiSecret === owner.apiSecret) {
       const user = normalizeOwnerUser({
@@ -154,6 +230,7 @@ async function resolveOwnerUser(
         role: "OWNER",
       });
       context.user = user;
+      setCachedOwnerUser(sessionCacheKey, user);
       return user;
     }
   }
@@ -165,6 +242,13 @@ async function resolveOwnerUser(
 
   const jwtUser = await verifyJwtToken(bearer);
   if (jwtUser) {
+    const jwtCacheKey = buildJwtCacheKey(jwtUser.id, bearer);
+    const cachedUser = getCachedOwnerUser(jwtCacheKey);
+    if (cachedUser) {
+      context.user = cachedUser;
+      return cachedUser;
+    }
+
     const owner = await readValidatedOwnerById(jwtUser.id);
     if (owner) {
       const user = normalizeOwnerUser({
@@ -174,8 +258,16 @@ async function resolveOwnerUser(
         role: "OWNER",
       });
       context.user = user;
+      setCachedOwnerUser(jwtCacheKey, user);
       return user;
     }
+  }
+
+  const apiSecretCacheKey = buildApiSecretCacheKey(bearer);
+  const cachedUser = getCachedOwnerUser(apiSecretCacheKey);
+  if (cachedUser) {
+    context.user = cachedUser;
+    return cachedUser;
   }
 
   const owner = await db.query.users.findFirst({
@@ -196,6 +288,7 @@ async function resolveOwnerUser(
     role: "OWNER",
   });
   context.user = user;
+  setCachedOwnerUser(apiSecretCacheKey, user);
   return user;
 }
 
@@ -207,6 +300,8 @@ export async function setOwnerSession(
   user: OwnerSessionUser,
   apiSecret: string,
 ) {
+  invalidateOwnerAuthCacheByPrefix(`${API_SECRET_CACHE_KEY_PREFIX}:`);
+  invalidateOwnerAuthCacheForUser(user.id);
   await setUserSession(event, {
     user,
     secure: {
@@ -250,12 +345,7 @@ export async function requireOwnerSession(event: H3Event) {
     });
   }
 
-  // Verify system is initialized
-  const isInitializedConfig = await db.query.systemConfig.findFirst({
-    where: eq(systemConfig.id, "global"),
-  });
-
-  if (!isInitializedConfig?.isInitialized) {
+  if (!(await isSystemInitialized())) {
     throw createError({
       statusCode: 401,
       statusMessage: "System not initialized.",
@@ -276,5 +366,12 @@ export async function resolveOwnerSocketUser(target: OwnerAuthTarget) {
  * Clear owner session
  */
 export async function clearOwnerSession(event: H3Event) {
+  const contextUser = isOwnerSessionUser(event.context.user)
+    ? normalizeOwnerUser(event.context.user)
+    : null;
+  if (contextUser) {
+    invalidateOwnerAuthCacheForUser(contextUser.id);
+  }
+  delete event.context.user;
   await clearUserSession(event);
 }

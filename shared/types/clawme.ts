@@ -124,6 +124,10 @@ export interface PublicStateResponse {
     isOwnerAuthenticated: boolean;
     hasBotSecret: boolean;
   };
+  stats?: {
+    roomCount: number;
+    messageCount: number;
+  };
 }
 
 export interface BootstrapResponse extends PublicStateResponse {

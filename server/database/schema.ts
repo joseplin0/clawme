@@ -1,5 +1,4 @@
 import {
-  boolean,
   index,
   integer,
   json,
@@ -11,19 +10,6 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-
-/** 系统初始化与全局状态配置。 */
-export const systemConfig = pgTable("SystemConfig", {
-  /** 配置主键，固定为 global。 */
-  id: text("id").primaryKey().default("global"),
-  /** 系统是否已经完成首次引导。 */
-  isInitialized: boolean("isInitialized").default(false).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
 
 /** 用户表：承载真人与 Bot 的基础资料。 */
 export const users = pgTable("user", {
@@ -388,7 +374,6 @@ export const botMcp = pgTable(
 );
 
 // Export types
-export type SystemConfig = typeof systemConfig.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type UserFollow = typeof userFollows.$inferSelect;

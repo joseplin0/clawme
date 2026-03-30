@@ -1,14 +1,7 @@
-import { db, schema } from "~~/server/utils/db";
-import { eq } from "drizzle-orm";
-
-const { systemConfig } = schema;
+import { isSystemInitialized } from "~~/server/utils/system-config";
 
 export default defineEventHandler(async () => {
-  const config = await db.query.systemConfig.findFirst({
-    where: eq(systemConfig.id, "global"),
-  });
-
   return {
-    isInitialized: config?.isInitialized ?? false,
+    isInitialized: await isSystemInitialized(),
   };
 });

@@ -139,13 +139,13 @@
               <div class="flex items-center justify-between border px-4 py-3">
                 <span class="text-muted">房间数</span>
                 <span class="font-semibold text-highlighted">{{
-                  state.rooms.length
+                  stats.roomCount
                 }}</span>
               </div>
               <div class="flex items-center justify-between border px-4 py-3">
                 <span class="text-muted">消息数</span>
                 <span class="font-semibold text-highlighted">{{
-                  state.roomMessages.length
+                  stats.messageCount
                 }}</span>
               </div>
               <div class="flex items-center justify-between border px-4 py-3">
@@ -222,8 +222,14 @@ const defaultViewer: PublicStateResponse["viewer"] = {
   hasBotSecret: false,
 };
 
+const defaultStats = {
+  roomCount: 0,
+  messageCount: 0,
+};
+
 const state = computed(() => bootstrap.value?.state ?? defaultState);
 const viewer = computed(() => bootstrap.value?.viewer ?? defaultViewer);
+const stats = computed(() => bootstrap.value?.stats ?? defaultStats);
 const provider = computed(() => state.value.providers[0] ?? null);
 
 async function handleLogout() {

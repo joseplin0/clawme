@@ -5,6 +5,9 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
   vite: {
+    optimizeDeps: {
+      include: ["@ai-sdk/vue", "ai"],
+    },
     build: {
       rollupOptions: {
         output: {

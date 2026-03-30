@@ -1,7 +1,7 @@
 import { createError, readBody } from "h3";
 import { and, eq } from "drizzle-orm";
-import { readStoredState } from "~~/server/services";
 import { setOwnerSession, type OwnerSessionUser } from "~~/server/utils/auth";
+import { isSystemInitialized } from "~~/server/utils/system-config";
 import { signJwtToken } from "~~/server/utils/jwt";
 import { db, schema } from "~~/server/utils/db";
 
@@ -24,46 +24,40 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const state = await readStoredState();
-
-  if (!state.system.isInitialized || !state.owner || !state.ownerAuthToken) {
+  if (!(await isSystemInitialized())) {
     throw createError({
       statusCode: 409,
       statusMessage: "System is not initialized yet.",
     });
   }
 
-  if (username !== state.owner.username) {
+  const owner = await db.query.users.findFirst({
+    where: and(
+      eq(users.role, "OWNER"),
+      eq(users.type, "human"),
+      eq(users.username, username),
+    ),
+  });
+
+  if (!owner) {
     throw createError({
       statusCode: 401,
       statusMessage: "Invalid owner username.",
     });
   }
 
-  if (!state.ownerPasswordHash) {
+  if (!owner.passwordHash) {
     throw createError({
       statusCode: 500,
       statusMessage: "Owner password not set. Please reinitialize the system.",
     });
   }
 
-  const isValid = await verifyPassword(state.ownerPasswordHash, password);
+  const isValid = await verifyPassword(owner.passwordHash, password);
   if (!isValid) {
     throw createError({
       statusCode: 401,
       statusMessage: "Invalid password.",
-    });
-  }
-
-  // Get the owner from database for full user info
-  const owner = await db.query.users.findFirst({
-    where: and(eq(users.role, "OWNER"), eq(users.type, "human")),
-  });
-
-  if (!owner) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Owner not found in database.",
     });
   }
 

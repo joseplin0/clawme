@@ -2,10 +2,6 @@
 -- Source schema: server/database/schema.ts
 -- Drizzle does not natively model table/column comments yet.
 BEGIN;
-COMMENT ON TABLE "public"."SystemConfig" IS '系统初始化与全局状态配置。';
-COMMENT ON COLUMN "public"."SystemConfig"."id" IS '配置主键，固定为 global。';
-COMMENT ON COLUMN "public"."SystemConfig"."isInitialized" IS '系统是否已经完成首次引导。';
-
 COMMENT ON TABLE "public"."user" IS '用户表：承载真人与 Bot 的基础资料。';
 COMMENT ON COLUMN "public"."user"."type" IS '用户类型，human 或 bot。';
 COMMENT ON COLUMN "public"."user"."intro" IS '人物简介或系统提示词摘要。';
@@ -68,15 +64,10 @@ COMMENT ON TABLE "public"."workflow_trigger" IS '工作流触发表。';
 COMMENT ON COLUMN "public"."workflow_trigger"."type" IS '触发类型。';
 COMMENT ON COLUMN "public"."workflow_trigger"."config" IS '触发配置 JSON。';
 
-COMMENT ON TABLE "public"."LlmProvider" IS '大模型提供商配置表。';
-COMMENT ON COLUMN "public"."LlmProvider"."provider" IS '提供商类型标识。';
-COMMENT ON COLUMN "public"."LlmProvider"."baseUrl" IS 'OpenAI 兼容接口基地址。';
+COMMENT ON TABLE "public"."llm" IS '大模型提供商配置表。';
 
-COMMENT ON TABLE "public"."McpServer" IS 'MCP 服务端配置表。';
-COMMENT ON COLUMN "public"."McpServer"."transport" IS '传输方式。';
-COMMENT ON COLUMN "public"."McpServer"."command" IS '本地命令入口。';
-COMMENT ON COLUMN "public"."McpServer"."args" IS '命令参数数组。';
+COMMENT ON TABLE "public"."mcp" IS 'MCP 服务端配置表。';
 
-COMMENT ON TABLE "public"."BotMcpConnection" IS 'Bot 与 MCP 服务的绑定关系表。';
+COMMENT ON TABLE "public"."bot_mcp" IS 'Bot 与 MCP 服务的绑定关系表。';
 
 COMMIT;

@@ -16,7 +16,10 @@ export default defineEventHandler(async (event) => {
       "/api/system/bootstrap",
     ];
 
-    if (publicPaths.some((path) => url.pathname === path)) {
+    if (
+      publicPaths.some((path) => url.pathname === path) ||
+      url.pathname.startsWith("/api/_nuxt_icon/")
+    ) {
       return;
     }
 

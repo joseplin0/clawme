@@ -1,9 +1,8 @@
 // System service - initialization and state management
 export {
-  readStoredState,
   initializeSystem,
+  readBootstrapStateResponse,
   toPublicStateResponse,
-  type StoredClawmeAppState,
 } from "./system.service";
 
 // Chat service - sessions and messages

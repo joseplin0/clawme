@@ -1,15 +1,16 @@
 import { desc, eq } from "drizzle-orm";
 import type {
+  ClawmeAppState,
   RoomMessageRecord,
   MessagePart,
   MessageRole,
   MessageStatus,
 } from "~~/shared/types/clawme";
 import { db, schema } from "~~/server/utils/db";
-import type { StoredClawmeAppState } from "./system.service";
 import { normalizeRoomType } from "./room.service";
 
 const { roomMessages, rooms } = schema;
+type ChatStateSnapshot = Pick<ClawmeAppState, "bot" | "providers" | "rooms">;
 
 export async function createMessage(input: {
   roomId: string;
@@ -72,13 +73,13 @@ export async function updateMessage(
   };
 }
 
-export function getActiveRoomId(state: StoredClawmeAppState) {
+export function getActiveRoomId(state: ChatStateSnapshot) {
   return state.rooms[0]?.id ?? null;
 }
 
 export function createMockAssistantReply(
   prompt: string,
-  state: StoredClawmeAppState,
+  state: ChatStateSnapshot,
 ) {
   const assistantName = state.bot?.nickname ?? "虾米";
   const provider = state.providers[0];
