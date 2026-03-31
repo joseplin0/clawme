@@ -124,7 +124,7 @@ describe("ChatList", () => {
     expect(wrapper.text()).toContain("Bot 讨论");
     expect(wrapper.text()).not.toContain("产品设计");
 
-    await items[0].trigger("click");
+    await items[0]!.trigger("click");
 
     expect(wrapper.emitted("update:modelValue")).toEqual([["room-1"]]);
     expect(wrapper.emitted("update:open")).toEqual([[false]]);

@@ -266,7 +266,7 @@ describe("ChatBox", () => {
 
     await wrapper.get('[data-testid="submit"]').trigger("click");
 
-    expect(boxState.chatInstances[0].sendMessage).toHaveBeenCalledWith({
+    expect(boxState.chatInstances[0]!.sendMessage).toHaveBeenCalledWith({
       text: "问候",
       metadata: expect.objectContaining({
         userId: "owner-1",
@@ -274,7 +274,7 @@ describe("ChatBox", () => {
     });
 
     await wrapper.get('[data-testid="stop"]').trigger("click");
-    expect(boxState.chatInstances[0].stop).toHaveBeenCalledTimes(1);
+    expect(boxState.chatInstances[0]!.stop).toHaveBeenCalledTimes(1);
   });
 
   it("group 房间展示禁发状态并阻止提交", async () => {
@@ -334,7 +334,7 @@ describe("ChatBox", () => {
 
     await wrapper.get('[data-testid="submit"]').trigger("click");
 
-    expect(boxState.chatInstances[0].sendMessage).not.toHaveBeenCalled();
+    expect(boxState.chatInstances[0]!.sendMessage).not.toHaveBeenCalled();
     expect(boxState.toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "当前房间暂不支持发送消息",

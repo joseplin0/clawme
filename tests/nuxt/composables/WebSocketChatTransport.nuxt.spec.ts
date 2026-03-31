@@ -60,7 +60,7 @@ describe("WebSocketChatTransport", () => {
     const socket = FakeWebSocket.instances[0];
     expect(socket).toBeTruthy();
 
-    const payload = JSON.parse(socket.sent[0] ?? "{}");
+    const payload = JSON.parse(socket!.sent[0] ?? "{}");
     expect(payload).toMatchObject({
       type: "send",
       memberIds: ["bot-1"],
@@ -68,7 +68,7 @@ describe("WebSocketChatTransport", () => {
     });
     expect(payload.targetUserId).toBeUndefined();
 
-    socket.emitMessage({
+    socket!.emitMessage({
       type: "ack",
       requestId: payload.requestId,
       chatId: "room-1",

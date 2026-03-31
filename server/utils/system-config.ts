@@ -1,3 +1,5 @@
+import { useStorage } from "nitropack/runtime";
+
 const STORAGE_KEY = "config";
 
 interface StoredSystemConfig {
