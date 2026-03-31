@@ -1,21 +1,17 @@
 import { $fetch, fetch, setup } from "@nuxt/test-utils/e2e";
 import { describe, expect, it } from "vitest";
 
-const host = process.env.NUXT_TEST_HOST;
+// 必须放在最外层，且提前注册 runner 环境
+await setup({
+  setupTimeout: 120000,
+  runner: "vitest",
+});
 
-if (!host) {
-  throw new Error("NUXT_TEST_HOST 未设置，请通过 `pnpm test:e2e` 运行端到端测试。");
-}
-
-describe("login page e2e", async () => {
-  await setup({
-    host,
-    setupTimeout: 120000,
-  });
-
+// describe 必须是同步的
+describe("login page e2e", () => {
   it("可以渲染登录页关键文案", async () => {
     const response = await fetch("/login");
-    const html = await $fetch("/login");
+    const html = await $fetch<string>("/login");
 
     expect(response.status).toBe(200);
     expect(html).toContain("请输入用户名和密码。");

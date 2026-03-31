@@ -12,7 +12,11 @@
       "Bash(openspec:*)",
       "Bash(ls:*)",
       "Bash(npx tsc:*)",
-      "Bash(pnpm list:*)"
+      "Bash(pnpm list:*)",
+      "Bash(pnpm run:*)",
+      "Bash(npx vitest:*)",
+      "Bash(pnpm test:e2e:*)",
+      "Bash(pnpm test:unit:*)"
     ]
   }
 }

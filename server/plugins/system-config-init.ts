@@ -5,10 +5,6 @@ import {
   setSystemInitialized,
 } from "~~/server/utils/system-config";
 
-declare function defineNitroPlugin(
-  setup: () => void | Promise<void>,
-): () => void | Promise<void>;
-
 const { users } = schema;
 
 export default defineNitroPlugin(async () => {

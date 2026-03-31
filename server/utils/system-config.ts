@@ -1,11 +1,3 @@
-type LocalStorageDriver = {
-  getItem<T>(key: string): Promise<T | null>;
-  setItem<T>(key: string, value: T): Promise<void>;
-  removeItem(key: string): Promise<void>;
-};
-
-declare function useStorage(base?: string): LocalStorageDriver;
-
 const STORAGE_KEY = "config";
 
 interface StoredSystemConfig {
