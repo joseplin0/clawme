@@ -14,14 +14,14 @@ export {
   getChatRoomListData,
 } from "./chat.service";
 
-// Room service - room creation and actor lookup
+// Room service - room creation and user lookup
 export {
   createRoom,
   createRoomAsync,
-  getAllActorProfiles,
-  getActorProfileById,
+  getAllUserProfiles,
+  getUserProfileById,
   mapRoomToChatRoomRecord,
-  mapUserToActorProfile,
+  mapUserToUserProfile,
   normalizeRoomType,
 } from "./room.service";
 

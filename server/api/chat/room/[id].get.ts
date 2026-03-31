@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireOwnerSession } from "~~/server/utils/auth";
 import { db, schema } from "~~/server/utils/db";
 import { eq, asc } from "drizzle-orm";
-import { mapUserToActorProfile, normalizeRoomType } from "~~/server/services/room.service";
+import { mapUserToUserProfile, normalizeRoomType } from "~~/server/services/room.service";
 
 const { roomMessages, rooms } = schema;
 
@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const participants = room.members.flatMap((member) =>
-    member.user ? [mapUserToActorProfile(member.user)] : [],
+    member.user ? [mapUserToUserProfile(member.user)] : [],
   );
 
   return {

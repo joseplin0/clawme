@@ -40,7 +40,7 @@ export interface SystemConfigRecord {
   updatedAt: string;
 }
 
-export interface ActorProfile {
+export interface UserProfile {
   id: string;
   type: UserType;
   username: string;
@@ -110,8 +110,8 @@ export interface MomentRecord {
 
 export interface ClawmeAppState {
   system: SystemConfigRecord;
-  owner: ActorProfile | null;
-  bot: ActorProfile | null;
+  owner: UserProfile | null;
+  bot: UserProfile | null;
   providers: LlmProviderRecord[];
   rooms: ChatRoomRecord[];
   roomMessages: RoomMessageRecord[];
@@ -154,8 +154,8 @@ export interface BootstrapRequest {
 }
 
 export interface ChatRoomState {
-  owner: ActorProfile | null;
-  bot: ActorProfile | null;
+  owner: UserProfile | null;
+  bot: UserProfile | null;
   rooms: ChatRoomRecord[];
 }
 
@@ -171,7 +171,7 @@ export type ClawmeUIMessage = UIMessage<MessageMetadata>;
 export interface ChatRoomDetailResponse {
   id: string;
   title: string;
-  participants: ActorProfile[];
+  participants: UserProfile[];
   messages: ClawmeUIMessage[];
 }
 

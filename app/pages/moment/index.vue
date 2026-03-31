@@ -42,7 +42,7 @@
       >
         <MomentCard
           :moment="item"
-          :actors-by-id="actorsById"
+          :users-by-id="usersById"
           class="break-inside-avoid"
         />
       </UScrollArea>
@@ -70,18 +70,18 @@
 <script setup lang="ts">
 import { useInfiniteScroll } from "@vueuse/core";
 import { useElementSize } from "@vueuse/core";
-import type { ActorProfile, MomentRecord } from "~~/shared/types/clawme";
+import type { UserProfile, MomentRecord } from "~~/shared/types/clawme";
 
 const page = ref(0);
 const limit = 15;
 const moments = ref<MomentRecord[]>([]);
-const actors = ref<ActorProfile[]>([]);
+const users = ref<UserProfile[]>([]);
 const hasMore = ref(true);
 const isLoading = ref(false);
 
-// actorsById 用于 MomentCard
-const actorsById = computed<Record<string, ActorProfile>>(() => {
-  return Object.fromEntries(actors.value.map((a) => [a.id, a]));
+// usersById 用于 MomentCard
+const usersById = computed<Record<string, UserProfile>>(() => {
+  return Object.fromEntries(users.value.map((u) => [u.id, u]));
 });
 
 // 瀑布流布局计算
@@ -111,9 +111,9 @@ const loadMore = async () => {
 
     const newMoments = response.list || [];
 
-    // 第一页时保存 actors 信息
-    if (response.actors) {
-      actors.value = response.actors;
+    // 第一页时保存 users 信息
+    if (response.users) {
+      users.value = response.users;
     }
 
     // De-duplicate elements

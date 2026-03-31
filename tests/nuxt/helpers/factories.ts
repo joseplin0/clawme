@@ -1,16 +1,16 @@
 import type {
-  ActorProfile,
+  UserProfile,
   ChatRoomRecord,
   MomentRecord,
 } from "~~/shared/types/clawme";
 
 const DEFAULT_TIMESTAMP = "2026-03-29T00:00:00.000Z";
 
-export function createActor(
-  overrides: Partial<ActorProfile> = {},
-): ActorProfile {
+export function createUser(
+  overrides: Partial<UserProfile> = {},
+): UserProfile {
   return {
-    id: "actor-1",
+    id: "user-1",
     type: "human",
     username: "lin",
     nickname: "林",
@@ -29,7 +29,7 @@ export function createMoment(
 ): MomentRecord {
   return {
     id: "moment-1",
-    primaryAuthorId: "actor-1",
+    primaryAuthorId: "user-1",
     coAuthorIds: [],
     title: "默认动态标题",
     text: "默认动态内容",
@@ -50,7 +50,7 @@ export function createRoom(
     id: "room-1",
     type: "direct",
     title: "默认房间",
-    memberIds: ["actor-1"],
+    memberIds: ["user-1"],
     lastMessage: "最近一条消息",
     createdAt: DEFAULT_TIMESTAMP,
     updatedAt: DEFAULT_TIMESTAMP,

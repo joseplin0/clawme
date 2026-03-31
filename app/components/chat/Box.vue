@@ -107,7 +107,7 @@ import {
   type ChatStatus,
 } from "ai";
 import type {
-  ActorProfile,
+  UserProfile,
   ChatRoomRecord,
   ChatRoomDetailResponse,
   ClawmeUIMessage,
@@ -134,8 +134,8 @@ const emit = defineEmits<{
 const activeRoomId = ref<string | null>(props.activeRoomId);
 const { user: currentUser } = useUserSession();
 
-// Use global actors cache
-const { getActor, fetchActors, setActors } = useActors();
+// Use global users cache
+const { getUser, fetchUsers, setUsers } = useUsers();
 const { transport, onIncomingMessage } = useGlobalChatClient();
 
 watch(
@@ -146,7 +146,7 @@ watch(
   { immediate: true },
 );
 
-const roomParticipants = ref<ActorProfile[]>([]);
+const roomParticipants = ref<UserProfile[]>([]);
 
 // Initialize Chat instance
 const chat = shallowRef<Chat<ClawmeUIMessage> | null>(null);
@@ -160,8 +160,8 @@ const selectedRoom = computed(
 const isDirectRoom = computed(() => selectedRoom.value?.type === "direct");
 const quickCreateMemberIds = computed(() =>
   roomParticipants.value
-    .filter((actor) => actor.id !== currentUser.value?.id)
-    .map((actor) => actor.id),
+    .filter((user) => user.id !== currentUser.value?.id)
+    .map((user) => user.id),
 );
 const isChatReady = computed(() =>
   Boolean(activeRoomId.value && chat.value && isDirectRoom.value),
@@ -192,7 +192,7 @@ const unsubscribeIncomingMessage = onIncomingMessage(
 
     const senderId = message.metadata?.userId;
     if (senderId) {
-      await fetchActors([senderId]);
+      await fetchUsers([senderId]);
     }
 
     if (
@@ -231,7 +231,7 @@ async function initializeChat() {
     );
 
     roomParticipants.value = response.participants;
-    setActors(response.participants);
+    setUsers(response.participants);
 
     const messages = response.messages as ClawmeUIMessage[];
 
@@ -314,31 +314,31 @@ const composerPlaceholder = computed(() =>
       : "group 房间暂不支持发送消息",
 );
 
-const mentionActors = computed<ActorProfile[]>(() => {
+const mentionUsers = computed<UserProfile[]>(() => {
   const currentUserId = currentUser.value?.id;
-  return roomParticipants.value.filter((actor) => actor.id !== currentUserId);
+  return roomParticipants.value.filter((user) => user.id !== currentUserId);
 });
 
 const mentionItems = computed<EditorMentionMenuItem[]>(() =>
-  mentionActors.value.map((actor) => ({
-    id: actor.id,
-    label: actor.username,
-    description: `${actor.nickname}${actor.type === "bot" ? " · BOT" : ""}`,
+  mentionUsers.value.map((user) => ({
+    id: user.id,
+    label: user.username,
+    description: `${user.nickname}${user.type === "bot" ? " · BOT" : ""}`,
     avatar: {
-      src: actor.avatar ?? undefined,
-      alt: actor.nickname,
+      src: user.avatar ?? undefined,
+      alt: user.nickname,
     },
   })),
 );
 
-// Get actor info by id
-function getActorById(actorId: string) {
-  return getActor(actorId);
+// Get user info by id
+function getUserById(userId: string) {
+  return getUser(userId);
 }
 
 // Get message props based on userId
 function getMessageUserProps(userId: string) {
-  const user = getActorById(userId);
+  const user = getUserById(userId);
   const isCurrentUser = currentUser.value?.id === userId;
   return {
     side: isCurrentUser ? ("right" as const) : ("left" as const),

@@ -72,7 +72,7 @@ mockNuxtImport("useToast", () => () => ({
 mockNuxtImport("useUserSession", () => () => ({
   user: {
     value: {
-      id: "actor-1",
+      id: "user-1",
     },
   },
   fetch: vi.fn(),

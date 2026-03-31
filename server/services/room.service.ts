@@ -1,5 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
-import type { ActorProfile, ChatRoomRecord, SessionType } from "~~/shared/types/clawme";
+import type { UserProfile, ChatRoomRecord, SessionType } from "~~/shared/types/clawme";
 import { db, schema } from "~~/server/utils/db";
 
 const { roomMembers, rooms, users } = schema;
@@ -17,7 +17,7 @@ export function normalizeRoomType(roomType: string | null | undefined): SessionT
   return roomType === "group" ? "group" : "direct";
 }
 
-export function mapUserToActorProfile(user: UserRecord): ActorProfile {
+export function mapUserToUserProfile(user: UserRecord): UserProfile {
   return {
     id: user.id,
     type: user.type,
@@ -46,22 +46,22 @@ export function mapRoomToChatRoomRecord(
   };
 }
 
-export async function getActorProfileById(
-  actorId: string,
-): Promise<ActorProfile | null> {
-  const actor = await db.query.users.findFirst({
-    where: eq(users.id, actorId),
+export async function getUserProfileById(
+  userId: string,
+): Promise<UserProfile | null> {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
   });
 
-  return actor ? mapUserToActorProfile(actor) : null;
+  return user ? mapUserToUserProfile(user) : null;
 }
 
-export async function getAllActorProfiles(): Promise<ActorProfile[]> {
-  const actors = await db.query.users.findMany({
+export async function getAllUserProfiles(): Promise<UserProfile[]> {
+  const usersList = await db.query.users.findMany({
     where: inArray(users.type, ["human", "bot"]),
   });
 
-  return actors.map(mapUserToActorProfile);
+  return usersList.map(mapUserToUserProfile);
 }
 
 export async function createRoom(
@@ -75,25 +75,25 @@ export async function createRoom(
     throw new Error("memberIds must contain at least one user");
   }
 
-  const uniqueActorIds = [input.creatorId, ...memberIds];
-  const actors = await db.query.users.findMany({
-    where: inArray(users.id, uniqueActorIds),
+  const uniqueUserIds = [input.creatorId, ...memberIds];
+  const usersData = await db.query.users.findMany({
+    where: inArray(users.id, uniqueUserIds),
   });
 
-  if (actors.length !== uniqueActorIds.length) {
+  if (usersData.length !== uniqueUserIds.length) {
     throw new Error("Failed to resolve all room members");
   }
 
-  const actorMap = new Map(actors.map((actor) => [actor.id, actor]));
-  const creator = actorMap.get(input.creatorId);
+  const userMap = new Map(usersData.map((user) => [user.id, user]));
+  const creator = userMap.get(input.creatorId);
 
   if (!creator) {
     throw new Error("Creator not found");
   }
 
   const selectedMembers = memberIds
-    .map((memberId) => actorMap.get(memberId))
-    .filter((actor): actor is UserRecord => Boolean(actor));
+    .map((memberId) => userMap.get(memberId))
+    .filter((user): user is UserRecord => Boolean(user));
 
   if (selectedMembers.length !== memberIds.length) {
     throw new Error("Failed to resolve all room members");
@@ -127,7 +127,7 @@ export async function createRoom(
     return createdRoom;
   });
 
-  return mapRoomToChatRoomRecord(room, uniqueActorIds);
+  return mapRoomToChatRoomRecord(room, uniqueUserIds);
 }
 
 export async function createRoomAsync(

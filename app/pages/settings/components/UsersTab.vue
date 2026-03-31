@@ -100,11 +100,11 @@
 </template>
 
 <script setup lang="ts">
-import type { ActorProfile } from "~~/shared/types/clawme";
+import type { UserProfile } from "~~/shared/types/clawme";
 
 const toast = useToast();
 
-const { data: users, refresh } = await useFetch<ActorProfile[]>("/api/actors", {
+const { data: users, refresh } = await useFetch<UserProfile[]>("/api/users", {
   lazy: true,
   default: () => [],
 });
@@ -118,7 +118,7 @@ const editForm = reactive({
   intro: "",
 });
 
-function startEdit(user: ActorProfile) {
+function startEdit(user: UserProfile) {
   editingId.value = user.id;
   editForm.nickname = user.nickname;
   editForm.role = user.role ?? "";

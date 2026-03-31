@@ -91,7 +91,7 @@ describe("chat room api e2e", () => {
     await sql?.end();
   });
 
-  it("可以读取 actors 列表并创建 direct 会话后获取详情", async () => {
+  it("可以读取 users 列表并创建 direct 会话后获取详情", async () => {
     if (!auth) {
       throw new Error("测试前置鉴权信息未初始化。");
     }
@@ -103,12 +103,12 @@ describe("chat room api e2e", () => {
       Authorization: `Bearer ${ownerSecret}`,
     };
 
-    const actors = await $fetch<Array<{ id: string; type: string }>>("/api/actors", {
+    const users = await $fetch<Array<{ id: string; type: string }>>("/api/users", {
       headers,
     });
 
-    expect(actors.some((actor) => actor.id === ownerId)).toBe(true);
-    expect(actors.some((actor) => actor.id === botId)).toBe(true);
+    expect(users.some((user) => user.id === ownerId)).toBe(true);
+    expect(users.some((user) => user.id === botId)).toBe(true);
 
     const room = await $fetch<{
       id: string;

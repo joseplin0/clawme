@@ -6,7 +6,7 @@ import {
 import { flushPromises } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import CreateRoomTrigger from "~~/app/components/chat/CreateRoomTrigger.vue";
-import { createActor, createRoom } from "../../helpers/factories";
+import { createUser, createRoom } from "../../helpers/factories";
 
 const triggerState = vi.hoisted(() => ({
   toastAdd: vi.fn(),
@@ -139,18 +139,18 @@ describe("CreateRoomTrigger", () => {
   });
 
   it("未传成员时打开选择器并可创建 group 会话", async () => {
-    const owner = createActor({
+    const owner = createUser({
       id: "owner-1",
       username: "lin",
       nickname: "林",
     });
-    const memberA = createActor({
-      id: "actor-2",
+    const memberA = createUser({
+      id: "user-2",
       username: "ming",
       nickname: "阿明",
     });
-    const memberB = createActor({
-      id: "actor-3",
+    const memberB = createUser({
+      id: "user-3",
       type: "bot",
       username: "clawme-2",
       nickname: "阿虾",
@@ -161,7 +161,7 @@ describe("CreateRoomTrigger", () => {
       url: string,
       options?: { method?: string; body?: unknown },
     ) => {
-      if (url === "/api/actors") {
+      if (url === "/api/users") {
         return [owner, memberA, memberB];
       }
 
@@ -170,7 +170,7 @@ describe("CreateRoomTrigger", () => {
           id: "room-group",
           type: "group",
           title: "多人讨论",
-          memberIds: ["owner-1", "actor-2", "actor-3"],
+          memberIds: ["owner-1", "user-2", "user-3"],
         });
       }
 
@@ -186,7 +186,7 @@ describe("CreateRoomTrigger", () => {
     await wrapper.get('[data-testid="trigger-button"]').trigger("click");
     await flushPromises();
 
-    expect(triggerState.fetchMock).toHaveBeenCalledWith("/api/actors");
+    expect(triggerState.fetchMock).toHaveBeenCalledWith("/api/users");
     expect(document.body.textContent).toContain("选择 1 个成员创建");
 
     clickDocumentButtonByText("阿明");
@@ -201,7 +201,7 @@ describe("CreateRoomTrigger", () => {
       expect.objectContaining({
         method: "POST",
         body: {
-          memberIds: ["actor-2", "actor-3"],
+          memberIds: ["user-2", "user-3"],
         },
       }),
     );

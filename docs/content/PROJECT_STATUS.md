@@ -40,7 +40,7 @@
 - `/api/chat/room/[id]`：会话详情接口已可用。
 - `/api/chat/room/[id].post`：HTTP 流式聊天接口已可用，但当前仅支持 `direct` 房间。
 - `/api/ws/chat`：WebSocket 聊天、输入态、已读和新会话确认链路已接通。
-- `/api/actors` 与 `/api/actors/[id]` 已提供选人创建和参与者补全所需数据。
+- `/api/users` 与 `/api/users/[id]` 已提供选人创建和参与者补全所需数据。
 - `server/ecosystem/core/AssistantInstant.ts` 已作为统一的 assistant 生成入口。
 - 前端聊天页已接入 AI SDK `Chat` 和自定义 `WebSocketChatTransport`。
 - 前端已补统一的 `CreateRoomTrigger`，支持聊天列表选人创建，以及聊天框基于当前成员直接新建会话。

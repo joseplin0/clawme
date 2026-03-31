@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { and, count, eq } from "drizzle-orm";
 import { generateText } from "ai";
 import type {
-  ActorProfile,
+  UserProfile,
   BootstrapRequest,
   ClawmeAppState,
   PublicStateResponse,
@@ -14,7 +14,7 @@ import {
   readSystemConfig,
   setSystemInitialized,
 } from "~~/server/utils/system-config";
-import { createRoomAsync, mapUserToActorProfile } from "./room.service";
+import { createRoomAsync, mapUserToUserProfile } from "./room.service";
 import { createMessage } from "./chat.service";
 
 const {
@@ -216,8 +216,8 @@ export async function initializeSystem(input: BootstrapRequest) {
 
   return {
     system: await readSystemConfig(),
-    owner: mapUserToActorProfile(owner),
-    bot: mapUserToActorProfile(bot),
+    owner: mapUserToUserProfile(owner),
+    bot: mapUserToUserProfile(bot),
     providers: [mapProviderRecord(provider)],
     rooms: [],
     roomMessages: [],
@@ -326,8 +326,8 @@ export async function readBootstrapStateResponse(
   return toPublicStateResponse(
     {
       system,
-      owner: ownerModel ? mapUserToActorProfile(ownerModel) : null,
-      bot: botModel ? mapUserToActorProfile(botModel) : null,
+      owner: ownerModel ? mapUserToUserProfile(ownerModel) : null,
+      bot: botModel ? mapUserToUserProfile(botModel) : null,
       providers: providers.map(mapProviderRecord),
       rooms: [],
       roomMessages: [],
@@ -354,8 +354,8 @@ async function readInitializedSystemState(): Promise<InitializedSystemState> {
 
   return {
     system,
-    owner: ownerModel ? mapUserToActorProfile(ownerModel) : null,
-    bot: botModel ? mapUserToActorProfile(botModel) : null,
+    owner: ownerModel ? mapUserToUserProfile(ownerModel) : null,
+    bot: botModel ? mapUserToUserProfile(botModel) : null,
     providers: providers.map(mapProviderRecord),
     rooms: [],
     roomMessages: [],

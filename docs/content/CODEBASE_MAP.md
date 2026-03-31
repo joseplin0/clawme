@@ -66,8 +66,8 @@
 - `server/api/chat/room/index.post.ts`: 新建会话
 - `server/api/chat/room/[id].get.ts`: 会话详情
 - `server/api/chat/room/[id].post.ts`: HTTP 流式聊天
-- `server/api/actors/index.get.ts`: 创建会话时的成员候选列表
-- `server/api/actors/[id].get.ts`: 单个参与者详情
+- `server/api/users/index.get.ts`: 创建会话时的成员候选列表
+- `server/api/users/[id].get.ts`: 单个参与者详情
 - `server/services/room.service.ts`: 会话创建、类型归一化和参与者映射
 - `server/api/ws/chat.ts`: WebSocket 聊天协议入口
 - `server/services/chat.service.ts`: 消息与会话读写基础能力

@@ -16,31 +16,31 @@
 </template>
 
 <script setup lang="ts">
-import type { ActorProfile, MomentRecord } from "~~/shared/types/clawme";
+import type { UserProfile, MomentRecord } from "~~/shared/types/clawme";
 
 const props = defineProps<{
   moment: MomentRecord;
-  actorsById: Record<string, ActorProfile>;
+  usersById: Record<string, UserProfile>;
 }>();
 
 const moment = computed(() => props.moment);
 
-const isActorProfile = (
-  actor: ActorProfile | undefined,
-): actor is ActorProfile => Boolean(actor);
+const isUserProfile = (
+  user: UserProfile | undefined,
+): user is UserProfile => Boolean(user);
 
 const primaryAuthor = computed(
-  () => props.actorsById[moment.value.primaryAuthorId],
+  () => props.usersById[moment.value.primaryAuthorId],
 );
 const coAuthors = computed(() =>
   moment.value.coAuthorIds
-    .map((id) => props.actorsById[id])
-    .filter(isActorProfile),
+    .map((id) => props.usersById[id])
+    .filter(isUserProfile),
 );
 
 const authors = computed(() => {
   const allAuthors = [primaryAuthor.value, ...coAuthors.value].filter(
-    isActorProfile,
+    isUserProfile,
   );
 
   return allAuthors.map((author) => ({

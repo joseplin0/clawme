@@ -1,7 +1,7 @@
 import { mountSuspended, mockComponent } from "@nuxt/test-utils/runtime";
 import { describe, expect, it } from "vitest";
 import MomentCard from "~~/app/components/MomentCard.vue";
-import { createActor, createMoment } from "../helpers/factories";
+import { createUser, createMoment } from "../helpers/factories";
 
 mockComponent("UBlogPost", {
   props: {
@@ -47,14 +47,14 @@ mockComponent("UBlogPost", {
 
 describe("MomentCard", () => {
   it("把作者、徽标和首图映射给卡片组件", async () => {
-    const primaryAuthor = createActor({
+    const primaryAuthor = createUser({
       id: "bot-1",
       type: "bot",
       username: "clawme",
       nickname: "虾米",
       role: "主理助理",
     });
-    const coAuthor = createActor({
+    const coAuthor = createUser({
       id: "human-1",
       username: "lin",
       nickname: "林",
@@ -82,7 +82,7 @@ describe("MomentCard", () => {
             },
           ],
         }),
-        actorsById: {
+        usersById: {
           [primaryAuthor.id]: primaryAuthor,
           [coAuthor.id]: coAuthor,
         },
@@ -106,7 +106,7 @@ describe("MomentCard", () => {
   });
 
   it("在缺少标题和首图时使用作者昵称回退", async () => {
-    const author = createActor({
+    const author = createUser({
       id: "human-1",
       username: "lin",
       nickname: "林",
@@ -119,7 +119,7 @@ describe("MomentCard", () => {
           title: null,
           attachments: [],
         }),
-        actorsById: {
+        usersById: {
           [author.id]: author,
         },
       },

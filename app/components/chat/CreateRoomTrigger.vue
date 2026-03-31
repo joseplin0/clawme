@@ -36,33 +36,33 @@
             class="w-full"
           />
 
-          <div v-if="loadingActors" class="py-10 text-center text-sm text-muted">
+          <div v-if="loadingUsers" class="py-10 text-center text-sm text-muted">
             正在加载可选成员...
           </div>
 
           <div v-else class="space-y-2">
             <button
-              v-for="actor in filteredActors"
-              :key="actor.id"
+              v-for="user in filteredUsers"
+              :key="user.id"
               type="button"
               class="flex w-full items-center gap-3 rounded-xl border border-default px-3 py-2 text-left transition hover:bg-elevated/60"
               :class="{
-                'border-primary bg-primary/5': selectedMemberIds.includes(actor.id),
+                'border-primary bg-primary/5': selectedMemberIds.includes(user.id),
               }"
-              @click="toggleActor(actor.id)"
+              @click="toggleUser(user.id)"
             >
               <UAvatar
-                :src="actor.avatar ?? undefined"
-                :alt="actor.nickname"
+                :src="user.avatar ?? undefined"
+                :alt="user.nickname"
                 size="sm"
               />
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
                   <span class="truncate font-medium text-default">
-                    {{ actor.nickname }}
+                    {{ user.nickname }}
                   </span>
                   <UBadge
-                    v-if="actor.id === currentUserId"
+                    v-if="user.id === currentUserId"
                     color="neutral"
                     variant="subtle"
                     size="xs"
@@ -70,7 +70,7 @@
                     我
                   </UBadge>
                   <UBadge
-                    v-else-if="actor.type === 'bot'"
+                    v-else-if="user.type === 'bot'"
                     color="primary"
                     variant="subtle"
                     size="xs"
@@ -78,10 +78,10 @@
                     BOT
                   </UBadge>
                 </div>
-                <p class="truncate text-sm text-muted">@{{ actor.username }}</p>
+                <p class="truncate text-sm text-muted">@{{ user.username }}</p>
               </div>
               <UIcon
-                :name="selectedMemberIds.includes(actor.id) ? 'i-lucide-check' : 'i-lucide-plus'"
+                :name="selectedMemberIds.includes(user.id) ? 'i-lucide-check' : 'i-lucide-plus'"
                 class="text-base text-muted"
               />
             </button>
@@ -114,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ActorProfile, ChatRoomRecord } from "~~/shared/types/clawme";
+import type { UserProfile, ChatRoomRecord } from "~~/shared/types/clawme";
 
 const props = withDefaults(
   defineProps<{
@@ -135,8 +135,8 @@ const { user } = useUserSession();
 
 const isOpen = ref(false);
 const creating = ref(false);
-const loadingActors = ref(false);
-const actors = ref<ActorProfile[]>([]);
+const loadingUsers = ref(false);
+const users = ref<UserProfile[]>([]);
 const searchQuery = ref("");
 const selectedMemberIds = ref<string[]>([]);
 
@@ -146,12 +146,12 @@ const directMemberIds = computed(() =>
     props.memberIds.filter((memberId) => memberId !== currentUserId.value),
   ),
 );
-const filteredActors = computed(() => {
+const filteredUsers = computed(() => {
   const currentId = currentUserId.value;
   const query = searchQuery.value.trim().toLowerCase();
 
-  return actors.value.filter((actor) => {
-    if (actor.id === currentId) {
+  return users.value.filter((user) => {
+    if (user.id === currentId) {
       return false;
     }
 
@@ -160,9 +160,9 @@ const filteredActors = computed(() => {
     }
 
     return [
-      actor.username,
-      actor.nickname,
-      actor.role ?? "",
+      user.username,
+      user.nickname,
+      user.role ?? "",
     ]
       .join(" ")
       .toLowerCase()
@@ -197,13 +197,13 @@ async function openSelector() {
     props.memberIds.filter((id) => id !== currentUserId.value),
   );
 
-  if (actors.value.length > 0) {
+  if (users.value.length > 0) {
     return;
   }
 
-  loadingActors.value = true;
+  loadingUsers.value = true;
   try {
-    actors.value = await $fetch<ActorProfile[]>("/api/actors");
+    users.value = await $fetch<UserProfile[]>("/api/users");
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "加载可选成员失败";
@@ -215,22 +215,22 @@ async function openSelector() {
       icon: "i-lucide-triangle-alert",
     });
   } finally {
-    loadingActors.value = false;
+    loadingUsers.value = false;
   }
 }
 
-function toggleActor(actorId: string) {
-  if (actorId === currentUserId.value) {
+function toggleUser(userId: string) {
+  if (userId === currentUserId.value) {
     return;
   }
 
-  const index = selectedMemberIds.value.indexOf(actorId);
+  const index = selectedMemberIds.value.indexOf(userId);
   if (index >= 0) {
     selectedMemberIds.value.splice(index, 1);
     return;
   }
 
-  selectedMemberIds.value.push(actorId);
+  selectedMemberIds.value.push(userId);
 }
 
 async function confirmCreate(overrideMemberIds?: string[]) {

@@ -6,13 +6,13 @@ import {
 import { flushPromises } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Box from "~~/app/components/chat/Box.vue";
-import { createActor, createRoom } from "../../helpers/factories";
+import { createUser, createRoom } from "../../helpers/factories";
 
 const boxState = vi.hoisted(() => ({
   toastAdd: vi.fn(),
-  getActor: vi.fn(),
-  fetchActors: vi.fn().mockResolvedValue([]),
-  setActors: vi.fn(),
+  getUser: vi.fn(),
+  fetchUsers: vi.fn().mockResolvedValue([]),
+  setUsers: vi.fn(),
   onIncomingMessage: vi.fn(() => vi.fn()),
   currentUser: {
     value: {
@@ -64,10 +64,10 @@ mockNuxtImport("useToast", () => () => ({
   add: boxState.toastAdd,
 }));
 
-mockNuxtImport("useActors", () => () => ({
-  getActor: boxState.getActor,
-  fetchActors: boxState.fetchActors,
-  setActors: boxState.setActors,
+mockNuxtImport("useUsers", () => () => ({
+  getUser: boxState.getUser,
+  fetchUsers: boxState.fetchUsers,
+  setUsers: boxState.setUsers,
 }));
 
 mockNuxtImport("useGlobalChatClient", () => () => ({
@@ -179,12 +179,12 @@ describe("ChatBox", () => {
   };
 
   beforeEach(() => {
-    const owner = createActor({
+    const owner = createUser({
       id: "owner-1",
       username: "lin",
       nickname: "林",
     });
-    const assistant = createActor({
+    const assistant = createUser({
       id: "bot-1",
       type: "bot",
       username: "clawme",
@@ -192,15 +192,15 @@ describe("ChatBox", () => {
       role: "本地助理",
     });
 
-    const actorsById = {
+    const usersById = {
       [owner.id]: owner,
       [assistant.id]: assistant,
     };
 
     boxState.toastAdd.mockReset();
-    boxState.getActor.mockReset();
-    boxState.fetchActors.mockClear();
-    boxState.setActors.mockClear();
+    boxState.getUser.mockReset();
+    boxState.fetchUsers.mockClear();
+    boxState.setUsers.mockClear();
     boxState.onIncomingMessage.mockClear();
     boxState.fetchMock.mockReset();
     boxState.chatInstances.length = 0;
@@ -208,7 +208,7 @@ describe("ChatBox", () => {
       id: owner.id,
     };
 
-    boxState.getActor.mockImplementation((id: string) => actorsById[id]);
+    boxState.getUser.mockImplementation((id: string) => usersById[id]);
     boxState.fetchMock.mockImplementation(async (url: string) => {
       if (url === "/api/chat/room/room-1") {
         return {
@@ -251,7 +251,7 @@ describe("ChatBox", () => {
     await flushPromises();
 
     expect(boxState.fetchMock).toHaveBeenCalledWith("/api/chat/room/room-1");
-    expect(boxState.setActors).toHaveBeenCalledTimes(1);
+    expect(boxState.setUsers).toHaveBeenCalledTimes(1);
     expect(boxState.chatInstances).toHaveLength(1);
 
     const composer = wrapper.get('[data-testid="composer"]');
@@ -280,12 +280,12 @@ describe("ChatBox", () => {
   it("group 房间展示禁发状态并阻止提交", async () => {
     boxState.fetchMock.mockImplementation(async (url: string) => {
       if (url === "/api/chat/room/room-group") {
-        const owner = createActor({
+        const owner = createUser({
           id: "owner-1",
           username: "lin",
           nickname: "林",
         });
-        const assistant = createActor({
+        const assistant = createUser({
           id: "bot-1",
           type: "bot",
           username: "clawme",
