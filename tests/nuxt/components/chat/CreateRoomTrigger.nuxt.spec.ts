@@ -5,7 +5,7 @@ import {
 } from "@nuxt/test-utils/runtime";
 import { flushPromises } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import CreateRoomTrigger from "~~/app/components/chat/CreateRoomTrigger.vue";
+import ChatCreate from "~~/app/components/chat/Create.vue";
 import { createUser, createRoom } from "../../helpers/factories";
 
 const triggerState = vi.hoisted(() => ({
@@ -106,7 +106,7 @@ describe("CreateRoomTrigger", () => {
       throw new Error(`Unexpected fetch in test: ${url}`);
     });
 
-    const wrapper = await mountSuspended(CreateRoomTrigger, {
+    const wrapper = await mountSuspended(ChatCreate, {
       props: {
         memberIds: ["owner-1", "bot-1"],
       },
@@ -177,7 +177,7 @@ describe("CreateRoomTrigger", () => {
       throw new Error(`Unexpected fetch in test: ${url}`);
     });
 
-    const wrapper = await mountSuspended(CreateRoomTrigger, {
+    const wrapper = await mountSuspended(ChatCreate, {
       slots: {
         default: '<button data-testid="trigger-button">创建会话</button>',
       },

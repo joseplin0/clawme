@@ -9,9 +9,9 @@
       <div class="flex w-full items-center gap-3">
         <UInput v-model="searchQuery" icon="i-lucide-search" placeholder="搜索房间..." variant="soft"
           class="flex-1 rounded-full" :ui="{ base: 'rounded-full text-sm' }" />
-        <CreateRoomTrigger @created="handleRoomCreated">
+        <ChatCreate @created="handleRoomCreated">
           <UButton icon="i-lucide-plus" color="neutral" variant="ghost" class="rounded-full" />
-        </CreateRoomTrigger>
+        </ChatCreate>
       </div>
     </template>
 
@@ -19,7 +19,8 @@
       estimateSize: 76,
       skipMeasurement: true,
     }" class="min-h-0 flex-1 w-full">
-      <div class="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors duration-200"
+      <div data-testid="room-item"
+        class="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors duration-200"
         :class="item.id === modelValue ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'"
         @click="handleSelectRoom(item.id)">
         <!-- Avatar Placeholder (can be customized using room participants logic) -->

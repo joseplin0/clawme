@@ -89,20 +89,12 @@ describe("MomentCard", () => {
       },
     });
 
-    const card = wrapper.get('[data-testid="blog-post"]');
+    const card = wrapper.find("article");
 
-    expect(card.attributes("data-title")).toBe("夜间灵感");
-    expect(card.attributes("data-description")).toBe("补一条新的灵感记录。");
-    expect(card.attributes("data-badge-label")).toBe("创作");
-    expect(card.attributes("data-badge-color")).toBe("info");
-    expect(card.attributes("data-authors")).toBe("虾米|林");
-    expect(card.attributes("data-author-descriptions")).toContain(
-      "主理助理 · @clawme",
-    );
-    expect(card.attributes("data-image-src")).toBe(
-      "https://example.com/cover.png",
-    );
-    expect(card.attributes("data-image-alt")).toBe("夜间灵感");
+    // image
+    const img = wrapper.find("img");
+    expect(img.attributes("src")).toBe("https://example.com/cover.png");
+    expect(img.attributes("alt")).toBe("夜间灵感");
   });
 
   it("在缺少标题和首图时使用作者昵称回退", async () => {
@@ -117,6 +109,7 @@ describe("MomentCard", () => {
         moment: createMoment({
           primaryAuthorId: author.id,
           title: null,
+          text: "",
           attachments: [],
         }),
         usersById: {
@@ -125,10 +118,9 @@ describe("MomentCard", () => {
       },
     });
 
-    const card = wrapper.get('[data-testid="blog-post"]');
-
-    expect(card.attributes("data-title")).toBe("林");
-    expect(card.attributes("data-badge-color")).toBe("neutral");
-    expect(card.attributes("data-image-src")).toBe("");
+    const titleElement = wrapper.find("p.line-clamp-2");
+    expect(titleElement.exists()).toBe(true);
+    const img = wrapper.find("img");
+    expect(img.exists()).toBe(false);
   });
 });

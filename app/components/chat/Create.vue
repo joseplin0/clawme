@@ -4,86 +4,48 @@
   </span>
 
   <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"
-      @click.self="close"
-    >
+    <div v-if="isOpen" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"
+      @click.self="close">
       <UCard class="w-full max-w-2xl shadow-2xl">
         <template #header>
           <div class="flex items-start justify-between gap-4">
             <div class="space-y-1">
               <h3 class="text-lg font-semibold text-highlighted">创建会话</h3>
-              <p class="text-sm text-muted">
-                选择 1 个成员创建 `direct`，选择多个成员创建 `group`。
-              </p>
             </div>
-            <UButton
-              icon="i-lucide-x"
-              color="neutral"
-              variant="ghost"
-              @click="close"
-            />
+            <UButton icon="i-lucide-x" color="neutral" variant="ghost" @click="close" />
           </div>
         </template>
 
         <div class="space-y-4">
-          <UInput
-            v-model="searchQuery"
-            icon="i-lucide-search"
-            placeholder="搜索成员..."
-            variant="soft"
-            class="w-full"
-          />
+          <UInput v-model="searchQuery" icon="i-lucide-search" placeholder="搜索成员..." variant="soft" class="w-full" />
 
           <div v-if="loadingUsers" class="py-10 text-center text-sm text-muted">
             正在加载可选成员...
           </div>
 
           <div v-else class="space-y-2">
-            <button
-              v-for="user in filteredUsers"
-              :key="user.id"
-              type="button"
+            <button v-for="user in filteredUsers" :key="user.id" type="button"
               class="flex w-full items-center gap-3 rounded-xl border border-default px-3 py-2 text-left transition hover:bg-elevated/60"
               :class="{
                 'border-primary bg-primary/5': selectedMemberIds.includes(user.id),
-              }"
-              @click="toggleUser(user.id)"
-            >
-              <UAvatar
-                :src="user.avatar ?? undefined"
-                :alt="user.nickname"
-                size="sm"
-              />
+              }" @click="toggleUser(user.id)">
+              <UAvatar :src="user.avatar ?? undefined" :alt="user.nickname" size="sm" />
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
                   <span class="truncate font-medium text-default">
                     {{ user.nickname }}
                   </span>
-                  <UBadge
-                    v-if="user.id === currentUserId"
-                    color="neutral"
-                    variant="subtle"
-                    size="xs"
-                  >
+                  <UBadge v-if="user.id === currentUserId" color="neutral" variant="subtle" size="xs">
                     我
                   </UBadge>
-                  <UBadge
-                    v-else-if="user.type === 'bot'"
-                    color="primary"
-                    variant="subtle"
-                    size="xs"
-                  >
+                  <UBadge v-else-if="user.type === 'bot'" color="primary" variant="subtle" size="xs">
                     BOT
                   </UBadge>
                 </div>
                 <p class="truncate text-sm text-muted">@{{ user.username }}</p>
               </div>
-              <UIcon
-                :name="selectedMemberIds.includes(user.id) ? 'i-lucide-check' : 'i-lucide-plus'"
-                class="text-base text-muted"
-              />
+              <UIcon :name="selectedMemberIds.includes(user.id) ? 'i-lucide-check' : 'i-lucide-plus'"
+                class="text-base text-muted" />
             </button>
           </div>
         </div>
@@ -97,12 +59,8 @@
               <UButton variant="ghost" color="neutral" @click="close">
                 取消
               </UButton>
-              <UButton
-                color="primary"
-                :loading="creating"
-                :disabled="selectedMemberIds.length === 0"
-                @click="handleConfirmClick"
-              >
+              <UButton color="primary" :loading="creating" :disabled="selectedMemberIds.length === 0"
+                @click="handleConfirmClick">
                 创建会话
               </UButton>
             </div>

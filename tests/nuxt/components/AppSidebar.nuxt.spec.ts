@@ -109,8 +109,8 @@ describe("AppSidebar", () => {
       inactiveLink.get('[data-testid="icon"]').attributes("data-name"),
     ).toBe("i-lucide-message-circle");
     expect(
-      activeLink.get('[data-testid="chip"]').attributes("data-show"),
-    ).toBe("true");
+      activeLink.find("span.bg-red-500").exists(),
+    ).toBe(true);
 
     await wrapper.get('[title="刷新"]').trigger("click");
     expect(onRefresh).toHaveBeenCalledTimes(1);

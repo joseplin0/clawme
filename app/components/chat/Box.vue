@@ -1,93 +1,59 @@
 <template>
-  <section
-    class="relative flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-white dark:bg-gray-900"
-  >
+  <section class="relative flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-white dark:bg-gray-900">
     <!-- Chat Header -->
-    <header class="flex items-center justify-between h-14 px-4 bg-default/80 backdrop-blur-xl border-b border-default/50 shrink-0 z-10">
+    <header
+      class="flex items-center justify-between h-14 px-4 bg-default/80 backdrop-blur-xl border-b border-default/50 shrink-0 z-10">
       <div class="flex items-center gap-3">
         <span class="font-medium outline-none text-[15px]">{{ selectedRoom?.title || '未命名房间' }}</span>
         <UBadge v-if="selectedRoom && !isDirectRoom" size="xs" color="warning" variant="subtle">群组</UBadge>
       </div>
 
       <div class="flex items-center gap-1">
-        <LazyCreateRoomTrigger
-          :member-ids="quickCreateMemberIds"
-          @created="handleRoomCreated"
-        >
+        <LazyChatCreate :member-ids="quickCreateMemberIds" @created="handleRoomCreated">
           <UButton variant="ghost" color="neutral" icon="i-lucide-plus" size="sm" class="rounded-full" />
-        </LazyCreateRoomTrigger>
-        <UButton variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class="rounded-full" @click="isDrawerOpen = true" />
+        </LazyChatCreate>
+        <UButton variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class="rounded-full"
+          @click="isDrawerOpen = true" />
       </div>
     </header>
 
-    <div
-      v-if="selectedRoom && !isDirectRoom"
-      class="border-b border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning"
-    >
+    <div v-if="selectedRoom && !isDirectRoom"
+      class="border-b border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning">
       当前房间是 group，消息发送链路暂仅保留 direct。
     </div>
 
     <!-- Chat Messages -->
     <div class="flex min-h-0 flex-1 relative bg-gray-50/80 dark:bg-black/20 shadow-[inset_0_4px_16px_rgba(0,0,0,0.04)]">
       <UContainer class="flex min-h-0 flex-1 w-full mx-auto px-4 sm:px-8 lg:px-12 py-4 overflow-y-auto">
-        <UChatMessages
-          :messages="chatMessages"
-          :status="chatStatus"
-          should-auto-scroll
-          class="w-full space-y-4"
-        >
+        <UChatMessages :messages="chatMessages" :status="chatStatus" should-auto-scroll class="w-full space-y-4">
           <template #indicator>
             <div class="flex items-center space-x-2 text-muted text-sm px-4 py-2 mt-2">
               <UChatShimmer text="对方正在输入..." />
             </div>
           </template>
-          <UChatMessage
-            v-for="message in chatMessages"
-            :key="message.id"
-            :id="message.id"
-            :role="message.role"
-            :parts="message.parts"
-            v-bind="getMessageDisplayProps(message)"
-            :ui="{
+          <UChatMessage v-for="message in chatMessages" :key="message.id" :id="message.id" :role="message.role"
+            :parts="message.parts" v-bind="getMessageDisplayProps(message)" :ui="{
               root: 'flex w-full mt-4',
               container: 'flex-1 min-w-0 mx-2',
-            }"
-          >
+            }">
             <!-- Hide the default role/time header to look more like WeChat -->
             <template #header>
-               <div style="display: none"></div>
+              <div style="display: none"></div>
             </template>
             <template #content>
-              <div class="px-3 py-[9px] text-[15px] leading-relaxed break-words rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
-                   :class="message.metadata?.userId === currentUser?.id ? 'rounded-tr-sm bg-primary text-white' : 'rounded-tl-sm bg-white dark:bg-gray-800 text-default'">
-                <template
-                  v-for="(part, index) in message.parts"
-                  :key="`${message.id}-${part.type}-${index}`"
-                >
-                  <UChatReasoning
-                    v-if="isReasoningUIPart(part)"
-                    :text="part.text"
-                    :streaming="getReasoningStreaming(message, index)"
-                    class="mb-2 text-sm opacity-90"
-                  >
-                    <MDCCached
-                      :value="part.text"
-                      :cache-key="`reasoning-${message.id}-${index}`"
-                      class="*:first:mt-0 *:last:mb-0"
-                    />
+              <div
+                class="px-3 py-[9px] text-[15px] leading-relaxed break-words rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+                :class="message.metadata?.userId === currentUser?.id ? 'rounded-tr-sm bg-primary text-white' : 'rounded-tl-sm bg-white dark:bg-gray-800 text-default'">
+                <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
+                  <UChatReasoning v-if="isReasoningUIPart(part)" :text="part.text"
+                    :streaming="getReasoningStreaming(message, index)" class="mb-2 text-sm opacity-90">
+                    <MDCCached :value="part.text" :cache-key="`reasoning-${message.id}-${index}`"
+                      class="*:first:mt-0 *:last:mb-0" />
                   </UChatReasoning>
-                  <UChatTool
-                    v-else-if="isToolUIPart(part)"
-                    :text="getToolName(part)"
-                    :streaming="isToolStreaming(part)"
-                    class="mb-2 text-sm opacity-90"
-                  />
-                  <MDCCached
-                    v-else-if="isTextUIPart(part)"
-                    :value="part.text"
-                    :cache-key="`${message.id}-${index}`"
-                    class="*:first:mt-0 *:last:mb-0"
-                  />
+                  <UChatTool v-else-if="isToolUIPart(part)" :text="getToolName(part)" :streaming="isToolStreaming(part)"
+                    class="mb-2 text-sm opacity-90" />
+                  <MDCCached v-else-if="isTextUIPart(part)" :value="part.text" :cache-key="`${message.id}-${index}`"
+                    class="*:first:mt-0 *:last:mb-0" />
                 </template>
               </div>
             </template>
@@ -97,16 +63,9 @@
     </div>
 
     <!-- Chat Composer -->
-    <LazyChatComposer
-      :key="activeRoomId || 'empty'"
-      :ready="isChatReady"
-      :status="chatStatus"
-      :placeholder="composerPlaceholder"
-      :mention-items="mentionItems"
-      @submit="handleSubmit"
-      @stop="handleStop"
-      @reload="handleReload"
-    />
+    <LazyChatComposer :key="activeRoomId || 'empty'" :ready="isChatReady" :status="chatStatus"
+      :placeholder="composerPlaceholder" :mention-items="mentionItems" @submit="handleSubmit" @stop="handleStop"
+      @reload="handleReload" />
 
     <!-- Right Drawer for User List -->
     <USlideover v-model:open="isDrawerOpen" title="房间成员" side="right">
