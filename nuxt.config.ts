@@ -55,4 +55,7 @@ export default defineNuxtConfig({
       testBypassRouteGuard: false,
     },
   },
+  routeRules: {
+    "/": { redirect: "/chat" },
+  },
 });

@@ -1,72 +1,37 @@
 <template>
-  <UDashboardSidebar
-    v-model:open="sidebarOpen"
-    side="left"
-    mode="slideover"
-    :toggle="false"
-    :auto-close="true"
-    resizable
-    :collapsed-size="0"
-    :default-size="24"
-    :min-size="20"
-    :max-size="70"
-    units="px"
-    :ui="{
-      root: '!min-h-0',
-      header: 'h-16 px-3',
-      body: '!min-h-0 !overflow-hidden p-1',
-    }"
-  >
+  <UDashboardSidebar v-model:open="sidebarOpen" side="left" mode="slideover" :toggle="false" :auto-close="true"
+    resizable :collapsed-size="0" :default-size="24" :min-size="20" :max-size="70" units="px" :ui="{
+      root: '!min-h-0 bg-white dark:bg-gray-900 border-r border-default/50',
+      header: 'h-16 px-4',
+      body: '!min-h-0 !overflow-hidden p-2',
+    }">
     <template #header>
-      <div class="flex w-full items-center gap-2">
-        <UInput
-          v-model="searchQuery"
-          icon="i-lucide-search"
-          placeholder="搜索房间..."
-          variant="none"
-          class="flex-1"
-        />
+      <div class="flex w-full items-center gap-3">
+        <UInput v-model="searchQuery" icon="i-lucide-search" placeholder="搜索房间..." variant="soft"
+          class="flex-1 rounded-full" :ui="{ base: 'rounded-full text-sm' }" />
         <CreateRoomTrigger @created="handleRoomCreated">
-          <UButton
-            icon="i-lucide-plus"
-            color="neutral"
-            variant="link"
-          />
+          <UButton icon="i-lucide-plus" color="neutral" variant="ghost" class="rounded-full" />
         </CreateRoomTrigger>
       </div>
     </template>
 
-    <UScrollArea
-      v-slot="{ item }"
-      :items="filteredRooms"
-      :virtualize="{
-        estimateSize: 72,
-        skipMeasurement: true,
-      }"
-      class="min-h-0 flex-1 w-full"
-    >
-      <UUser
-        size="xl"
-        class="cursor-pointer rounded p-3"
-        :class="{ 'bg-gray-100': item.id === modelValue }"
-        :description="item.lastMessage"
-        :ui="{
-          wrapper: 'flex-1 min-w-0',
-          description: 'truncate',
-        }"
-        @click="handleSelectRoom(item.id)"
-      >
-        <template #name>
-          <div class="flex items-center justify-between gap-3">
-            <span class="truncate">
-              {{ item.title }}
-            </span>
-            <span class="shrink-0 text-xs text-muted">
-              {{ formatRelativeTime(item.updatedAt) }}
-            </span>
+    <UScrollArea v-slot="{ item }" :items="filteredRooms" :virtualize="{
+      estimateSize: 76,
+      skipMeasurement: true,
+    }" class="min-h-0 flex-1 w-full">
+      <div class="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors duration-200"
+        :class="item.id === modelValue ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'"
+        @click="handleSelectRoom(item.id)">
+        <!-- Avatar Placeholder (can be customized using room participants logic) -->
+        <UAvatar :text="item.title.slice(0, 1)" size="md" />
+        <div class="flex flex-col flex-1 min-w-0 justify-center">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-default truncate">{{ item.title }}</span>
+            <span class="text-[10px] text-muted whitespace-nowrap">{{ formatRelativeTime(item.updatedAt) }}</span>
           </div>
-        </template>
-      </UUser>
+          <span class="text-[12px] text-muted truncate mt-0.5">{{ item.lastMessage || '...' }}</span>
+        </div>
+      </div>
     </UScrollArea>
   </UDashboardSidebar>
 </template>
@@ -129,6 +94,11 @@ function formatRelativeTime(value?: string) {
   }
 
   const deltaHours = Math.round(deltaMinutes / 60);
-  return `${deltaHours} 小时前`;
+  if (deltaHours < 24) {
+    return `${deltaHours} 小时前`;
+  }
+
+  const deltaDays = Math.round(deltaHours / 24);
+  return `${deltaDays} 天前`;
 }
 </script>

@@ -9,5 +9,5 @@ definePageMeta({
   layout: false,
 });
 
-await navigateTo("/moment");
+await navigateTo("/chat");
 </script>

@@ -1,48 +1,70 @@
 <template>
   <div
-    class="shrink-0 border-t border-default px-3 pt-3.5"
-    :style="{ paddingBottom: 'max(0.875rem, env(safe-area-inset-bottom))' }"
+    class="shrink-0 border-t border-default/50 bg-white dark:bg-gray-900 px-4 py-4 w-full"
+    :style="{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }"
   >
-    <UEditor
-      ref="editorRef"
-      v-model="editorContent"
-      :editable="ready"
-      :image="false"
-      :enable-input-rules="false"
-      :placeholder="placeholder"
-      :starter-kit="editorStarterKit"
-      :editor-props="editorInputProps"
-      :ui="{
-        content: 'min-h-[6.5rem]',
-        base: 'min-h-[6.5rem] w-full text-sm leading-7 outline-none [&_p]:my-0 [&_.mention]:font-medium sm:px-0',
-      }"
-      class="flex w-full flex-col"
-      @update:model-value="syncInputMessage"
-    >
-      <template #default="{ editor }">
-        <UEditorMentionMenu
-          :editor="editor"
-          :items="mentionItems"
-          :filter-fields="['label', 'description', 'searchText']"
-          :limit="6"
-        />
-      </template>
-    </UEditor>
+    <div class="flex flex-col">
+      
+      <!-- Input Area -->
+      <div class="flex-1 w-full flex">
+        <UEditor
+          ref="editorRef"
+          v-model="editorContent"
+          :editable="ready"
+          :image="false"
+          :enable-input-rules="false"
+          :placeholder="placeholder"
+          :starter-kit="editorStarterKit"
+          :editor-props="editorInputProps"
+          :ui="{
+            content: 'min-h-[80px] max-h-[240px] overflow-y-auto py-3 px-4',
+            base: 'w-full text-[15px] leading-relaxed outline-none [&_p]:my-0 [&_.mention]:font-medium text-default bg-transparent',
+          }"
+          class="flex w-full flex-col"
+          @update:model-value="syncInputMessage"
+        >
+          <template #default="{ editor }">
+            <UEditorMentionMenu
+              :editor="editor"
+              :items="mentionItems"
+              :filter-fields="['label', 'description', 'searchText']"
+              :limit="6"
+            />
+          </template>
+        </UEditor>
+      </div>
 
-    <div class="mt-2 flex items-center justify-between gap-3 px-1">
-      <p class="text-xs text-muted"></p>
-
-      <UChatPromptSubmit
-        :status="status"
-        type="button"
-        size="lg"
-        class="shrink-0"
-        :disabled="isPromptActionDisabled"
-        @click="handlePromptAction"
-        @mousedown.prevent
-        @stop="emit('stop')"
-        @reload="emit('reload')"
-      />
+      <!-- Footer Buttons -->
+      <div class="flex items-center justify-between px-2 pb-2">
+        <div class="flex items-center gap-1">
+          <UButton
+            icon="i-lucide-paperclip"
+            variant="ghost"
+            color="neutral"
+            size="sm"
+            class="rounded-md px-2 text-muted"
+          />
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-muted/60 hidden sm:inline-block mr-2">按 Enter 发送，Shift + Enter 换行</span>
+          <UChatPromptSubmit
+            :status="status"
+            type="button"
+            size="md"
+            color="primary"
+            variant="solid"
+            class="rounded-md flex items-center justify-center transition-transform active:scale-95 px-4 h-9 font-medium shadow-sm shadow-primary/20"
+            :disabled="isPromptActionDisabled"
+            @click="handlePromptAction"
+            @mousedown.prevent
+            @stop="emit('stop')"
+            @reload="emit('reload')"
+          >
+            发送
+          </UChatPromptSubmit>
+        </div>
+      </div>
     </div>
   </div>
 </template>

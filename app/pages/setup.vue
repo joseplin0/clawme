@@ -1,170 +1,202 @@
 <template>
-  <div class="px-4 py-6 md:px-6 md:py-10">
-    <div class="mx-auto max-w-3xl">
-      <UForm :state="form" class="space-y-6" @submit="handleSubmit">
-        <UStepper
-          ref="stepper"
-          v-model="currentStep"
-          :items="stepItems"
-          class="gap-6"
-        >
-          <template #owner>
-            <div class="space-y-4">
-              <UFormField name="ownerNickname" label="昵称" required>
-                <UInput
-                  v-model="form.ownerNickname"
-                  class="w-full"
-                  placeholder="例如：林"
-                  required
-                />
-              </UFormField>
-
-              <UFormField name="ownerUsername" label="用户名" required>
-                <UInput
-                  v-model="form.ownerUsername"
-                  class="w-full"
-                  placeholder="例如：lin"
-                  required
-                />
-              </UFormField>
-
-              <UFormField name="ownerPassword" label="密码" required>
-                <UInput
-                  v-model="form.ownerPassword"
-                  class="w-full"
-                  type="password"
-                  placeholder="至少 6 位"
-                  required
-                />
-              </UFormField>
-            </div>
-          </template>
-
-          <template #assistant>
-            <div class="space-y-4">
-              <UFormField
-                name="assistantNickname"
-                label="默认助理昵称"
-                required
-              >
-                <UInput
-                  v-model="form.assistantNickname"
-                  class="w-full"
-                  placeholder="例如：虾米"
-                  required
-                />
-              </UFormField>
-
-              <UFormField name="assistantRole" label="默认助理角色" required>
-                <UInput
-                  v-model="form.assistantRole"
-                  class="w-full"
-                  placeholder="例如：本地助理"
-                  required
-                />
-              </UFormField>
-
-              <UFormField
-                name="assistantIntro"
-                label="助理 System Prompt"
-                required
-              >
-                <UTextarea
-                  v-model="form.assistantIntro"
-                  class="w-full"
-                  :rows="5"
-                  :maxrows="8"
-                  autoresize
-                  required
-                />
-              </UFormField>
-            </div>
-          </template>
-
-          <template #provider>
-            <div class="space-y-4">
-              <UFormField name="providerName" label="Provider" required>
-                <UInput
-                  v-model="form.providerName"
-                  class="w-full"
-                  placeholder="例如：oMLX"
-                  required
-                />
-              </UFormField>
-
-              <UFormField name="providerBaseUrl" label="Base URL" required>
-                <UInput
-                  v-model="form.providerBaseUrl"
-                  class="w-full"
-                  placeholder="http://localhost:8000/v1"
-                  required
-                />
-              </UFormField>
-
-              <UFormField name="apiKey" label="API Key" required>
-                <UInput
-                  v-model="form.apiKey"
-                  class="w-full"
-                  type="password"
-                  placeholder="sk-..."
-                  required
-                />
-              </UFormField>
-
-              <UFormField name="modelId" label="Model ID" required>
-                <UInput
-                  v-model="form.modelId"
-                  class="w-full"
-                  placeholder="例如：qwen3.5-8b-instruct"
-                  required
-                />
-              </UFormField>
-            </div>
-          </template>
-        </UStepper>
-
-        <USeparator />
-
-        <div class="space-y-4">
-          <div class="flex items-center justify-between gap-4">
-            <p>{{ statusMessage }}</p>
-            <p class="shrink-0">
-              步骤 {{ stepIndex + 1 }} / {{ stepItems.length }}
-            </p>
-          </div>
-
-          <div class="flex justify-center gap-3">
-            <UButton
-              type="button"
-              icon="i-lucide-arrow-left"
-              :disabled="stepIndex === 0 || submitting"
-              @click="prevStep"
-            >
-              上一步
-            </UButton>
-
-            <UButton
-              v-if="!isLastStep"
-              type="button"
-              trailing-icon="i-lucide-arrow-right"
-              :disabled="submitting"
-              @click="nextStep"
-            >
-              下一步
-            </UButton>
-
-            <UButton
-              v-else
-              type="submit"
-              icon="i-lucide-rocket"
-              :loading="submitting"
-            >
-              启动 Clawme
-            </UButton>
-          </div>
-        </div>
-      </UForm>
+  <div class="flex flex-col items-center">
+    <!-- Header -->
+    <div class="w-full text-center space-y-2 mb-8">
+      <div
+        class="size-14 mx-auto bg-primary rounded-[1.25rem] flex items-center justify-center text-white text-2xl font-black shadow-[0_8px_20px_-6px_rgba(255,90,95,0.4)] mb-4"
+      >
+        <UIcon name="i-lucide-rocket" class="size-6" />
+      </div>
+      <h1 class="text-[22px] font-bold text-default tracking-tight">
+        初始化系统
+      </h1>
+      <p class="text-xs text-muted font-medium px-4">
+        {{ statusMessage }}
+      </p>
     </div>
+
+    <!-- Stepper & Form -->
+    <UForm :state="form" class="w-full" @submit="handleSubmit">
+      <UStepper
+        ref="stepper"
+        v-model="currentStep"
+        :items="stepItems"
+        class="mb-6"
+        :ui="{
+          header: 'mb-4',
+          title: 'text-[13px] font-medium',
+          description: 'hidden',
+          indicator: 'size-7'
+        }"
+      >
+        <!-- Step 1: Owner -->
+        <template #owner>
+          <div class="space-y-4 py-2">
+            <UFormField name="ownerNickname">
+              <UInput
+                v-model="form.ownerNickname"
+                class="w-full"
+                placeholder="管理员昵称 (如: 林)"
+                icon="i-lucide-contact"
+                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                required
+              />
+            </UFormField>
+
+            <UFormField name="ownerUsername">
+              <UInput
+                v-model="form.ownerUsername"
+                class="w-full"
+                placeholder="登录账号 (如: lin)"
+                icon="i-lucide-user"
+                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                required
+              />
+            </UFormField>
+
+            <UFormField name="ownerPassword">
+              <UInput
+                v-model="form.ownerPassword"
+                class="w-full"
+                type="password"
+                placeholder="至少 6 位密码"
+                icon="i-lucide-lock-keyhole"
+                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                required
+              />
+            </UFormField>
+          </div>
+        </template>
+
+        <!-- Step 2: Assistant -->
+        <template #assistant>
+          <div class="space-y-4 py-2">
+            <UFormField name="assistantNickname">
+              <UInput
+                v-model="form.assistantNickname"
+                class="w-full"
+                placeholder="助理昵称 (如: 虾米)"
+                icon="i-lucide-bot"
+                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                required
+              />
+            </UFormField>
+
+            <UFormField name="assistantRole">
+              <UInput
+                v-model="form.assistantRole"
+                class="w-full"
+                placeholder="助理角色定位 (如: 本地助手)"
+                icon="i-lucide-graduation-cap"
+                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                required
+              />
+            </UFormField>
+
+            <UFormField name="assistantIntro">
+              <UTextarea
+                v-model="form.assistantIntro"
+                class="w-full"
+                :rows="3"
+                :maxrows="5"
+                autoresize
+                placeholder="我是用来干嘛的 System Prompt..."
+                :ui="{ base: 'rounded-2xl text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40 py-3 px-4' }"
+                required
+              />
+            </UFormField>
+          </div>
+        </template>
+
+        <!-- Step 3: Provider -->
+        <template #provider>
+          <div class="space-y-4 py-2">
+            <UFormField name="providerName">
+              <UInput
+                v-model="form.providerName"
+                class="w-full"
+                placeholder="供应商 (如: Ollama)"
+                icon="i-lucide-cloud"
+                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                required
+              />
+            </UFormField>
+
+            <UFormField name="providerBaseUrl">
+              <UInput
+                v-model="form.providerBaseUrl"
+                class="w-full"
+                placeholder="Base URL"
+                icon="i-lucide-network"
+                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                required
+              />
+            </UFormField>
+
+            <UFormField name="apiKey">
+              <UInput
+                v-model="form.apiKey"
+                class="w-full"
+                type="password"
+                placeholder="API Key"
+                icon="i-lucide-key"
+                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                required
+              />
+            </UFormField>
+
+            <UFormField name="modelId">
+              <UInput
+                v-model="form.modelId"
+                class="w-full"
+                placeholder="大模型 ID (如: gpt-4o)"
+                icon="i-lucide-cpu"
+                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                required
+              />
+            </UFormField>
+          </div>
+        </template>
+      </UStepper>
+
+      <!-- Buttons -->
+      <div class="flex items-center justify-between gap-3 pt-6 border-t border-default/30 mt-4">
+        <UButton
+          type="button"
+          icon="i-lucide-arrow-left"
+          variant="soft"
+          color="neutral"
+          :disabled="stepIndex === 0 || submitting"
+          class="rounded-full h-11 px-5 font-semibold active:scale-[0.98] transition-all"
+          @click="prevStep"
+        >
+          返回
+        </UButton>
+
+        <UButton
+          v-if="!isLastStep"
+          type="button"
+          trailing-icon="i-lucide-arrow-right"
+          color="primary"
+          :disabled="submitting"
+          class="rounded-full h-11 px-6 font-semibold shadow-[0_6px_14px_-4px_rgba(255,90,95,0.3)] active:scale-[0.98] transition-all ml-auto"
+          @click="nextStep"
+        >
+          下一步
+        </UButton>
+
+        <UButton
+          v-else
+          type="submit"
+          icon="i-lucide-sparkles"
+          color="primary"
+          :loading="submitting"
+          class="rounded-full h-11 px-6 font-semibold shadow-[0_6px_14px_-4px_rgba(255,90,95,0.3)] active:scale-[0.98] transition-all ml-auto"
+        >
+          启动
+        </UButton>
+      </div>
+    </UForm>
   </div>
 </template>
 
@@ -192,21 +224,21 @@ const stepItems = [
   {
     value: "owner",
     title: "管理员",
-    description: "设置管理员身份。",
+    description: "设置管理员身份",
     icon: "i-lucide-user-round-cog",
     slot: "owner",
   },
   {
     value: "assistant",
-    title: "默认助理",
-    description: "设置名称、角色和提示词。",
+    title: "助理",
+    description: "设置名称角色",
     icon: "i-lucide-bot",
     slot: "assistant",
   },
   {
     value: "provider",
-    title: "模型网关",
-    description: "填写 provider、地址和模型。",
+    title: "模型",
+    description: "设置网关和模型",
     icon: "i-lucide-server",
     slot: "provider",
   },
@@ -253,17 +285,15 @@ async function handleSubmit() {
       body: form,
     });
 
-    // Refresh session state from server
     await refreshSession();
-    statusMessage.value = "初始化完成，正在跳转到 Moment。";
     toast.add({
       title: "Clawme 已点亮",
       description: "默认管理员、助理和模型网关已经初始化。",
       color: "success",
-      icon: "i-lucide-check",
+      icon: "i-lucide-check-circle-2",
     });
 
-    await navigateTo("/moment");
+    await navigateTo("/");
   } catch (error) {
     const message =
       error instanceof Error

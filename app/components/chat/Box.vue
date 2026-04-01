@@ -1,37 +1,45 @@
 <template>
   <section
-    class="relative flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-surface"
+    class="relative flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-white dark:bg-gray-900"
   >
-    <UDashboardNavbar
-      :title="selectedRoom?.title || '默认房间'"
-      class="border-b border-default/70"
-    >
-      <template #right>
+    <!-- Chat Header -->
+    <header class="flex items-center justify-between h-14 px-4 bg-default/80 backdrop-blur-xl border-b border-default/50 shrink-0 z-10">
+      <div class="flex items-center gap-3">
+        <span class="font-medium outline-none text-[15px]">{{ selectedRoom?.title || '未命名房间' }}</span>
+        <UBadge v-if="selectedRoom && !isDirectRoom" size="xs" color="warning" variant="subtle">群组</UBadge>
+      </div>
+
+      <div class="flex items-center gap-1">
         <LazyCreateRoomTrigger
           :member-ids="quickCreateMemberIds"
           @created="handleRoomCreated"
         >
-          <UButton variant="outline" color="neutral" icon="i-lucide-plus">
-            新会话
-          </UButton>
+          <UButton variant="ghost" color="neutral" icon="i-lucide-plus" size="sm" class="rounded-full" />
         </LazyCreateRoomTrigger>
-      </template>
-    </UDashboardNavbar>
+        <UButton variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class="rounded-full" />
+      </div>
+    </header>
+
     <div
       v-if="selectedRoom && !isDirectRoom"
-      class="border-b border-warning/40 bg-warning/10 px-4 py-2 text-sm text-warning"
+      class="border-b border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning"
     >
-      当前房间是 group，会话创建已支持，消息发送链路暂仅保留 direct。
+      当前房间是 group，消息发送链路暂仅保留 direct。
     </div>
-    <div class="flex min-h-0 flex-1 relative">
-      <UContainer class="flex min-h-0 flex-1 overflow-y-auto">
+
+    <!-- Chat Messages -->
+    <div class="flex min-h-0 flex-1 relative bg-gray-50/80 dark:bg-black/20 shadow-[inset_0_4px_16px_rgba(0,0,0,0.04)]">
+      <UContainer class="flex min-h-0 flex-1 w-full mx-auto px-4 sm:px-8 lg:px-12 py-4 overflow-y-auto">
         <UChatMessages
           :messages="chatMessages"
           :status="chatStatus"
           should-auto-scroll
+          class="w-full space-y-4"
         >
           <template #indicator>
-            <UChatShimmer text="思考中..." />
+            <div class="flex items-center space-x-2 text-muted text-sm px-4 py-2 mt-2">
+              <UChatShimmer text="对方正在输入..." />
+            </div>
           </template>
           <UChatMessage
             v-for="message in chatMessages"
@@ -40,41 +48,55 @@
             :role="message.role"
             :parts="message.parts"
             v-bind="getMessageDisplayProps(message)"
+            :ui="{
+              root: 'flex w-full mt-4',
+              container: 'flex-1 min-w-0 mx-2',
+            }"
           >
+            <!-- Hide the default role/time header to look more like WeChat -->
+            <template #header>
+               <div style="display: none"></div>
+            </template>
             <template #content>
-              <template
-                v-for="(part, index) in message.parts"
-                :key="`${message.id}-${part.type}-${index}`"
-              >
-                <UChatReasoning
-                  v-if="isReasoningUIPart(part)"
-                  :text="part.text"
-                  :streaming="getReasoningStreaming(message, index)"
+              <div class="px-3 py-[9px] text-[15px] leading-relaxed break-words rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+                   :class="message.metadata?.userId === currentUser?.id ? 'rounded-tr-sm bg-primary text-white' : 'rounded-tl-sm bg-white dark:bg-gray-800 text-default'">
+                <template
+                  v-for="(part, index) in message.parts"
+                  :key="`${message.id}-${part.type}-${index}`"
                 >
+                  <UChatReasoning
+                    v-if="isReasoningUIPart(part)"
+                    :text="part.text"
+                    :streaming="getReasoningStreaming(message, index)"
+                    class="mb-2 text-sm opacity-90"
+                  >
+                    <MDCCached
+                      :value="part.text"
+                      :cache-key="`reasoning-${message.id}-${index}`"
+                      class="*:first:mt-0 *:last:mb-0"
+                    />
+                  </UChatReasoning>
+                  <UChatTool
+                    v-else-if="isToolUIPart(part)"
+                    :text="getToolName(part)"
+                    :streaming="isToolStreaming(part)"
+                    class="mb-2 text-sm opacity-90"
+                  />
                   <MDCCached
+                    v-else-if="isTextUIPart(part)"
                     :value="part.text"
-                    :cache-key="`reasoning-${message.id}-${index}`"
+                    :cache-key="`${message.id}-${index}`"
                     class="*:first:mt-0 *:last:mb-0"
                   />
-                </UChatReasoning>
-                <UChatTool
-                  v-else-if="isToolUIPart(part)"
-                  :text="getToolName(part)"
-                  :streaming="isToolStreaming(part)"
-                />
-                <MDCCached
-                  v-else-if="isTextUIPart(part)"
-                  :value="part.text"
-                  :cache-key="`${message.id}-${index}`"
-                  class="*:first:mt-0 *:last:mb-0"
-                />
-              </template>
+                </template>
+              </div>
             </template>
           </UChatMessage>
         </UChatMessages>
       </UContainer>
     </div>
 
+    <!-- Chat Composer -->
     <LazyChatComposer
       :key="activeRoomId || 'empty'"
       :ready="isChatReady"
@@ -117,8 +139,6 @@ import {
   isToolStreaming,
 } from "@nuxt/ui/utils/ai";
 import type { EditorMentionMenuItem } from "@nuxt/ui";
-
-// Typed UIMessage with custom metadata
 
 const toast = useToast();
 
@@ -310,8 +330,8 @@ const composerPlaceholder = computed(() =>
   !activeRoomId.value
     ? "请先选择房间..."
     : isDirectRoom.value
-      ? "告诉虾米接下来该先做什么..."
-      : "group 房间暂不支持发送消息",
+      ? "发送消息..."
+      : "群组暂不支持发送消息",
 );
 
 const mentionUsers = computed<UserProfile[]>(() => {
@@ -342,7 +362,7 @@ function getMessageUserProps(userId: string) {
   const isCurrentUser = currentUser.value?.id === userId;
   return {
     side: isCurrentUser ? ("right" as const) : ("left" as const),
-    variant: isCurrentUser ? ("soft" as const) : ("naked" as const),
+    variant: "naked" as const, // We use custom background in slot instead
     avatar: {
       src: user?.avatar ?? undefined,
       alt: user?.nickname ?? (isCurrentUser ? "用户" : "助手"),
