@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const participants = room.members.flatMap((member) =>
+  const members = room.members.flatMap((member) =>
     member.user ? [mapUserToUserProfile(member.user)] : [],
   );
 
@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
     type: normalizeRoomType(room.type),
     createdAt: room.createdAt.toISOString(),
     updatedAt: room.updatedAt.toISOString(),
-    participants,
+    members,
     messages: room.messages.map((m) => ({
       id: m.id,
       role: m.role,

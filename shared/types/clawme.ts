@@ -171,7 +171,7 @@ export type ClawmeUIMessage = UIMessage<MessageMetadata>;
 export interface ChatRoomDetailResponse {
   id: string;
   title: string;
-  participants: UserProfile[];
+  members: UserProfile[];
   messages: ClawmeUIMessage[];
 }
 

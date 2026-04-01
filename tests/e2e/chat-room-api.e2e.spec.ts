@@ -129,14 +129,14 @@ describe("chat room api e2e", () => {
     const detail = await $fetch<{
       id: string;
       type: string;
-      participants: Array<{ id: string }>;
+      members: Array<{ id: string }>;
     }>(`/api/chat/room/${room.id}`, {
       headers,
     });
 
     expect(detail.id).toBe(room.id);
     expect(detail.type).toBe("direct");
-    expect(detail.participants.map((participant) => participant.id)).toEqual(
+    expect(detail.members.map((member) => member.id)).toEqual(
       expect.arrayContaining([ownerId, botId])
     );
   }, 60000);

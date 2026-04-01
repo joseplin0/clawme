@@ -214,7 +214,7 @@ describe("ChatBox", () => {
         return {
           id: "room-1",
           title: "产品讨论",
-          participants: [owner, assistant],
+          members: [owner, assistant],
           messages: [],
         };
       }
@@ -296,7 +296,7 @@ describe("ChatBox", () => {
         return {
           id: "room-group",
           title: "多人讨论",
-          participants: [owner, assistant],
+          members: [owner, assistant],
           messages: [],
         };
       }

@@ -16,7 +16,7 @@
         >
           <UButton variant="ghost" color="neutral" icon="i-lucide-plus" size="sm" class="rounded-full" />
         </LazyCreateRoomTrigger>
-        <UButton variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class="rounded-full" />
+        <UButton variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class="rounded-full" @click="isDrawerOpen = true" />
       </div>
     </header>
 
@@ -107,6 +107,26 @@
       @stop="handleStop"
       @reload="handleReload"
     />
+
+    <!-- Right Drawer for User List -->
+    <USlideover v-model:open="isDrawerOpen" title="房间成员" side="right">
+      <template #body>
+        <div class="p-4 space-y-4">
+          <div v-for="user in roomMembers" :key="user.id" class="flex items-center gap-3">
+            <UAvatar :src="user.avatar ?? undefined" :alt="user.nickname" size="md" />
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {{ user.nickname }}
+                </p>
+                <UBadge v-if="user.type === 'bot'" size="xs" color="neutral" variant="subtle">BOT</UBadge>
+              </div>
+              <p class="text-xs text-gray-500 truncate">@{{ user.username }}</p>
+            </div>
+          </div>
+        </div>
+      </template>
+    </USlideover>
   </section>
 </template>
 
@@ -151,6 +171,7 @@ const emit = defineEmits<{
   created: [room: ChatRoomRecord];
 }>();
 
+const isDrawerOpen = ref(false);
 const activeRoomId = ref<string | null>(props.activeRoomId);
 const { user: currentUser } = useUserSession();
 
@@ -166,7 +187,7 @@ watch(
   { immediate: true },
 );
 
-const roomParticipants = ref<UserProfile[]>([]);
+const roomMembers = ref<UserProfile[]>([]);
 
 // Initialize Chat instance
 const chat = shallowRef<Chat<ClawmeUIMessage> | null>(null);
@@ -179,7 +200,7 @@ const selectedRoom = computed(
 );
 const isDirectRoom = computed(() => selectedRoom.value?.type === "direct");
 const quickCreateMemberIds = computed(() =>
-  roomParticipants.value
+  roomMembers.value
     .filter((user) => user.id !== currentUser.value?.id)
     .map((user) => user.id),
 );
@@ -195,12 +216,13 @@ onMounted(async () => {
 
 watch(activeRoomId, async (id) => {
   await stopActiveChat();
+  isDrawerOpen.value = false;
 
   if (id) {
     await initializeChat();
   } else {
     chat.value = null;
-    roomParticipants.value = [];
+    roomMembers.value = [];
   }
 });
 
@@ -243,15 +265,15 @@ async function stopActiveChat() {
 async function initializeChat() {
   if (!activeRoomId.value) return;
 
-  roomParticipants.value = [];
+  roomMembers.value = [];
 
   try {
     const response = await $fetch<ChatRoomDetailResponse>(
       `/api/chat/room/${activeRoomId.value}`,
     );
 
-    roomParticipants.value = response.participants;
-    setUsers(response.participants);
+    roomMembers.value = response.members;
+    setUsers(response.members);
 
     const messages = response.messages as ClawmeUIMessage[];
 
@@ -336,7 +358,7 @@ const composerPlaceholder = computed(() =>
 
 const mentionUsers = computed<UserProfile[]>(() => {
   const currentUserId = currentUser.value?.id;
-  return roomParticipants.value.filter((user) => user.id !== currentUserId);
+  return roomMembers.value.filter((user) => user.id !== currentUserId);
 });
 
 const mentionItems = computed<EditorMentionMenuItem[]>(() =>
