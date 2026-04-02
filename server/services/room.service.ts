@@ -27,6 +27,7 @@ export function mapUserToUserProfile(user: UserRecord): UserProfile {
     intro: user.intro,
     role: user.role,
     catchphrase: user.catchphrase,
+    modelConfigId: user.modelConfigId,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };

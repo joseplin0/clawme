@@ -10,7 +10,7 @@ import { db, schema } from "~~/server/utils/db";
 import { normalizeRoomType } from "./room.service";
 
 const { roomMessages, rooms } = schema;
-type ChatStateSnapshot = Pick<ClawmeAppState, "bot" | "providers" | "rooms">;
+type ChatStateSnapshot = Pick<ClawmeAppState, "bot" | "modelConfigs" | "rooms">;
 
 export async function createMessage(input: {
   roomId: string;
@@ -82,7 +82,7 @@ export function createMockAssistantReply(
   state: ChatStateSnapshot,
 ) {
   const assistantName = state.bot?.nickname ?? "虾米";
-  const provider = state.providers[0];
+  const modelConfig = state.modelConfigs[0];
   const cleanedPrompt = prompt.trim().replace(/\s+/g, " ");
 
   return [
@@ -92,8 +92,8 @@ export function createMockAssistantReply(
     "1. 固化初始化状态与账号边界。",
     "2. 让聊天链路先具备流式占位与收尾落盘。",
     "3. 把后续数据库接入点收敛到统一仓储层。",
-    provider
-      ? `当前预留的模型网关是 ${provider.name} / ${provider.modelId}。等真实本地模型接上后，这条 SSE 链路可以直接替换生成器。`
+    modelConfig
+      ? `当前预留的模型网关是 ${modelConfig.name} / ${modelConfig.modelId}。等真实本地模型接上后，这条 SSE 链路可以直接替换生成器。`
       : "当前还没有模型网关配置，所以我先用可替换的 mock 生成器把服务链打通。",
   ].join("\n\n");
 }

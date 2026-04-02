@@ -18,6 +18,7 @@ export function createUser(
     intro: null,
     role: null,
     catchphrase: null,
+    modelConfigId: null,
     createdAt: DEFAULT_TIMESTAMP,
     updatedAt: DEFAULT_TIMESTAMP,
     ...overrides,

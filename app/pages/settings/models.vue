@@ -1,153 +1,169 @@
 <template>
   <div class="space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-3">
       <div>
         <h2 class="text-lg font-semibold text-highlighted">模型配置</h2>
-        <p class="mt-1 text-sm text-muted">管理 LLM 提供商配置</p>
+        <p class="mt-1 text-sm text-muted">管理可绑定给 Bot 的模型配置</p>
       </div>
+
+      <UButton icon="i-lucide-plus" @click="openCreatePanel">
+        新建模型
+      </UButton>
     </div>
 
     <div class="space-y-4">
-      <UCard
-        v-for="provider in providers"
-        :key="provider.id"
-        class="hover:border-primary/50 transition-colors"
-      >
-        <div class="flex items-start justify-between mb-4">
-          <div>
+      <UCard v-for="modelConfig in modelConfigs" :key="modelConfig.id"
+        class="hover:border-primary/50 transition-colors">
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
             <div class="flex items-center gap-2">
               <p class="text-base font-semibold text-highlighted">
-                {{ provider.name }}
+                {{ modelConfig.name }}
               </p>
               <UBadge color="info" variant="subtle" size="sm">
-                {{ provider.provider }}
+                {{ getProviderLabel(modelConfig.provider) }}
               </UBadge>
             </div>
-            <p class="text-sm text-muted mt-1">{{ provider.modelId }}</p>
+            <p class="mt-2 text-sm text-muted break-all">
+              {{ modelConfig.baseUrl || "留空，使用 SDK 默认" }}
+            </p>
+            <p class="mt-1 text-sm text-toned">{{ modelConfig.modelId }}</p>
           </div>
-          <UButton
-            v-if="editingId !== provider.id"
-            icon="i-lucide-pencil"
-            variant="ghost"
-            color="neutral"
-            @click="startEdit(provider)"
-          >
+
+          <UButton icon="i-lucide-pencil" variant="ghost" color="neutral" @click="openEditPanel(modelConfig)">
             编辑
           </UButton>
-        </div>
-
-        <div v-if="editingId === provider.id" class="space-y-4">
-          <UFormField label="Provider 名称" :name="`provider-${provider.id}-name`">
-            <UInput v-model="editForm.name" placeholder="输入 Provider 名称" />
-          </UFormField>
-          <UFormField label="Base URL" :name="`provider-${provider.id}-baseUrl`">
-            <UInput v-model="editForm.baseUrl" placeholder="输入 Base URL" />
-          </UFormField>
-          <UFormField label="API Key" :name="`provider-${provider.id}-apiKey`">
-            <UInput
-              v-model="editForm.apiKey"
-              type="password"
-              placeholder="留空保持不变"
-            />
-          </UFormField>
-          <UFormField label="Model ID" :name="`provider-${provider.id}-modelId`">
-            <UInput v-model="editForm.modelId" placeholder="输入 Model ID" />
-          </UFormField>
-          <div class="flex gap-2 pt-2">
-            <UButton :loading="saving" @click="saveProvider(provider.id)">
-              保存
-            </UButton>
-            <UButton variant="outline" color="neutral" @click="cancelEdit">
-              取消
-            </UButton>
-          </div>
-        </div>
-
-        <div v-else class="text-sm text-toned">
-          <p class="break-all">{{ provider.baseUrl }}</p>
         </div>
       </UCard>
     </div>
 
-    <div
-      v-if="providers.length === 0"
-      class="border border-dashed p-8 text-center"
-    >
-      <p class="text-base font-medium text-highlighted">暂无模型配置</p>
-      <p class="mt-2 text-sm text-muted">请先完成系统引导来配置模型提供商。</p>
-      <UButton to="/setup" icon="i-lucide-refresh-cw" class="mt-4">
-        前往引导
-      </UButton>
-    </div>
+
+    <USlideover v-model:open="panelOpen" :title="panelMode === 'create' ? '新建模型配置' : '编辑模型配置'" side="right">
+      <template #body>
+        <ModelConfigFields :state="editForm" field-prefix="settings-model-config" />
+      </template>
+
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton variant="outline" color="neutral" @click="closePanel">
+            取消
+          </UButton>
+          <UButton :loading="saving" @click="saveModelConfig">
+            {{ panelMode === "create" ? "创建" : "保存" }}
+          </UButton>
+        </div>
+      </template>
+    </USlideover>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { LlmProviderRecord } from "~~/shared/types/clawme";
+import type {
+  CreateModelConfigRequest,
+  ModelConfigRecord,
+  UpdateModelConfigRequest,
+} from "~~/shared/types/clawme";
+import {
+  getModelConfigDefaults,
+  getModelProviderCatalogEntry,
+  modelProviderCatalog,
+  type ModelConfigDraft,
+} from "~~/shared/utils/model-config-catalog";
+
+type PanelMode = "create" | "edit";
 
 const toast = useToast();
 
-const { data: providers, refresh } = await useFetch<LlmProviderRecord[]>(
-  "/api/llm",
+const { data: modelConfigs, refresh } = await useFetch<ModelConfigRecord[]>(
+  "/api/model-configs",
   {
     lazy: true,
     default: () => [],
   },
 );
 
-const editingId = ref<string | null>(null);
+const defaultProvider = modelProviderCatalog[0]?.value ?? "openai";
+const panelOpen = ref(false);
+const panelMode = ref<PanelMode>("create");
+const editingModelConfigId = ref<string | null>(null);
 const saving = ref(false);
 
-const editForm = reactive({
-  name: "",
-  baseUrl: "",
-  apiKey: "",
-  modelId: "",
-});
+const editForm = reactive<ModelConfigDraft>(getModelConfigDefaults(defaultProvider));
 
-function startEdit(provider: LlmProviderRecord) {
-  editingId.value = provider.id;
-  editForm.name = provider.name;
-  editForm.baseUrl = provider.baseUrl ?? "";
-  editForm.apiKey = "";
-  editForm.modelId = provider.modelId;
+function openCreatePanel() {
+  panelMode.value = "create";
+  editingModelConfigId.value = null;
+  Object.assign(editForm, getModelConfigDefaults(defaultProvider));
+  panelOpen.value = true;
 }
 
-function cancelEdit() {
-  editingId.value = null;
-  editForm.name = "";
-  editForm.baseUrl = "";
+function openEditPanel(modelConfig: ModelConfigRecord) {
+  panelMode.value = "edit";
+  editingModelConfigId.value = modelConfig.id;
+  editForm.name = modelConfig.name;
+  editForm.provider = modelConfig.provider;
+  editForm.baseUrl = modelConfig.baseUrl;
   editForm.apiKey = "";
-  editForm.modelId = "";
+  editForm.modelId = modelConfig.modelId;
+  panelOpen.value = true;
 }
 
-async function saveProvider(providerId: string) {
+function closePanel() {
+  panelOpen.value = false;
+}
+
+function getProviderLabel(provider: string) {
+  return getModelProviderCatalogEntry(provider)?.label ?? provider;
+}
+
+async function saveModelConfig() {
   saving.value = true;
   try {
-    const body: Record<string, string> = {
-      name: editForm.name,
-      baseUrl: editForm.baseUrl,
-      modelId: editForm.modelId,
-    };
-    if (editForm.apiKey) {
-      body.apiKey = editForm.apiKey;
+    if (panelMode.value === "create") {
+      const body: CreateModelConfigRequest = {
+        name: editForm.name,
+        provider: editForm.provider,
+        baseUrl: editForm.baseUrl,
+        apiKey: editForm.apiKey,
+        modelId: editForm.modelId,
+      };
+
+      await $fetch("/api/model-configs", {
+        method: "POST",
+        body,
+      });
+    } else if (editingModelConfigId.value) {
+      const body: UpdateModelConfigRequest = {
+        name: editForm.name,
+        provider: editForm.provider,
+        baseUrl: editForm.baseUrl,
+        modelId: editForm.modelId,
+      };
+
+      if (editForm.apiKey.trim()) {
+        body.apiKey = editForm.apiKey;
+      }
+
+      await $fetch(`/api/model-configs/${editingModelConfigId.value}`, {
+        method: "PUT",
+        body,
+      });
     }
 
-    await $fetch(`/api/llm/${providerId}`, {
-      method: "PUT",
-      body,
-    });
     toast.add({
-      title: "保存成功",
-      description: "模型配置已更新。",
+      title: panelMode.value === "create" ? "创建成功" : "保存成功",
+      description:
+        panelMode.value === "create"
+          ? "模型配置已创建。"
+          : "模型配置已更新。",
       color: "success",
       icon: "i-lucide-check",
     });
-    editingId.value = null;
+    panelOpen.value = false;
     await refresh();
   } catch (error) {
     toast.add({
-      title: "保存失败",
+      title: panelMode.value === "create" ? "创建失败" : "保存失败",
       description: error instanceof Error ? error.message : "请稍后重试。",
       color: "error",
       icon: "i-lucide-triangle-alert",

@@ -7,8 +7,8 @@ import { db, schema } from "~~/server/utils/db";
 
 const { users, roomMembers, roomMessages, rooms } = schema;
 
-export type UserWithProvider = typeof users.$inferSelect & {
-  llmProvider: typeof schema.llm.$inferSelect | null;
+export type UserWithModelConfig = typeof users.$inferSelect & {
+  modelConfig: typeof schema.modelConfigs.$inferSelect | null;
 };
 
 export interface PreparedChatCommand {
@@ -16,7 +16,7 @@ export interface PreparedChatCommand {
   createdRoomId?: string;
   userMessage: typeof roomMessages.$inferSelect;
   uiMessage: UIMessage;
-  targetUser: UserWithProvider;
+  targetUser: UserWithModelConfig;
 }
 
 export class ChatCommandError extends Error {
@@ -65,7 +65,7 @@ export async function prepareDirectRoomMessage(input: {
           with: {
             user: {
               with: {
-                llmProvider: true,
+                modelConfig: true,
               },
             },
           },
@@ -150,7 +150,7 @@ export async function prepareDirectRoomMessage(input: {
     db.query.users.findFirst({
       where: eq(users.id, targetUserId),
       with: {
-        llmProvider: true,
+        modelConfig: true,
       },
     }),
   ]);

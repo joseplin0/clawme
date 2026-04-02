@@ -5,6 +5,12 @@ import {
   initializeSystem,
   toPublicStateResponse,
 } from "~~/server/services";
+import {
+  assertApiKeyForProvider,
+  assertKnownModelProvider,
+  assertValidBaseUrl,
+  normalizeRequiredText,
+} from "~~/server/utils/model-configs";
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<BootstrapRequest>(event);
@@ -22,6 +28,12 @@ export default defineEventHandler(async (event) => {
       statusMessage: "ownerPassword must be at least 6 characters.",
     });
   }
+
+  assertKnownModelProvider(body.provider);
+  normalizeRequiredText(body.modelConfigName, "modelConfigName");
+  normalizeRequiredText(body.modelId, "modelId");
+  assertValidBaseUrl(body.baseUrl);
+  assertApiKeyForProvider(body.provider, body.apiKey);
 
   const result = await initializeSystem(body);
 

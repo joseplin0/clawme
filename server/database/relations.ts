@@ -3,7 +3,7 @@ import {
   assets,
   botMcp,
   comments,
-  llm,
+  modelConfigs,
   mcp,
   likes,
   momentAssets,
@@ -22,9 +22,9 @@ import {
 
 // User relations
 export const usersRelations = relations(users, ({ one, many }) => ({
-  llmProvider: one(llm, {
-    fields: [users.llmProviderId],
-    references: [llm.id],
+  modelConfig: one(modelConfigs, {
+    fields: [users.modelConfigId],
+    references: [modelConfigs.id],
   }),
   createdBy: one(users, {
     fields: [users.createdById],
@@ -69,7 +69,7 @@ export const userFollowsRelations = relations(userFollows, ({ one }) => ({
 }));
 
 // Llm relations
-export const llmRelations = relations(llm, ({ many }) => ({
+export const modelConfigsRelations = relations(modelConfigs, ({ many }) => ({
   users: many(users),
 }));
 

@@ -49,11 +49,12 @@ export interface UserProfile {
   intro: string | null;
   role: string | null;
   catchphrase: string | null;
+  modelConfigId: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface LlmProviderRecord {
+export interface ModelConfigRecord {
   id: string;
   name: string;
   provider: string;
@@ -112,7 +113,7 @@ export interface ClawmeAppState {
   system: SystemConfigRecord;
   owner: UserProfile | null;
   bot: UserProfile | null;
-  providers: LlmProviderRecord[];
+  modelConfigs: ModelConfigRecord[];
   rooms: ChatRoomRecord[];
   roomMessages: RoomMessageRecord[];
   moments: MomentRecord[];
@@ -147,10 +148,34 @@ export interface BootstrapRequest {
   assistantNickname: string;
   assistantRole: string;
   assistantIntro: string;
-  providerName: string;
-  providerBaseUrl: string;
+  modelConfigName: string;
+  provider: string;
+  baseUrl: string;
   apiKey: string;
   modelId: string;
+}
+
+export interface CreateModelConfigRequest {
+  name: string;
+  provider: string;
+  baseUrl?: string;
+  apiKey?: string;
+  modelId: string;
+}
+
+export interface UpdateModelConfigRequest {
+  name?: string;
+  provider?: string;
+  baseUrl?: string;
+  apiKey?: string;
+  modelId?: string;
+}
+
+export interface UpdateUserRequest {
+  nickname?: string;
+  intro?: string;
+  role?: string;
+  modelConfigId?: string | null;
 }
 
 export interface ChatRoomState {

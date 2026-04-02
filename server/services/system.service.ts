@@ -8,7 +8,7 @@ import type {
   PublicStateResponse,
 } from "~~/shared/types/clawme";
 import { db, schema } from "~~/server/utils/db";
-import { createModelFromProvider } from "~~/server/utils/llm";
+import { createModelFromConfig } from "~~/server/utils/llm";
 import {
   isSystemInitialized,
   readSystemConfig,
@@ -20,7 +20,7 @@ import { createMessage } from "./chat.service";
 const {
   assets,
   users,
-  llm,
+  modelConfigs,
   roomMembers,
   roomMessages,
   rooms,
@@ -51,7 +51,7 @@ export async function initializeSystem(input: BootstrapRequest) {
   const ownerPasswordHash = await hashPassword(input.ownerPassword);
   const botApiSecret = randomBytes(24).toString("hex");
 
-  const { owner, bot, provider } = await db.transaction(async (tx) => {
+  const { owner, bot, modelConfig } = await db.transaction(async (tx) => {
     // 0. Clean slate
     await tx.delete(momentAssets);
     await tx.delete(momentCollections);
@@ -64,7 +64,7 @@ export async function initializeSystem(input: BootstrapRequest) {
     await tx.delete(roomMessages);
     await tx.delete(roomMembers);
     await tx.delete(rooms);
-    await tx.delete(llm);
+    await tx.delete(modelConfigs);
     await tx.delete(users);
 
     // 1. Users (Owner + Bot)
@@ -99,26 +99,26 @@ export async function initializeSystem(input: BootstrapRequest) {
       throw new Error("Failed to create users");
     }
 
-    // 2. Provider
-    const [provider] = await tx
-      .insert(llm)
+    // 2. Model config
+    const [modelConfig] = await tx
+      .insert(modelConfigs)
       .values({
-        name: input.providerName,
-        provider: "OPENAI_COMPATIBLE",
-        baseUrl: input.providerBaseUrl,
-        apiKey: input.apiKey,
+        name: input.modelConfigName,
+        provider: input.provider,
+        baseUrl: input.baseUrl || null,
+        apiKey: input.apiKey || null,
         modelId: input.modelId,
       })
       .returning();
 
-    if (!provider) {
-      throw new Error("Failed to create provider");
+    if (!modelConfig) {
+      throw new Error("Failed to create model config");
     }
 
     await tx
       .update(users)
       .set({
-        llmProviderId: provider.id,
+        modelConfigId: modelConfig.id,
       })
       .where(eq(users.id, bot.id));
 
@@ -200,7 +200,7 @@ export async function initializeSystem(input: BootstrapRequest) {
     return {
       owner,
       bot,
-      provider,
+      modelConfig,
     };
   });
 
@@ -209,7 +209,7 @@ export async function initializeSystem(input: BootstrapRequest) {
   void bootstrapDefaultRoom({
     owner,
     bot,
-    provider,
+    modelConfig,
   }).catch((error) => {
     console.error("Failed to bootstrap default room:", error);
   });
@@ -218,7 +218,7 @@ export async function initializeSystem(input: BootstrapRequest) {
     system: await readSystemConfig(),
     owner: mapUserToUserProfile(owner),
     bot: mapUserToUserProfile(bot),
-    providers: [mapProviderRecord(provider)],
+    modelConfigs: [mapModelConfigRecord(modelConfig)],
     rooms: [],
     roomMessages: [],
     moments: [],
@@ -231,7 +231,7 @@ export async function initializeSystem(input: BootstrapRequest) {
 async function bootstrapDefaultRoom(input: {
   owner: typeof users.$inferSelect;
   bot: typeof users.$inferSelect;
-  provider: typeof llm.$inferSelect;
+  modelConfig: typeof modelConfigs.$inferSelect;
 }) {
   const room = await createRoomAsync({
     creatorId: input.owner.id,
@@ -248,7 +248,7 @@ async function bootstrapDefaultRoom(input: {
   });
 
   try {
-    const model = createModelFromProvider(input.provider);
+    const model = createModelFromConfig(input.modelConfig);
     const { text } = await generateText({
       model,
       messages: [{ role: "user", content: "你好" }],
@@ -297,7 +297,7 @@ export function toPublicStateResponse(
       system: state.system,
       owner: state.owner,
       bot: state.bot,
-      providers: state.providers,
+      modelConfigs: state.modelConfigs,
       rooms: state.rooms,
       roomMessages: state.roomMessages,
       moments: initialMoments,
@@ -313,12 +313,12 @@ export function toPublicStateResponse(
 export async function readBootstrapStateResponse(
   isOwnerAuthenticated: boolean,
 ): Promise<PublicStateResponse> {
-  const [system, ownerModel, botModel, providers, roomCount, messageCount] =
+  const [system, ownerModel, botModel, modelConfigsList, roomCount, messageCount] =
     await Promise.all([
       readSystemConfig(),
       readOwnerModel(),
       readBotModel(),
-      db.query.llm.findMany(),
+      db.query.modelConfigs.findMany(),
       db.select({ count: count() }).from(rooms),
       db.select({ count: count() }).from(roomMessages),
     ]);
@@ -328,7 +328,7 @@ export async function readBootstrapStateResponse(
       system,
       owner: ownerModel ? mapUserToUserProfile(ownerModel) : null,
       bot: botModel ? mapUserToUserProfile(botModel) : null,
-      providers: providers.map(mapProviderRecord),
+      modelConfigs: modelConfigsList.map(mapModelConfigRecord),
       rooms: [],
       roomMessages: [],
       moments: [],
@@ -345,18 +345,18 @@ export async function readBootstrapStateResponse(
 }
 
 async function readInitializedSystemState(): Promise<InitializedSystemState> {
-  const [system, ownerModel, botModel, providers] = await Promise.all([
+  const [system, ownerModel, botModel, modelConfigsList] = await Promise.all([
     readSystemConfig(),
     readOwnerModel(),
     readBotModel(),
-    db.query.llm.findMany(),
+    db.query.modelConfigs.findMany(),
   ]);
 
   return {
     system,
     owner: ownerModel ? mapUserToUserProfile(ownerModel) : null,
     bot: botModel ? mapUserToUserProfile(botModel) : null,
-    providers: providers.map(mapProviderRecord),
+    modelConfigs: modelConfigsList.map(mapModelConfigRecord),
     rooms: [],
     roomMessages: [],
     moments: [],
@@ -378,13 +378,13 @@ async function readBotModel() {
   });
 }
 
-function mapProviderRecord(provider: typeof llm.$inferSelect) {
+function mapModelConfigRecord(modelConfig: typeof modelConfigs.$inferSelect) {
   return {
-    id: provider.id,
-    name: provider.name,
-    provider: provider.provider,
-    baseUrl: provider.baseUrl || "",
-    modelId: provider.modelId,
-    createdAt: provider.createdAt.toISOString(),
+    id: modelConfig.id,
+    name: modelConfig.name,
+    provider: modelConfig.provider,
+    baseUrl: modelConfig.baseUrl || "",
+    modelId: modelConfig.modelId,
+    createdAt: modelConfig.createdAt.toISOString(),
   };
 }

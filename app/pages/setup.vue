@@ -110,51 +110,12 @@
 
         <!-- Step 3: Provider -->
         <template #provider>
-          <div class="space-y-4 py-2">
-            <UFormField name="providerName">
-              <UInput
-                v-model="form.providerName"
-                class="w-full"
-                placeholder="供应商 (如: Ollama)"
-                icon="i-lucide-cloud"
-                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
-                required
-              />
-            </UFormField>
-
-            <UFormField name="providerBaseUrl">
-              <UInput
-                v-model="form.providerBaseUrl"
-                class="w-full"
-                placeholder="Base URL"
-                icon="i-lucide-network"
-                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
-                required
-              />
-            </UFormField>
-
-            <UFormField name="apiKey">
-              <UInput
-                v-model="form.apiKey"
-                class="w-full"
-                type="password"
-                placeholder="API Key"
-                icon="i-lucide-key"
-                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
-                required
-              />
-            </UFormField>
-
-            <UFormField name="modelId">
-              <UInput
-                v-model="form.modelId"
-                class="w-full"
-                placeholder="大模型 ID (如: gpt-4o)"
-                icon="i-lucide-cpu"
-                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
-                required
-              />
-            </UFormField>
+          <div class="py-2">
+            <ModelConfigFields
+              :state="modelConfigForm"
+              field-prefix="setup-model-config"
+              name-label="模型配置名称"
+            />
           </div>
         </template>
       </UStepper>
@@ -205,6 +166,11 @@ import type {
   BootstrapRequest,
   BootstrapResponse,
 } from "~~/shared/types/clawme";
+import {
+  getModelConfigDefaults,
+  modelProviderCatalog,
+  type ModelConfigDraft,
+} from "~~/shared/utils/model-config-catalog";
 
 definePageMeta({
   layout: "auth",
@@ -249,18 +215,20 @@ const stepIndex = computed(() =>
 );
 const isLastStep = computed(() => stepIndex.value === stepItems.length - 1);
 
-const form = reactive<BootstrapRequest>({
+const initialProvider = modelProviderCatalog[0]?.value ?? "openai";
+
+const form = reactive({
   ownerNickname: "",
   ownerUsername: "",
   ownerPassword: "",
   assistantNickname: "",
   assistantRole: "",
   assistantIntro: "",
-  providerName: "",
-  providerBaseUrl: "",
-  apiKey: "",
-  modelId: "",
 });
+
+const modelConfigForm = reactive<ModelConfigDraft>(
+  getModelConfigDefaults(initialProvider),
+);
 
 function nextStep() {
   stepper.value?.next();
@@ -280,9 +248,23 @@ async function handleSubmit() {
   statusMessage.value = "正在写入系统状态，默认会话会在后台继续生成...";
 
   try {
+    const payload: BootstrapRequest = {
+      ownerNickname: form.ownerNickname,
+      ownerUsername: form.ownerUsername,
+      ownerPassword: form.ownerPassword,
+      assistantNickname: form.assistantNickname,
+      assistantRole: form.assistantRole,
+      assistantIntro: form.assistantIntro,
+      modelConfigName: modelConfigForm.name,
+      provider: modelConfigForm.provider,
+      baseUrl: modelConfigForm.baseUrl,
+      apiKey: modelConfigForm.apiKey,
+      modelId: modelConfigForm.modelId,
+    };
+
     await $fetch<BootstrapResponse>("/api/system/bootstrap", {
       method: "POST",
-      body: form,
+      body: payload,
     });
 
     await refreshSession();

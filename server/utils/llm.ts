@@ -1,13 +1,13 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import type { LanguageModel } from "ai";
 import { eq } from "drizzle-orm";
-import type { LlmProvider } from "~~/server/database/schema";
+import type { ModelConfig } from "~~/server/database/schema";
 import { db, schema } from "~~/server/utils/db";
 
-type UserProviderCandidate = {
+type UserModelConfigCandidate = {
   id: string;
   type: string;
-  llmProvider?: LlmProvider | null;
+  modelConfig?: ModelConfig | null;
 };
 
 let _defaultModel: LanguageModel | null = null;
@@ -33,51 +33,51 @@ export function getModel(): LanguageModel {
   return _defaultModel;
 }
 
-export function createModelFromProvider(provider: LlmProvider): LanguageModel {
+export function createModelFromConfig(modelConfig: ModelConfig): LanguageModel {
   return createOpenAI({
-    baseURL: provider.baseUrl ?? undefined,
-    apiKey: provider.apiKey ?? undefined,
-  }).languageModel(provider.modelId);
+    baseURL: modelConfig.baseUrl || undefined,
+    apiKey: modelConfig.apiKey ?? undefined,
+  }).languageModel(modelConfig.modelId);
 }
 
-export async function resolveUserLlmProvider(
-  user: UserProviderCandidate,
-): Promise<LlmProvider | null> {
-  if (user.llmProvider) {
-    return user.llmProvider;
+export async function resolveUserModelConfig(
+  user: UserModelConfigCandidate,
+): Promise<ModelConfig | null> {
+  if (user.modelConfig) {
+    return user.modelConfig;
   }
 
   const hydratedUser = await db.query.users.findFirst({
     where: eq(schema.users.id, user.id),
     with: {
-      llmProvider: true,
+      modelConfig: true,
     },
   });
 
-  if (hydratedUser?.llmProvider) {
-    return hydratedUser.llmProvider;
+  if (hydratedUser?.modelConfig) {
+    return hydratedUser.modelConfig;
   }
 
   if ((hydratedUser?.type ?? user.type) !== "bot") {
     return null;
   }
 
-  const llmConfigs = await db.query.llm.findMany();
-  if (llmConfigs.length !== 1) {
+  const configuredModelConfigs = await db.query.modelConfigs.findMany();
+  if (configuredModelConfigs.length !== 1) {
     return null;
   }
 
-  const [provider] = llmConfigs;
-  if (!provider) {
+  const [modelConfig] = configuredModelConfigs;
+  if (!modelConfig) {
     return null;
   }
 
   await db
     .update(schema.users)
     .set({
-      llmProviderId: provider.id,
+      modelConfigId: modelConfig.id,
     })
     .where(eq(schema.users.id, user.id));
 
-  return provider;
+  return modelConfig;
 }

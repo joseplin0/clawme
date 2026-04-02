@@ -11,7 +11,7 @@ import { createMessage } from "~~/server/services/chat.service";
 import { normalizeRoomType } from "~~/server/services/room.service";
 import { requireOwnerSession } from "~~/server/utils/auth";
 import { db, schema } from "~~/server/utils/db";
-import { resolveUserLlmProvider } from "~~/server/utils/llm";
+import { resolveUserModelConfig } from "~~/server/utils/llm";
 import { eq } from "drizzle-orm";
 
 const { rooms, users } = schema;
@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
 
   const receiver = await db.query.users.findFirst({
     where: eq(users.id, receiverId),
-    with: { llmProvider: true },
+    with: { modelConfig: true },
   });
 
   if (!receiver) {
@@ -71,11 +71,11 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const hasProvider = await resolveUserLlmProvider(receiver);
-  if (!hasProvider) {
+  const hasModelConfig = await resolveUserModelConfig(receiver);
+  if (!hasModelConfig) {
     throw createError({
       statusCode: 400,
-      statusMessage: "Receiver or LLM provider not found",
+      statusMessage: "Receiver or model config not found",
     });
   }
 

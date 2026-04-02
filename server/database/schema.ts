@@ -35,8 +35,8 @@ export const users = pgTable("user", {
   passwordHash: text("password_hash"),
   /** 服务端鉴权密钥。 */
   apiSecret: text("api_secret").unique(),
-  /** 绑定的模型提供商 ID。 */
-  llmProviderId: uuid("llm_provider_id"),
+  /** 绑定的模型配置 ID。 */
+  modelConfigId: uuid("model_config_id"),
   /** 外部回调地址。 */
   webhookUrl: text("webhook_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -342,8 +342,8 @@ export const workflowTriggers = pgTable("workflow_trigger", {
   config: json("config").$type<Record<string, unknown>>(),
 });
 
-/** 大模型提供商配置表。 */
-export const llm = pgTable("llm", {
+/** 大模型配置表。 */
+export const modelConfigs = pgTable("model_config", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   provider: text("provider").notNull(),
@@ -377,8 +377,8 @@ export const botMcp = pgTable(
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type UserFollow = typeof userFollows.$inferSelect;
-export type LlmProvider = typeof llm.$inferSelect;
-export type NewLlmProvider = typeof llm.$inferInsert;
+export type ModelConfig = typeof modelConfigs.$inferSelect;
+export type NewModelConfig = typeof modelConfigs.$inferInsert;
 export type McpServer = typeof mcp.$inferSelect;
 export type BotMcpConnection = typeof botMcp.$inferSelect;
 export type Workflow = typeof workflows.$inferSelect;

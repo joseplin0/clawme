@@ -1,1 +1,22 @@
-pnpm exec commitlint --edit "$1"
+pnpm exec commitlint --edit "$1" --verbose || {
+  echo ""
+  echo "=========================================="
+  echo " Commit 消息格式要求 (Conventional Commits)"
+  echo "=========================================="
+  echo "格式: <type>(<scope>): <subject>"
+  echo ""
+  echo "示例: feat(auth): add login page"
+  echo ""
+  echo "常用类型:"
+  echo "  feat     - 新功能"
+  echo "  fix      - 修复 bug"
+  echo "  docs     - 文档变更"
+  echo "  style    - 代码格式"
+  echo "  refactor - 重构"
+  echo "  test     - 测试"
+  echo "  chore    - 构建/工具"
+  echo ""
+  echo "长度限制: 标题最多 100 字符"
+  echo ""
+  exit 1
+}

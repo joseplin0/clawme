@@ -2,32 +2,32 @@ import { streamText, type ModelMessage } from "ai";
 import { eq } from "drizzle-orm";
 import {
   ChatCommandError,
-  type UserWithProvider,
+  type UserWithModelConfig,
 } from "~~/server/services/chat-command.service";
 import { db, schema } from "~~/server/utils/db";
 import {
-  createModelFromProvider,
-  resolveUserLlmProvider,
+  createModelFromConfig,
+  resolveUserModelConfig,
 } from "~~/server/utils/llm";
 
 const { roomMessages } = schema;
 
 export async function createAssistantMessageStream(input: {
   roomId: string;
-  assistantUser: UserWithProvider;
+  assistantUser: UserWithModelConfig;
   modelMessages: ModelMessage[];
 }) {
-  const provider = await resolveUserLlmProvider(input.assistantUser);
-  if (!provider) {
+  const modelConfig = await resolveUserModelConfig(input.assistantUser);
+  if (!modelConfig) {
     throw new ChatCommandError(
-      "NO_LLM_PROVIDER",
-      "AI 助理未配置 LLM 提供商",
+      "NO_MODEL_CONFIG",
+      "AI 助理未配置模型",
       input.roomId,
     );
   }
 
   const result = streamText({
-    model: createModelFromProvider(provider),
+    model: createModelFromConfig(modelConfig),
     system: createAssistantSystemPrompt(input.assistantUser),
     // 后续如果要加意愿打分或拦截，只需要改这一处。
     messages: input.modelMessages,
@@ -68,7 +68,7 @@ export async function createAssistantMessageStream(input: {
 
 export async function createAssistantMessageStreamFromRoom(input: {
   roomId: string;
-  assistantUser: UserWithProvider;
+  assistantUser: UserWithModelConfig;
 }) {
   return createAssistantMessageStream({
     roomId: input.roomId,
@@ -106,7 +106,7 @@ async function buildRoomModelMessages(
 }
 
 function createAssistantSystemPrompt(
-  assistantUser: Pick<UserWithProvider, "nickname">,
+  assistantUser: Pick<UserWithModelConfig, "nickname">,
 ) {
   return `你是 ${assistantUser.nickname || "虾米"}，一个有帮助的 AI 助手。请简洁友好地回复。`;
 }
