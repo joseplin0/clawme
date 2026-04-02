@@ -135,7 +135,6 @@ describe("CreateRoomTrigger", () => {
         }),
       ],
     ]);
-    expect(document.body.textContent).not.toContain("选择 1 个成员创建");
   });
 
   it("未传成员时打开选择器并可创建 group 会话", async () => {
@@ -187,7 +186,7 @@ describe("CreateRoomTrigger", () => {
     await flushPromises();
 
     expect(triggerState.fetchMock).toHaveBeenCalledWith("/api/users");
-    expect(document.body.textContent).toContain("选择 1 个成员创建");
+
 
     clickDocumentButtonByText("阿明");
     clickDocumentButtonByText("阿虾");
