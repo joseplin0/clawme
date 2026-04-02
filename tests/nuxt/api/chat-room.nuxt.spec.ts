@@ -18,7 +18,7 @@ await setup({
 });
 
 // describe 必须是同步的
-describe("chat room api e2e", () => {
+describe("chat room api", () => {
   beforeAll(async () => {
     // 初始化数据库连接（此时 .env.test 已加载）
     const databaseUrl =
@@ -46,8 +46,9 @@ describe("chat room api e2e", () => {
           assistantNickname: "Clawme",
           assistantRole: "CI assistant",
           assistantIntro: "Bootstrap fixture for end-to-end tests.",
-          providerName: "CI Mock Provider",
-          providerBaseUrl: "https://example.com/v1",
+          modelConfigName: "CI Mock Provider",
+          provider: "openai-compatible",
+          baseUrl: "https://example.com/v1",
           apiKey: "ci-test-key",
           modelId: "gpt-4o-mini",
         }),
@@ -77,7 +78,7 @@ describe("chat room api e2e", () => {
     `;
 
     if (!owner?.id || !owner.api_secret || !bot?.id) {
-      throw new Error("测试数据库缺少 owner 或 bot 数据，无法执行 chat room api e2e。");
+      throw new Error("测试数据库缺少 owner 或 bot 数据，无法执行 chat room api 测试。");
     }
 
     auth = {

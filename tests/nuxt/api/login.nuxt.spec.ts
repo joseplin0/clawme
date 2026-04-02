@@ -8,7 +8,7 @@ await setup({
 });
 
 // describe 必须是同步的
-describe("login page e2e", () => {
+describe("login page", () => {
   it("可以渲染登录页关键文案", async () => {
     const response = await fetch("/login");
     await $fetch<string>("/login");
