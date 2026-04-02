@@ -37,10 +37,10 @@
           />
           <!-- Icon -->
           <UIcon
-            :name="route.path === link.to ? (link.activeIcon || link.icon) : link.icon"
+            :name="isActiveLink(link) ? (link.activeIcon || link.icon) : link.icon"
             class="text-[22px] transition-all duration-200"
             :class="[
-              route.path === link.to
+              isActiveLink(link)
                 ? 'text-primary scale-110'
                 : 'text-muted group-hover:text-default',
             ]"
@@ -49,7 +49,7 @@
         <!-- Label -->
         <span
           class="text-[10px] font-medium leading-none transition-colors duration-200"
-          :class="route.path === link.to ? 'text-primary' : 'text-muted group-hover:text-default'"
+          :class="isActiveLink(link) ? 'text-primary' : 'text-muted group-hover:text-default'"
         >
           {{ link.label }}
         </span>
@@ -83,4 +83,8 @@ const navLinks = [
     activeIcon: "i-ph-user-fill",
   },
 ];
+
+function isActiveLink(link: { to: string }) {
+  return route.path === link.to || (link.to !== "/" && route.path.startsWith(`${link.to}/`));
+}
 </script>

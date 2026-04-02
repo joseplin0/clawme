@@ -1,6 +1,6 @@
 <template>
   <aside
-    class="hidden md:flex flex-col h-dvh w-14 shrink-0 bg-default border-r border-default/50"
+    class="hidden w-14 shrink-0 border-r border-default/50 bg-default md:sticky md:top-0 md:flex md:h-dvh md:flex-col md:self-start"
   >
     <!-- Logo -->
     <div class="flex items-center justify-center h-14 shrink-0">
@@ -27,7 +27,7 @@
         :title="link.label"
         :class="[
           'relative flex items-center justify-center size-10 rounded-xl cursor-pointer transition-all duration-200',
-          route.path === link.to
+          isActiveLink(link)
             ? 'text-primary'
             : 'text-muted hover:text-default hover:bg-elevated',
         ]"
@@ -39,7 +39,7 @@
           class="absolute top-1.5 right-1.5 size-2 rounded-full bg-red-500 ring-2 ring-default"
         />
         <UIcon
-          :name="route.path === link.to ? (link.activeIcon || link.icon) : link.icon"
+          :name="isActiveLink(link) ? (link.activeIcon || link.icon) : link.icon"
           class="text-xl"
         />
       </component>
@@ -71,4 +71,12 @@ defineProps<{
 
 const route = useRoute();
 const NuxtLink = resolveComponent("NuxtLink");
+
+function isActiveLink(link: MenuItem) {
+  if (!link.to) {
+    return false;
+  }
+
+  return route.path === link.to || (link.to !== "/" && route.path.startsWith(`${link.to}/`));
+}
 </script>

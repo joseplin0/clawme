@@ -1,5 +1,5 @@
 <template>
-  <div class="mt-6 space-y-6">
+  <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
         <h2 class="text-lg font-semibold text-highlighted">模型配置</h2>
