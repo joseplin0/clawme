@@ -28,8 +28,7 @@ type PendingRoomRequest = {
 };
 
 export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
-  implements ChatTransport<UI_MESSAGE>
-{
+  implements ChatTransport<UI_MESSAGE> {
   private ws: WebSocket | null = null;
   private connectionState: WebSocketConnectionState = "disconnected";
   private reconnectAttempts = 0;
@@ -45,7 +44,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
   private stateChangeCallbacks = new Set<(state: WebSocketConnectionState) => void>();
   private connectionPromise: Promise<WebSocket> | null = null;
 
-  constructor(private options: WebSocketChatTransportOptions) {}
+  constructor(private options: WebSocketChatTransportOptions) { }
 
   getConnectionState(): WebSocketConnectionState {
     return this.connectionState;
@@ -272,6 +271,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
           break;
 
         case "room-message":
+          console.log(`[WS] Received message for room ${data.roomId}, requestId: ${data.requestId}`);
           if (data.payload.kind === "chunk" && data.requestId) {
             this.handleStreamChunk(data.requestId, data.payload.chunk);
           }

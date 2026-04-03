@@ -6,7 +6,12 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   vite: {
     optimizeDeps: {
-      include: ["@ai-sdk/vue", "ai"],
+      include: [
+        "@ai-sdk/vue",
+        "ai",
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+      ],
     },
     build: {
       rollupOptions: {

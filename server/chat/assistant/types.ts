@@ -1,5 +1,5 @@
 import type { ModelMessage, UIMessageChunk } from "ai";
-import type { UserWithModelConfig } from "~~/server/services/chat-command.service";
+import type { UserWithModelConfig } from "../chat-command.service";
 
 export interface AssistantStreamResult {
   // 支持 Vercel AI 的 ReadableStream 或我们手动实现的 AsyncGenerator

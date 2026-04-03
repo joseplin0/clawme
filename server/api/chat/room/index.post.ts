@@ -2,7 +2,7 @@ import { createError, defineEventHandler, readBody } from "h3";
 import { z } from "zod";
 import type { CreateRoomRequest, CreateRoomResponse } from "~~/shared/types/clawme";
 import { requireOwnerSession } from "~~/server/utils/auth";
-import { createRoom } from "~~/server/services/room.service";
+import { createRoom } from "~~/server/chat/room.service";
 
 const bodySchema = z.object({
   memberIds: z.array(z.uuid()).min(1),

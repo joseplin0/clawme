@@ -49,7 +49,7 @@ describe("WebSocketChatTransport", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket as unknown as typeof WebSocket);
 
     const transport = new WebSocketChatTransport({
-      url: "ws://localhost:3000/api/ws/chat",
+      url: "ws://localhost:3000/api/chat/socket",
     });
 
     const result = await transport.sendMessageToMembers({
@@ -82,7 +82,7 @@ describe("WebSocketChatTransport", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket as unknown as typeof WebSocket);
 
     const transport = new WebSocketChatTransport({
-      url: "ws://localhost:3000/api/ws/chat",
+      url: "ws://localhost:3000/api/chat/socket",
     });
 
     const stream = await transport.sendMessages({
@@ -152,7 +152,7 @@ describe("WebSocketChatTransport", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket as unknown as typeof WebSocket);
 
     const transport = new WebSocketChatTransport({
-      url: "ws://localhost:3000/api/ws/chat",
+      url: "ws://localhost:3000/api/chat/socket",
     });
     const callback = vi.fn();
     transport.onIncomingMessage(callback);

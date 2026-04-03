@@ -1,4 +1,4 @@
-import { getChatRoomListData } from "~~/server/services";
+import { getChatRoomListData } from "~~/server/chat/chat.service";
 import { requireOwnerSession } from "~~/server/utils/auth";
 
 export default defineEventHandler(async (event) => {

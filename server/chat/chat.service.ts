@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray, sql } from "drizzle-orm";
 import type {
   ClawmeAppState,
   RoomMessageRecord,
@@ -9,7 +9,7 @@ import type {
 import { db, schema } from "~~/server/utils/db";
 import { normalizeRoomType } from "./room.service";
 
-const { roomMessages } = schema;
+const { rooms, roomMembers, roomMessages } = schema;
 type ChatStateSnapshot = Pick<ClawmeAppState, "bot" | "modelConfigs" | "rooms">;
 
 export async function createMessage(input: {

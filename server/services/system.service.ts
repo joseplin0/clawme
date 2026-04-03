@@ -13,8 +13,8 @@ import {
   readSystemConfig,
   setSystemInitialized,
 } from "~~/server/utils/system-config";
-import { createRoomAsync, mapUserToUserProfile } from "./room.service";
-import { createMessage } from "./chat.service";
+import { createRoomAsync, mapUserToUserProfile } from "../chat/room.service";
+import { createMessage } from "../chat/chat.service";
 
 const {
   assets,

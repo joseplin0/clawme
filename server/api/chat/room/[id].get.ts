@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireOwnerSession } from "~~/server/utils/auth";
 import { db, schema } from "~~/server/utils/db";
 import { eq, asc } from "drizzle-orm";
-import { mapUserToUserProfile, normalizeRoomType } from "~~/server/services/room.service";
+import { mapUserToUserProfile, normalizeRoomType } from "~~/server/chat/room.service";
 
 const { roomMessages, rooms } = schema;
 

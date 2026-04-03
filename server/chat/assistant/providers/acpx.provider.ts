@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import readline from "node:readline";
 import type { ModelMessage, UIMessageChunk } from "ai";
 import { db, schema } from "~~/server/utils/db";
-import type { UserWithModelConfig } from "~~/server/services/chat-command.service";
+import type { UserWithModelConfig } from "../../chat-command.service";
 import type { BotStreamProvider, AssistantStreamResult } from "../types";
 
 const { roomMessages } = schema;

@@ -1,6 +1,6 @@
 import { streamText, type ModelMessage } from "ai";
 import { db, schema } from "~~/server/utils/db";
-import { ChatCommandError, type UserWithModelConfig } from "~~/server/services/chat-command.service";
+import { ChatCommandError, type UserWithModelConfig } from "../../chat-command.service";
 import { createModelFromConfig, resolveUserModelConfig } from "~~/server/utils/llm";
 import type { BotStreamProvider, AssistantStreamResult } from "../types";
 
@@ -18,10 +18,17 @@ export class LlmBotProvider implements BotStreamProvider {
     assistantUser: UserWithModelConfig;
     modelMessages: ModelMessage[];
   }): Promise<AssistantStreamResult> {
+    console.log("[LLM Provider] Creating stream for room:", input.roomId);
+    console.log("[LLM Provider] Assistant user:", input.assistantUser.username);
+    console.log("[LLM Provider] Messages count:", input.modelMessages.length);
+
     const modelConfig = await resolveUserModelConfig(input.assistantUser);
     if (!modelConfig) {
+      console.error("[LLM Provider] No model config found for user:", input.assistantUser.username);
       throw new ChatCommandError("NO_MODEL_CONFIG", "AI 助理未配置模型", input.roomId);
     }
+
+    console.log("[LLM Provider] Model config:", modelConfig);
 
     const result = streamText({
       model: createModelFromConfig(modelConfig),
@@ -43,6 +50,8 @@ export class LlmBotProvider implements BotStreamProvider {
           createdAt: Date.now(),
         }),
         onFinish: async ({ responseMessage }) => {
+          console.log("[LLM Provider] Stream finished for room:", input.roomId);
+          console.log("[LLM Provider] Response parts:", responseMessage.parts?.length ?? 0);
           try {
             await db.insert(roomMessages).values({
               roomId: input.roomId,
@@ -51,8 +60,10 @@ export class LlmBotProvider implements BotStreamProvider {
               parts: responseMessage.parts,
               status: "done",
             });
+            console.log("[LLM Provider] Message saved to database");
             resolveCompleted?.();
           } catch (error) {
+            console.error("[LLM Provider] Failed to save message:", error);
             rejectCompleted?.(error);
             throw error;
           }

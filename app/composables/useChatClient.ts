@@ -32,7 +32,7 @@ function getWebSocketUrl(): string {
   // 在浏览器环境中自动推断
   if (import.meta.client) {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${protocol}//${window.location.host}/api/ws/chat`;
+    return `${protocol}//${window.location.host}/api/chat/socket`;
   }
 
   // 服务端渲染时返回空字符串（会在客户端重新连接）

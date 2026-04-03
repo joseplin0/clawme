@@ -34,9 +34,16 @@ export function getModel(): LanguageModel {
 }
 
 export function createModelFromConfig(modelConfig: ModelConfig): LanguageModel {
+  const apiKey = modelConfig.apiKey || process.env.LLM_API_KEY;
+  const baseUrl = modelConfig.baseUrl || process.env.LLM_BASE_URL;
+
+  if (!apiKey) {
+    throw new Error(`API key not found for model ${modelConfig.modelId}. Please set it in model config or LLM_API_KEY env.`);
+  }
+
   return createOpenAI({
-    baseURL: modelConfig.baseUrl || undefined,
-    apiKey: modelConfig.apiKey ?? undefined,
+    baseURL: baseUrl || undefined,
+    apiKey,
   }).languageModel(modelConfig.modelId);
 }
 

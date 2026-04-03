@@ -268,7 +268,7 @@ export const rooms = pgTable(
 
 /** 房间成员表，记录用户加入房间及其角色。 */
 export const roomMembers = pgTable(
-  "room_members",
+  "rooms_members",
   {
     roomId: uuid("room_id")
       .notNull()
@@ -286,14 +286,14 @@ export const roomMembers = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.roomId, table.userId] }),
-    index("idx_room_members_room_id").on(table.roomId),
-    index("idx_room_members_user_id").on(table.userId),
+    index("idx_rooms_members_room_id").on(table.roomId),
+    index("idx_rooms_members_user_id").on(table.userId),
   ],
 );
 
 /** 房间消息表，保存结构化消息 parts。 */
 export const roomMessages = pgTable(
-  "room_messages",
+  "rooms_messages",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     roomId: uuid("room_id")
@@ -314,7 +314,7 @@ export const roomMessages = pgTable(
       .notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [index("idx_room_messages_room_id").on(table.roomId)],
+  (table) => [index("idx_rooms_messages_room_id").on(table.roomId)],
 );
 
 /** 工作流定义表。 */

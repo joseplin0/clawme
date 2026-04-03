@@ -5,11 +5,11 @@ import {
   type MessagePart,
   type SessionType,
 } from "~~/shared/types/clawme";
-import { createMessage } from "~~/server/services/chat.service";
-import { createRoom, normalizeRoomType } from "~~/server/services/room.service";
+import { createMessage } from "./chat.service";
+import { createRoom, normalizeRoomType } from "./room.service";
 import { db, schema } from "~~/server/utils/db";
 
-const { users, roomMembers, rooms } = schema;
+const { users, roomMembers, rooms, roomMessages } = schema;
 
 export type UserWithModelConfig = typeof users.$inferSelect & {
   modelConfig: typeof schema.modelConfigs.$inferSelect | null;
@@ -58,12 +58,21 @@ export async function prepareRoomMessage(input: {
   roomId?: string;
   memberIds?: string[];
 }): Promise<PreparedChatCommand> {
+  console.log("[ChatCommand] prepareRoomMessage called:", {
+    senderId: input.senderId,
+    roomId: input.roomId,
+    memberIds: input.memberIds,
+    contentLength: input.content?.length,
+  });
+
   const content = input.content.trim();
   if (!content) {
     throw new ChatCommandError("EMPTY_CONTENT", "消息内容不能为空", input.roomId);
   }
 
   if (input.roomId) {
+    console.log("[ChatCommand] Finding existing room:", input.roomId);
+
     const session = await db.query.rooms.findFirst({
       where: eq(rooms.id, input.roomId),
       with: {
@@ -78,6 +87,8 @@ export async function prepareRoomMessage(input: {
         },
       },
     });
+
+    console.log("[ChatCommand] Room query completed, found:", !!session);
 
     if (!session) {
       throw new ChatCommandError(
@@ -113,20 +124,34 @@ export async function prepareRoomMessage(input: {
       content,
     });
 
+    console.log("[ChatCommand] User message created:", userMessage.id);
+
+    const assistantTargetUser =
+      roomType === "direct" &&
+        otherParticipants[0]?.user &&
+        isBotUserType(otherParticipants[0].user.type)
+        ? otherParticipants[0].user
+        : undefined;
+
+    console.log("[ChatCommand] Prepared result:", {
+      activeRoomId: session.id,
+      roomType,
+      recipientCount: otherParticipants.length,
+      hasAssistantTarget: !!assistantTargetUser,
+      assistantType: assistantTargetUser?.type,
+    });
+
     return {
       activeRoomId: session.id,
       roomType,
       userMessage,
       uiMessage: toChatUiMessage(userMessage),
       recipientUserIds: otherParticipants.map((participant) => participant.userId),
-      assistantTargetUser:
-        roomType === "direct" &&
-        otherParticipants[0]?.user &&
-        isBotUserType(otherParticipants[0].user.type)
-          ? otherParticipants[0].user
-          : undefined,
+      assistantTargetUser,
     };
   }
+
+  console.log("[ChatCommand] Creating new room with memberIds:", input.memberIds);
 
   const memberIds = Array.from(
     new Set((input.memberIds ?? []).filter((memberId) => memberId !== input.senderId)),
@@ -188,9 +213,9 @@ export async function prepareRoomMessage(input: {
     recipientUserIds: memberIds,
     assistantTargetUser:
       createdRoom.type === "direct" &&
-      memberIds.length === 1 &&
-      targetUsers[0] &&
-      isBotUserType(targetUsers[0].type)
+        memberIds.length === 1 &&
+        targetUsers[0] &&
+        isBotUserType(targetUsers[0].type)
         ? targetUsers[0]
         : undefined,
   };

@@ -1,7 +1,7 @@
 import { createError, defineEventHandler, getRouterParam } from "h3";
 import { z } from "zod";
 import { requireOwnerSession } from "~~/server/utils/auth";
-import { getUserProfileById } from "~~/server/services/room.service";
+import { getUserProfileById } from "~~/server/chat/room.service";
 
 const paramsSchema = z.object({
   id: z.uuid(),

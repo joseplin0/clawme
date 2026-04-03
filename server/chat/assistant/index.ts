@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { ModelMessage } from "ai";
 import { db, schema } from "~~/server/utils/db";
-import type { UserWithModelConfig } from "~~/server/services/chat-command.service";
+import type { UserWithModelConfig } from "../chat-command.service";
 
 // 引入类型和各个 Provider
 import type { BotStreamProvider } from "./types";

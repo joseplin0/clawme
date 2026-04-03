@@ -23,6 +23,7 @@ function publishWsMessage(userIds: string[], message: ChatWsServerMessage) {
     return;
   }
 
+  console.log("[WS EventBus] Emitting to", userIds.length, "users, type:", message.type);
   wsEventBus.emit(PUBLISH_WS_EVENT, {
     userIds,
     message,
@@ -56,6 +57,11 @@ export function publishRoomChunk(
     requestId?: string;
   },
 ) {
+  console.log("[WS EventBus] publishRoomChunk called:", {
+    userIds,
+    roomId: input.roomId,
+    chunkType: (input.chunk as any)?.type,
+  });
   publishWsMessage(userIds, {
     type: "room-message",
     roomId: input.roomId,
