@@ -262,39 +262,35 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
       const rawData =
         typeof event.data === "string" ? event.data : String(event.data);
       const data: ChatWsServerMessage = JSON.parse(rawData);
-      const { type, requestId, chatId, chunk, message, roomId, userId, code, text } =
-        data;
+      const { type } = data;
 
       switch (type) {
         case "ack":
-          if (requestId && roomId) {
-            this.resolvePendingRoomRequest(requestId, roomId);
+          if (data.requestId && data.roomId) {
+            this.resolvePendingRoomRequest(data.requestId, data.roomId);
           }
           break;
 
-        case "stream-chunk":
-          if (requestId && chunk) {
-            this.handleStreamChunk(requestId, chunk);
+        case "room-message":
+          if (data.payload.kind === "chunk" && data.requestId) {
+            this.handleStreamChunk(data.requestId, data.payload.chunk);
           }
-          break;
-
-        case "message":
-          if (chatId && message) {
-            this.handleIncomingMessage(chatId, message, roomId);
+          if (data.payload.kind === "message") {
+            this.handleIncomingMessage(data.roomId, data.payload.message);
           }
           break;
 
         case "typing":
-          console.log(`[WS] User ${userId} is typing in chat ${chatId}`);
+          console.log(`[WS] User ${data.userId} is typing in chat ${data.chatId}`);
           break;
 
         case "error":
-          console.error(`[WS] Server error: ${code} - ${text}`);
+          console.error(`[WS] Server error: ${data.code} - ${data.text}`);
           {
-            const error = new Error(text || "Unknown server error");
+            const error = new Error(data.text || "Unknown server error");
 
-            if (requestId) {
-              this.rejectPendingRequest(requestId, error);
+            if (data.requestId) {
+              this.rejectPendingRequest(data.requestId, error);
               return;
             }
 

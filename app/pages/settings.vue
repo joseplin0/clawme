@@ -9,7 +9,8 @@
       <div class="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)]">
         <aside class="self-start md:sticky md:top-8">
           <nav class="rounded-2xl border border-default/50 bg-default/70 p-2 backdrop-blur-sm">
-            <NuxtLink v-for="item in menuItems" :key="item.to" :to="item.to" :class="[
+            <NuxtLink
+v-for="item in menuItems" :key="item.to" :to="item.to" :class="[
               'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors',
               route.path === item.to
                 ? 'text-black'

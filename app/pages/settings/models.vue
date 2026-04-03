@@ -12,7 +12,8 @@
     </div>
 
     <div class="space-y-4">
-      <UCard v-for="modelConfig in modelConfigs" :key="modelConfig.id"
+      <UCard
+v-for="modelConfig in modelConfigs" :key="modelConfig.id"
         class="hover:border-primary/50 transition-colors">
         <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">

@@ -50,7 +50,7 @@
     </div>
 
     <!-- 瀑布流主体 -->
-    <main class="px-2 py-3 pb-24 md:pb-6" ref="mainRef">
+    <main ref="mainRef" class="px-2 py-3 pb-24 md:pb-6">
       <!-- 瀑布流容器 - CSS columns 方案 -->
       <div
         class="masonry-grid"

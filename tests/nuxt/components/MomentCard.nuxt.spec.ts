@@ -89,7 +89,7 @@ describe("MomentCard", () => {
       },
     });
 
-    const card = wrapper.find("article");
+    const _card = wrapper.find("article");
 
     // image
     const img = wrapper.find("img");

@@ -4,7 +4,8 @@
   </span>
 
   <Teleport to="body">
-    <div v-if="isOpen" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"
+    <div
+v-if="isOpen" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"
       @click.self="close">
       <UCard class="w-full max-w-2xl shadow-2xl">
         <template #header>
@@ -24,27 +25,29 @@
           </div>
 
           <div v-else class="space-y-2">
-            <button v-for="user in filteredUsers" :key="user.id" type="button"
+            <button
+v-for="member in filteredUsers" :key="member.id" type="button"
               class="flex w-full items-center gap-3 rounded-xl border border-default px-3 py-2 text-left transition hover:bg-elevated/60"
               :class="{
-                'border-primary bg-primary/5': selectedMemberIds.includes(user.id),
-              }" @click="toggleUser(user.id)">
-              <UAvatar :src="user.avatar ?? undefined" :alt="user.nickname" size="sm" />
+                'border-primary bg-primary/5': selectedMemberIds.includes(member.id),
+              }" @click="toggleUser(member.id)">
+              <UAvatar :src="member.avatar ?? undefined" :alt="member.nickname" size="sm" />
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
                   <span class="truncate font-medium text-default">
-                    {{ user.nickname }}
+                    {{ member.nickname }}
                   </span>
-                  <UBadge v-if="user.id === currentUserId" color="neutral" variant="subtle" size="xs">
+                  <UBadge v-if="member.id === currentUserId" color="neutral" variant="subtle" size="xs">
                     我
                   </UBadge>
-                  <UBadge v-else-if="user.type === 'bot'" color="primary" variant="subtle" size="xs">
+                  <UBadge v-else-if="isBotUserType(member.type)" color="primary" variant="subtle" size="xs">
                     BOT
                   </UBadge>
                 </div>
-                <p class="truncate text-sm text-muted">@{{ user.username }}</p>
+                <p class="truncate text-sm text-muted">@{{ member.username }}</p>
               </div>
-              <UIcon :name="selectedMemberIds.includes(user.id) ? 'i-lucide-check' : 'i-lucide-plus'"
+              <UIcon
+:name="selectedMemberIds.includes(member.id) ? 'i-lucide-check' : 'i-lucide-plus'"
                 class="text-base text-muted" />
             </button>
           </div>
@@ -59,7 +62,8 @@
               <UButton variant="ghost" color="neutral" @click="close">
                 取消
               </UButton>
-              <UButton color="primary" :loading="creating" :disabled="selectedMemberIds.length === 0"
+              <UButton
+color="primary" :loading="creating" :disabled="selectedMemberIds.length === 0"
                 @click="handleConfirmClick">
                 创建会话
               </UButton>
@@ -72,7 +76,11 @@
 </template>
 
 <script setup lang="ts">
-import type { UserProfile, ChatRoomRecord } from "~~/shared/types/clawme";
+import {
+  isBotUserType,
+  type UserProfile,
+  type ChatRoomRecord,
+} from "~~/shared/types/clawme";
 
 const props = withDefaults(
   defineProps<{

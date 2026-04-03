@@ -1,85 +1,52 @@
-import { streamText, type ModelMessage } from "ai";
 import { eq } from "drizzle-orm";
-import {
-  ChatCommandError,
-  type UserWithModelConfig,
-} from "~~/server/services/chat-command.service";
+import type { ModelMessage } from "ai";
 import { db, schema } from "~~/server/utils/db";
-import {
-  createModelFromConfig,
-  resolveUserModelConfig,
-} from "~~/server/utils/llm";
+import type { UserWithModelConfig } from "~~/server/services/chat-command.service";
+
+// 引入类型和各个 Provider
+import type { BotStreamProvider } from "./types";
+import { LlmBotProvider } from "./providers/llm.provider";
+import { AcpxBotProvider } from "./providers/acpx.provider";
 
 const { roomMessages } = schema;
 
-export async function createAssistantMessageStream(input: {
-  roomId: string;
-  assistantUser: UserWithModelConfig;
-  modelMessages: ModelMessage[];
-}) {
-  const modelConfig = await resolveUserModelConfig(input.assistantUser);
-  if (!modelConfig) {
-    throw new ChatCommandError(
-      "NO_MODEL_CONFIG",
-      "AI 助理未配置模型",
-      input.roomId,
-    );
-  }
+// ============================================================================
+// 1. 注册表：将所有支持的引擎放到数组中
+// ============================================================================
+const providers: BotStreamProvider[] = [
+  new LlmBotProvider(),
+  new AcpxBotProvider(),
+];
 
-  const result = streamText({
-    model: createModelFromConfig(modelConfig),
-    system: createAssistantSystemPrompt(input.assistantUser),
-    // 后续如果要加意愿打分或拦截，只需要改这一处。
-    messages: input.modelMessages,
-  });
-
-  let resolveCompleted: (() => void) | null = null;
-  let rejectCompleted: ((error: unknown) => void) | null = null;
-  const completed = new Promise<void>((resolve, reject) => {
-    resolveCompleted = resolve;
-    rejectCompleted = reject;
-  });
-
-  return {
-    stream: result.toUIMessageStream({
-      messageMetadata: () => ({
-        userId: input.assistantUser.id,
-        createdAt: Date.now(),
-      }),
-      onFinish: async ({ responseMessage }) => {
-        try {
-          await db.insert(roomMessages).values({
-            roomId: input.roomId,
-            senderId: input.assistantUser.id,
-            role: "assistant",
-            parts: responseMessage.parts,
-            status: "done",
-          });
-          resolveCompleted?.();
-        } catch (error) {
-          rejectCompleted?.(error);
-          throw error;
-        }
-      },
-    }),
-    completed,
-  };
-}
-
+// ============================================================================
+// 2. 统一入口 (WebSocket 直接调用)
+// ============================================================================
 export async function createAssistantMessageStreamFromRoom(input: {
   roomId: string;
   assistantUser: UserWithModelConfig;
 }) {
-  return createAssistantMessageStream({
+  const modelMessages = await buildRoomModelMessages(input.roomId);
+  const botType = input.assistantUser.type || "bot";
+
+  // 动态寻找匹配的 Provider
+  const provider = providers.find((p) => p.supports(botType));
+
+  if (!provider) {
+    throw new Error(`无法处理当前类型的 AI 助理: ${botType}`);
+  }
+
+  // 委托给对应的 Provider 处理并返回
+  return provider.createStream({
     roomId: input.roomId,
     assistantUser: input.assistantUser,
-    modelMessages: await buildRoomModelMessages(input.roomId),
+    modelMessages,
   });
 }
 
-async function buildRoomModelMessages(
-  roomId: string,
-): Promise<ModelMessage[]> {
+// ============================================================================
+// 3. 共享的辅助函数
+// ============================================================================
+async function buildRoomModelMessages(roomId: string): Promise<ModelMessage[]> {
   const history = await db.query.roomMessages.findMany({
     where: eq(roomMessages.roomId, roomId),
     orderBy: (messages, { asc }) => [asc(messages.createdAt)],
@@ -103,12 +70,6 @@ async function buildRoomModelMessages(
   }
 
   return modelMessages;
-}
-
-function createAssistantSystemPrompt(
-  assistantUser: Pick<UserWithModelConfig, "nickname">,
-) {
-  return `你是 ${assistantUser.nickname || "虾米"}，一个有帮助的 AI 助手。请简洁友好地回复。`;
 }
 
 function extractTextContent(parts: unknown[]): string {

@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
             message: finalResult
         }
 
-    } catch (error) {
+    } catch {
         return { success: false, message: 'AI 大脑开小差了，请检查 oMLX 是否运行。' }
     }
 })

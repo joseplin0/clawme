@@ -1,11 +1,15 @@
 import { type UIMessage } from "ai";
-import { eq } from "drizzle-orm";
-import { type MessagePart } from "~~/shared/types/clawme";
+import { eq, inArray } from "drizzle-orm";
+import {
+  isBotUserType,
+  type MessagePart,
+  type SessionType,
+} from "~~/shared/types/clawme";
 import { createMessage } from "~~/server/services/chat.service";
 import { createRoom, normalizeRoomType } from "~~/server/services/room.service";
 import { db, schema } from "~~/server/utils/db";
 
-const { users, roomMembers, roomMessages, rooms } = schema;
+const { users, roomMembers, rooms } = schema;
 
 export type UserWithModelConfig = typeof users.$inferSelect & {
   modelConfig: typeof schema.modelConfigs.$inferSelect | null;
@@ -14,9 +18,11 @@ export type UserWithModelConfig = typeof users.$inferSelect & {
 export interface PreparedChatCommand {
   activeRoomId: string;
   createdRoomId?: string;
+  roomType: SessionType;
   userMessage: typeof roomMessages.$inferSelect;
   uiMessage: UIMessage;
-  targetUser: UserWithModelConfig;
+  recipientUserIds: string[];
+  assistantTargetUser?: UserWithModelConfig;
 }
 
 export class ChatCommandError extends Error {
@@ -46,7 +52,7 @@ export async function getRoomMembersForUser(
   return participants;
 }
 
-export async function prepareDirectRoomMessage(input: {
+export async function prepareRoomMessage(input: {
   senderId: string;
   content: string;
   roomId?: string;
@@ -89,18 +95,16 @@ export async function prepareDirectRoomMessage(input: {
       throw new ChatCommandError("FORBIDDEN", "无权访问该房间", input.roomId);
     }
 
-    if (normalizeRoomType(session.type) !== "direct") {
+    const roomType = normalizeRoomType(session.type);
+    const otherParticipants = session.members.filter(
+      (participant) => participant.userId !== input.senderId,
+    );
+    if (otherParticipants.length === 0) {
       throw new ChatCommandError(
-        "UNSUPPORTED_SESSION_TYPE",
-        "当前实时聊天仅支持 direct 房间，group 后续再走扩展链路。",
+        "TARGET_NOT_FOUND",
+        "未找到房间目标",
         input.roomId,
       );
-    }
-
-    const targetUser =
-      session.members.find((participant) => participant.userId !== input.senderId)?.user ?? null;
-    if (!targetUser) {
-      throw new ChatCommandError("TARGET_NOT_FOUND", "未找到房间目标", input.roomId);
     }
 
     const userMessage = await createUserMessage({
@@ -111,9 +115,16 @@ export async function prepareDirectRoomMessage(input: {
 
     return {
       activeRoomId: session.id,
+      roomType,
       userMessage,
       uiMessage: toChatUiMessage(userMessage),
-      targetUser,
+      recipientUserIds: otherParticipants.map((participant) => participant.userId),
+      assistantTargetUser:
+        roomType === "direct" &&
+        otherParticipants[0]?.user &&
+        isBotUserType(otherParticipants[0].user.type)
+          ? otherParticipants[0].user
+          : undefined,
     };
   }
 
@@ -128,40 +139,29 @@ export async function prepareDirectRoomMessage(input: {
     );
   }
 
-  if (memberIds.length !== 1) {
-    throw new ChatCommandError(
-      "UNSUPPORTED_MEMBER_COUNT",
-      "当前实时聊天仅支持通过 memberIds 创建 direct 房间，memberIds 需要且只能包含 1 个成员。",
-    );
-  }
-
-  const [targetUserId] = memberIds;
-  if (!targetUserId) {
-    throw new ChatCommandError(
-      "MISSING_SESSION_OR_MEMBERS",
-      "需要提供 roomId 或 memberIds",
-    );
-  }
-
-  const [sender, targetUser] = await Promise.all([
+  const [sender, targetUsers] = await Promise.all([
     db.query.users.findFirst({
       where: eq(users.id, input.senderId),
     }),
-    db.query.users.findFirst({
-      where: eq(users.id, targetUserId),
+    db.query.users.findMany({
+      where: inArray(users.id, memberIds),
       with: {
         modelConfig: true,
       },
     }),
   ]);
 
-  if (!sender || !targetUser) {
+  if (!sender) {
+    throw new ChatCommandError("USER_NOT_FOUND", "用户不存在");
+  }
+
+  if (targetUsers.length !== memberIds.length) {
     throw new ChatCommandError("USER_NOT_FOUND", "用户不存在");
   }
 
   const createdRoom = await createRoom({
     creatorId: sender.id,
-    memberIds: [targetUser.id],
+    memberIds,
   }).catch((error) => {
     throw new ChatCommandError(
       "SESSION_CREATE_FAILED",
@@ -183,8 +183,16 @@ export async function prepareDirectRoomMessage(input: {
 
   return {
     ...creation,
+    roomType: createdRoom.type,
     uiMessage: toChatUiMessage(creation.userMessage),
-    targetUser,
+    recipientUserIds: memberIds,
+    assistantTargetUser:
+      createdRoom.type === "direct" &&
+      memberIds.length === 1 &&
+      targetUsers[0] &&
+      isBotUserType(targetUsers[0].type)
+        ? targetUsers[0]
+        : undefined,
   };
 }
 

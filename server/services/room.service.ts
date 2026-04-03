@@ -59,7 +59,7 @@ export async function getUserProfileById(
 
 export async function getAllUserProfiles(): Promise<UserProfile[]> {
   const usersList = await db.query.users.findMany({
-    where: inArray(users.type, ["human", "bot"]),
+    where: inArray(users.type, ["human", "bot", "acpx"]),
   });
 
   return usersList.map(mapUserToUserProfile);

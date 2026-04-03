@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import { and, count, eq } from "drizzle-orm";
 import { generateText } from "ai";
 import type {
-  UserProfile,
   BootstrapRequest,
   ClawmeAppState,
   PublicStateResponse,

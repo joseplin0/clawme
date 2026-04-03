@@ -271,7 +271,7 @@ describe("ChatBox", () => {
     expect(boxState.chatInstances[0]!.stop).toHaveBeenCalledTimes(1);
   });
 
-  it("group 房间展示禁发状态并阻止提交", async () => {
+  it("group 房间允许提交消息并复用同一套发送链路", async () => {
     boxState.fetchMock.mockImplementation(async (url: string) => {
       if (url === "/api/chat/room/room-group") {
         const owner = createUser({
@@ -320,11 +320,16 @@ describe("ChatBox", () => {
     await flushPromises();
 
     const composer = wrapper.get('[data-testid="composer"]');
-    expect(composer.attributes("data-ready")).toBe("false");
+    expect(composer.attributes("data-ready")).toBe("true");
 
     await wrapper.get('[data-testid="submit"]').trigger("click");
 
-    expect(boxState.chatInstances[0]!.sendMessage).not.toHaveBeenCalled();
-    expect(boxState.toastAdd).toHaveBeenCalledTimes(1);
+    expect(boxState.chatInstances[0]!.sendMessage).toHaveBeenCalledWith({
+      text: "问候",
+      metadata: expect.objectContaining({
+        userId: "owner-1",
+      }),
+    });
+    expect(boxState.toastAdd).not.toHaveBeenCalled();
   });
 });

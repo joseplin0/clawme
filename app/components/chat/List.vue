@@ -1,5 +1,6 @@
 <template>
-  <UDashboardSidebar v-model:open="sidebarOpen" side="left" mode="slideover" :toggle="false" :auto-close="true"
+  <UDashboardSidebar
+v-model:open="sidebarOpen" side="left" mode="slideover" :toggle="false" :auto-close="true"
     resizable :collapsed-size="0" :default-size="24" :min-size="20" :max-size="70" units="px" :ui="{
       root: '!min-h-0 bg-white dark:bg-gray-900 border-r border-default/50',
       header: 'h-16 px-4',
@@ -7,7 +8,8 @@
     }">
     <template #header>
       <div class="flex w-full items-center gap-3">
-        <UInput v-model="searchQuery" icon="i-lucide-search" placeholder="搜索房间..." variant="soft"
+        <UInput
+v-model="searchQuery" icon="i-lucide-search" placeholder="搜索房间..." variant="soft"
           class="flex-1 rounded-full" :ui="{ base: 'rounded-full text-sm' }" />
         <ChatCreate @created="handleRoomCreated">
           <UButton icon="i-lucide-plus" color="neutral" variant="ghost" class="rounded-full" />
@@ -15,11 +17,13 @@
       </div>
     </template>
 
-    <UScrollArea v-slot="{ item }" :items="filteredRooms" :virtualize="{
+    <UScrollArea
+v-slot="{ item }" :items="filteredRooms" :virtualize="{
       estimateSize: 76,
       skipMeasurement: true,
     }" class="min-h-0 flex-1 w-full">
-      <div data-testid="room-item"
+      <div
+data-testid="room-item"
         class="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors duration-200"
         :class="item.id === modelValue ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'"
         @click="handleSelectRoom(item.id)">

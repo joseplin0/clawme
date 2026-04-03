@@ -12,15 +12,11 @@
         <LazyChatCreate :member-ids="quickCreateMemberIds" @created="handleRoomCreated">
           <UButton variant="ghost" color="neutral" icon="i-lucide-plus" size="sm" class="rounded-full" />
         </LazyChatCreate>
-        <UButton variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class="rounded-full"
+        <UButton
+variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class="rounded-full"
           @click="isDrawerOpen = true" />
       </div>
     </header>
-
-    <div v-if="selectedRoom && !isDirectRoom"
-      class="border-b border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning">
-      当前房间是 group，消息发送链路暂仅保留 direct。
-    </div>
 
     <!-- Chat Messages -->
     <div class="flex min-h-0 flex-1 relative bg-gray-50/80 dark:bg-black/20 shadow-[inset_0_4px_16px_rgba(0,0,0,0.04)]">
@@ -31,28 +27,33 @@
               <UChatShimmer text="对方正在输入..." />
             </div>
           </template>
-          <UChatMessage v-for="message in chatMessages" :key="message.id" :id="message.id" :role="message.role"
+          <UChatMessage
+v-for="message in chatMessages" :id="message.id" :key="message.id" :role="message.role"
             :parts="message.parts" v-bind="getMessageDisplayProps(message)" :ui="{
               root: 'flex w-full mt-4',
               container: 'flex-1 min-w-0 mx-2',
             }">
             <!-- Hide the default role/time header to look more like WeChat -->
             <template #header>
-              <div style="display: none"></div>
+              <div style="display: none"/>
             </template>
             <template #content>
               <div
                 class="px-3 py-[9px] text-[15px] leading-relaxed break-words rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
                 :class="message.metadata?.userId === currentUser?.id ? 'rounded-tr-sm bg-primary text-white' : 'rounded-tl-sm bg-white dark:bg-gray-800 text-default'">
                 <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
-                  <UChatReasoning v-if="isReasoningUIPart(part)" :text="part.text"
+                  <UChatReasoning
+v-if="isReasoningUIPart(part)" :text="part.text"
                     :streaming="getReasoningStreaming(message, index)" class="mb-2 text-sm opacity-90">
-                    <MDCCached :value="part.text" :cache-key="`reasoning-${message.id}-${index}`"
+                    <MDCCached
+:value="part.text" :cache-key="`reasoning-${message.id}-${index}`"
                       class="*:first:mt-0 *:last:mb-0" />
                   </UChatReasoning>
-                  <UChatTool v-else-if="isToolUIPart(part)" :text="getToolName(part)" :streaming="isToolStreaming(part)"
+                  <UChatTool
+v-else-if="isToolUIPart(part)" :text="getToolName(part)" :streaming="isToolStreaming(part)"
                     class="mb-2 text-sm opacity-90" />
-                  <MDCCached v-else-if="isTextUIPart(part)" :value="part.text" :cache-key="`${message.id}-${index}`"
+                  <MDCCached
+v-else-if="isTextUIPart(part)" :value="part.text" :cache-key="`${message.id}-${index}`"
                     class="*:first:mt-0 *:last:mb-0" />
                 </template>
               </div>
@@ -63,7 +64,8 @@
     </div>
 
     <!-- Chat Composer -->
-    <LazyChatComposer :key="activeRoomId || 'empty'" :ready="isChatReady" :status="chatStatus"
+    <LazyChatComposer
+:key="activeRoomId || 'empty'" :ready="isChatReady" :status="chatStatus"
       :placeholder="composerPlaceholder" :mention-items="mentionItems" @submit="handleSubmit" @stop="handleStop"
       @reload="handleReload" />
 
@@ -78,7 +80,7 @@
                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {{ user.nickname }}
                 </p>
-                <UBadge v-if="user.type === 'bot'" size="xs" color="neutral" variant="subtle">BOT</UBadge>
+                <UBadge v-if="isBotUserType(user.type)" size="xs" color="neutral" variant="subtle">BOT</UBadge>
               </div>
               <p class="text-xs text-gray-500 truncate">@{{ user.username }}</p>
             </div>
@@ -113,6 +115,7 @@ import type {
   ChatRoomDetailResponse,
   ClawmeUIMessage,
 } from "~~/shared/types/clawme";
+import { isBotUserType } from "~~/shared/types/clawme";
 import {
   isReasoningStreaming as getNuxtReasoningStreaming,
   isToolStreaming,
@@ -164,7 +167,7 @@ const quickCreateMemberIds = computed(() =>
     .map((user) => user.id),
 );
 const isChatReady = computed(() =>
-  Boolean(activeRoomId.value && chat.value && isDirectRoom.value),
+  Boolean(activeRoomId.value && chat.value),
 );
 
 onMounted(async () => {
@@ -271,17 +274,8 @@ function handleSubmit(text: string) {
     !text.trim() ||
     !chat.value ||
     !currentUser.value?.id ||
-    chatStatus.value !== "ready" ||
-    !isDirectRoom.value
+    chatStatus.value !== "ready"
   ) {
-    if (activeRoomId.value && !isDirectRoom.value) {
-      toast.add({
-        title: "当前房间暂不支持发送消息",
-        description: "group 房间只保留创建和浏览，发送链路后续再接通。",
-        color: "warning",
-        icon: "i-lucide-circle-alert",
-      });
-    }
     return;
   }
 
@@ -308,11 +302,7 @@ function handleStop() {
 }
 
 const composerPlaceholder = computed(() =>
-  !activeRoomId.value
-    ? "请先选择房间..."
-    : isDirectRoom.value
-      ? "发送消息..."
-      : "群组暂不支持发送消息",
+  !activeRoomId.value ? "请先选择房间..." : "发送消息...",
 );
 
 const mentionUsers = computed<UserProfile[]>(() => {
@@ -324,7 +314,7 @@ const mentionItems = computed<EditorMentionMenuItem[]>(() =>
   mentionUsers.value.map((user) => ({
     id: user.id,
     label: user.username,
-    description: `${user.nickname}${user.type === "bot" ? " · BOT" : ""}`,
+    description: `${user.nickname}${isBotUserType(user.type) ? " · BOT" : ""}`,
     avatar: {
       src: user.avatar ?? undefined,
       alt: user.nickname,

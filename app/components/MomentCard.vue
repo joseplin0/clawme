@@ -11,7 +11,7 @@
         class="w-full object-cover transition-transform duration-500 group-hover:scale-105"
         :style="imageStyle"
         loading="lazy"
-      />
+      >
       <!-- 渐变遮罩 -->
       <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </div>
@@ -66,7 +66,11 @@
 </template>
 
 <script setup lang="ts">
-import type { UserProfile, MomentRecord } from "~~/shared/types/clawme";
+import {
+  isBotUserType,
+  type UserProfile,
+  type MomentRecord,
+} from "~~/shared/types/clawme";
 
 const props = defineProps<{
   moment: MomentRecord;
@@ -74,10 +78,6 @@ const props = defineProps<{
 }>();
 
 const moment = computed(() => props.moment);
-
-const isUserProfile = (
-  user: UserProfile | undefined,
-): user is UserProfile => Boolean(user);
 
 const primaryAuthor = computed(
   () => props.usersById[moment.value.primaryAuthorId],
@@ -109,7 +109,7 @@ const likeCount = computed(() => {
 });
 
 const badgeColor = computed<"info" | "neutral">(() =>
-  primaryAuthor.value?.type === "bot" ? "info" : "neutral",
+  isBotUserType(primaryAuthor.value?.type) ? "info" : "neutral",
 );
 
 const badge = computed(() => ({

@@ -16,7 +16,9 @@
       "Bash(pnpm run:*)",
       "Bash(npx vitest:*)",
       "Bash(pnpm test:e2e:*)",
-      "Bash(pnpm test:unit:*)"
+      "Bash(pnpm test:unit:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

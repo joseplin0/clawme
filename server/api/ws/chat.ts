@@ -1,4 +1,3 @@
-import { type UIMessageChunk } from "ai";
 import type {
   ChatWsClientMessage,
   ChatWsConnectionAuth,
@@ -7,13 +6,41 @@ import type {
 import {
   ChatCommandError,
   getRoomMembersForUser,
-  prepareDirectRoomMessage,
+  prepareRoomMessage,
+  type UserWithModelConfig,
 } from "~~/server/services/chat-command.service";
 import { createAssistantMessageStreamFromRoom } from "~~/server/ecosystem/core/AssistantInstant";
 import { resolveOwnerSocketUser } from "~~/server/utils/auth";
+import {
+  publishRoomChunk,
+  publishRoomMessage,
+  publishWsError,
+} from "~~/server/utils/ws-event-bus";
 
 type WSMessage = ChatWsClientMessage;
 type WSResponse = ChatWsServerMessage;
+
+type HandleMessageSendDependencies = {
+  prepareRoomMessage: typeof prepareRoomMessage;
+  createAssistantMessageStreamFromRoom: typeof createAssistantMessageStreamFromRoom;
+  publishRoomMessage: typeof publishRoomMessage;
+  publishRoomChunk: typeof publishRoomChunk;
+  publishWsError: typeof publishWsError;
+  launchBackgroundTask: (task: Promise<void>) => void;
+};
+
+const defaultHandleMessageSendDependencies: HandleMessageSendDependencies = {
+  prepareRoomMessage,
+  createAssistantMessageStreamFromRoom,
+  publishRoomMessage,
+  publishRoomChunk,
+  publishWsError,
+  launchBackgroundTask(task) {
+    void task;
+  },
+};
+
+export const handleMessageSend = createHandleMessageSend();
 
 export default defineWebSocketHandler({
   async upgrade(request: any) {
@@ -181,26 +208,6 @@ function sendChatCommandError(
   );
 }
 
-function sendStreamChunk(
-  peer: any,
-  chatId: string,
-  requestId: string | undefined,
-  chunk: UIMessageChunk,
-) {
-  peer.send(
-    JSON.stringify({
-      type: "stream-chunk",
-      chatId,
-      requestId,
-      chunk,
-    } satisfies WSResponse),
-  );
-}
-
-function sendFinishedStream(peer: any, chatId: string, requestId?: string) {
-  sendStreamChunk(peer, chatId, requestId, { type: "finish" });
-}
-
 function sendRoomAck(
   peer: any,
   chatId: string,
@@ -217,61 +224,159 @@ function sendRoomAck(
   );
 }
 
-async function handleMessageSend(peer: any, data: WSMessage, senderId: string) {
-  const requestId = data.requestId;
-  let chatId = data.roomId;
+export function createHandleMessageSend(
+  dependencies: HandleMessageSendDependencies = defaultHandleMessageSendDependencies,
+) {
+  return async function handleMessageSend(peer: any, data: WSMessage, senderId: string) {
+    const requestId = data.requestId;
+    let chatId = data.roomId;
 
-  try {
-    const prepared = await prepareDirectRoomMessage({
-      senderId,
-      roomId: data.roomId,
-      memberIds: data.memberIds,
-      content: data.content ?? "",
-    });
+    try {
+      const prepared = await dependencies.prepareRoomMessage({
+        senderId,
+        roomId: data.roomId,
+        memberIds: data.memberIds,
+        content: data.content ?? "",
+      });
 
-    chatId = prepared.activeRoomId;
+      chatId = prepared.activeRoomId;
 
-    if (requestId && prepared.createdRoomId) {
-      sendRoomAck(
-        peer,
-        prepared.activeRoomId,
-        requestId,
-        prepared.createdRoomId,
-      );
-    }
+      if (requestId && prepared.createdRoomId) {
+        sendRoomAck(
+          peer,
+          prepared.activeRoomId,
+          requestId,
+          prepared.createdRoomId,
+        );
+      }
 
-    if (prepared.targetUser.type !== "bot") {
-      peer.publish(
-        `user:${prepared.targetUser.id}`,
-        JSON.stringify({
-          type: "message",
-          chatId: prepared.activeRoomId,
+      if (prepared.assistantTargetUser) {
+        dependencies.launchBackgroundTask(
+          publishAssistantStreamToSender(dependencies, {
+            roomId: prepared.activeRoomId,
+            requestId,
+            senderUserId: senderId,
+            assistantUser: prepared.assistantTargetUser,
+          }),
+        );
+        return;
+      }
+
+      if (prepared.recipientUserIds.length > 0) {
+        dependencies.publishRoomMessage(prepared.recipientUserIds, {
+          roomId: prepared.activeRoomId,
           message: prepared.uiMessage,
-          roomId: prepared.createdRoomId,
-        } satisfies WSResponse),
-      );
+        });
+      }
 
-      sendFinishedStream(peer, prepared.activeRoomId, requestId);
-      return;
+      if (requestId) {
+        dependencies.publishRoomChunk([senderId], {
+          roomId: prepared.activeRoomId,
+          requestId,
+          chunk: { type: "finish" },
+        });
+      }
+    } catch (error) {
+      console.error("[WS] Send message error:", error);
+      sendChatCommandError(peer, error, {
+        chatId,
+        requestId,
+      });
     }
+  };
+}
 
-    const assistantReply = await createAssistantMessageStreamFromRoom({
-      roomId: prepared.activeRoomId,
-      assistantUser: prepared.targetUser,
+async function publishAssistantStreamToSender(
+  dependencies: HandleMessageSendDependencies,
+  input: {
+    roomId: string;
+    requestId?: string;
+    senderUserId: string;
+    assistantUser: UserWithModelConfig;
+  },
+) {
+  try {
+    const assistantReply =
+      await dependencies.createAssistantMessageStreamFromRoom({
+        roomId: input.roomId,
+        assistantUser: input.assistantUser,
+      });
+
+    await publishAssistantStreamChunks(dependencies, {
+      roomId: input.roomId,
+      requestId: input.requestId,
+      senderUserId: input.senderUserId,
+      prepared: assistantReply,
     });
-
-    for await (const chunk of assistantReply.stream) {
-      sendStreamChunk(peer, prepared.activeRoomId, requestId, chunk);
-    }
-
-    await assistantReply.completed;
   } catch (error) {
-    console.error("[WS] Send message error:", error);
-    sendChatCommandError(peer, error, {
-      chatId,
-      requestId,
+    console.error("[WS] Assistant stream error:", error);
+    const wsError = toWsErrorPayload(error, input.roomId);
+    dependencies.publishWsError([input.senderUserId], {
+      ...wsError,
+      requestId: input.requestId,
     });
   }
+}
+
+async function publishAssistantStreamChunks(
+  dependencies: HandleMessageSendDependencies,
+  input: {
+    roomId: string;
+    requestId?: string;
+    senderUserId: string;
+    prepared: Awaited<
+      ReturnType<HandleMessageSendDependencies["createAssistantMessageStreamFromRoom"]>
+    >;
+  },
+) {
+  const stream = input.prepared.stream;
+
+  if (stream instanceof ReadableStream) {
+    const reader = stream.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        dependencies.publishRoomChunk([input.senderUserId], {
+          roomId: input.roomId,
+          requestId: input.requestId,
+          chunk: value,
+        });
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  } else {
+    for await (const chunk of stream) {
+      dependencies.publishRoomChunk([input.senderUserId], {
+        roomId: input.roomId,
+        requestId: input.requestId,
+        chunk,
+      });
+    }
+  }
+
+  await input.prepared.completed;
+}
+
+function toWsErrorPayload(
+  error: unknown,
+  chatId?: string,
+): Pick<Extract<WSResponse, { type: "error" }>, "code" | "text" | "chatId"> {
+  if (error instanceof ChatCommandError) {
+    return {
+      code: error.code,
+      text: error.message,
+      chatId: error.chatId ?? chatId,
+    };
+  }
+
+  return {
+    code: "MESSAGE_ERROR",
+    text: error instanceof Error ? error.message : "消息处理失败",
+    chatId,
+  };
 }
 
 async function handleTyping(peer: any, data: WSMessage, senderId: string) {

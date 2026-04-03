@@ -15,7 +15,7 @@ import {
 export const users = pgTable("user", {
   id: uuid("id").primaryKey().defaultRandom(),
   /** 用户类型，human 或 bot。 */
-  type: varchar("type", { enum: ["human", "bot"] })
+  type: varchar("type", { enum: ["human", "bot", "acpx"] })
     .default("human")
     .notNull(),
   username: text("username").notNull().unique(),

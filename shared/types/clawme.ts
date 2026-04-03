@@ -1,6 +1,6 @@
 import type { UIMessage } from "ai";
 
-export type UserType = "human" | "bot";
+export type UserType = "human" | "bot" | "acpx";
 export type SessionType = "direct" | "group";
 export type DbMessageRole = "user" | "assistant" | "system";
 export type MessageRole = DbMessageRole;
@@ -52,6 +52,12 @@ export interface UserProfile {
   modelConfigId: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export function isBotUserType(
+  type: UserType | string | null | undefined,
+): type is Exclude<UserType, "human"> {
+  return type === "bot" || type === "acpx";
 }
 
 export interface ModelConfigRecord {

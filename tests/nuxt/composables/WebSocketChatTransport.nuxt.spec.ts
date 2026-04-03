@@ -77,4 +77,111 @@ describe("WebSocketChatTransport", () => {
 
     await expect(result.roomId).resolves.toBe("room-1");
   });
+
+  it("将 room-message chunk payload 路由到待处理流", async () => {
+    vi.stubGlobal("WebSocket", FakeWebSocket as unknown as typeof WebSocket);
+
+    const transport = new WebSocketChatTransport({
+      url: "ws://localhost:3000/api/ws/chat",
+    });
+
+    const stream = await transport.sendMessages({
+      trigger: "submit-message",
+      chatId: "room-1",
+      messageId: undefined,
+      messages: [{
+        id: "user-message-1",
+        role: "user",
+        parts: [{ type: "text", text: "你好" }],
+      }] as any,
+      abortSignal: undefined,
+    });
+
+    const socket = FakeWebSocket.instances[0];
+    const payload = JSON.parse(socket!.sent[0] ?? "{}");
+    const reader = stream.getReader();
+
+    socket!.emitMessage({
+      type: "room-message",
+      roomId: "room-1",
+      requestId: payload.requestId,
+      payload: {
+        kind: "chunk",
+        chunk: {
+          type: "text-delta",
+          id: "assistant-message-1",
+          delta: "世界",
+        },
+      },
+    });
+
+    await expect(reader.read()).resolves.toMatchObject({
+      done: false,
+      value: {
+        type: "text-delta",
+        delta: "世界",
+      },
+    });
+
+    socket!.emitMessage({
+      type: "room-message",
+      roomId: "room-1",
+      requestId: payload.requestId,
+      payload: {
+        kind: "chunk",
+        chunk: {
+          type: "finish",
+        },
+      },
+    });
+
+    await expect(reader.read()).resolves.toMatchObject({
+      done: false,
+      value: {
+        type: "finish",
+      },
+    });
+
+    await expect(reader.read()).resolves.toEqual({
+      done: true,
+      value: undefined,
+    });
+  });
+
+  it("将 room-message message payload 路由到消息回调", async () => {
+    vi.stubGlobal("WebSocket", FakeWebSocket as unknown as typeof WebSocket);
+
+    const transport = new WebSocketChatTransport({
+      url: "ws://localhost:3000/api/ws/chat",
+    });
+    const callback = vi.fn();
+    transport.onIncomingMessage(callback);
+
+    await transport.sendMessageToMembers({
+      memberIds: ["bot-1"],
+      content: "你好",
+    });
+
+    const socket = FakeWebSocket.instances[0];
+    socket!.emitMessage({
+      type: "room-message",
+      roomId: "room-1",
+      payload: {
+        kind: "message",
+        message: {
+          id: "assistant-message-1",
+          role: "assistant",
+          parts: [{ type: "text", text: "收到" }],
+        },
+      },
+    });
+
+    expect(callback).toHaveBeenCalledWith(
+      "room-1",
+      expect.objectContaining({
+        id: "assistant-message-1",
+      }),
+      undefined,
+    );
+  });
 });

@@ -9,7 +9,7 @@ import type {
 import { db, schema } from "~~/server/utils/db";
 import { normalizeRoomType } from "./room.service";
 
-const { roomMessages, rooms } = schema;
+const { roomMessages } = schema;
 type ChatStateSnapshot = Pick<ClawmeAppState, "bot" | "modelConfigs" | "rooms">;
 
 export async function createMessage(input: {

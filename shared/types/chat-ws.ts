@@ -9,19 +9,45 @@ export interface ChatWsClientMessage {
   messageId?: string;
 }
 
-export interface ChatWsServerMessage<
+export type ChatWsRoomMessagePayload<
   UI_MESSAGE extends UIMessage = UIMessage,
-> {
-  type: "ack" | "stream-chunk" | "message" | "typing" | "error";
-  requestId?: string;
-  chatId?: string;
-  chunk?: UIMessageChunk;
-  message?: UI_MESSAGE;
-  roomId?: string;
-  userId?: string;
-  code?: string;
-  text?: string;
-}
+> =
+  | {
+      kind: "message";
+      message: UI_MESSAGE;
+    }
+  | {
+      kind: "chunk";
+      chunk: UIMessageChunk;
+    };
+
+export type ChatWsServerMessage<
+  UI_MESSAGE extends UIMessage = UIMessage,
+> =
+  | {
+      type: "ack";
+      requestId: string;
+      chatId: string;
+      roomId: string;
+    }
+  | {
+      type: "room-message";
+      roomId: string;
+      requestId?: string;
+      payload: ChatWsRoomMessagePayload<UI_MESSAGE>;
+    }
+  | {
+      type: "typing";
+      chatId: string;
+      userId: string;
+    }
+  | {
+      type: "error";
+      code: string;
+      text: string;
+      chatId?: string;
+      requestId?: string;
+    };
 
 export interface ChatWsConnectionAuth {
   userId: string;

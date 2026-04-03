@@ -155,6 +155,7 @@ import type {
   UpdateUserRequest,
   UserProfile,
 } from "~~/shared/types/clawme";
+import { isBotUserType } from "~~/shared/types/clawme";
 import {
   getModelConfigDefaults,
   getModelProviderCatalogEntry,
@@ -289,7 +290,7 @@ async function saveUser(userId: string) {
     };
 
     const user = users.value?.find((candidate) => candidate.id === userId);
-    if (user?.type === "bot") {
+    if (isBotUserType(user?.type)) {
       body.role = editForm.role;
       body.intro = editForm.intro;
       body.modelConfigId = editForm.modelConfigId;
