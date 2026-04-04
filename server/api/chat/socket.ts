@@ -216,7 +216,7 @@ async function handleMessageSend(peer: any, data: WSMessage, senderId: string) {
       senderId,
       roomId: data.roomId,
       memberIds: data.memberIds,
-      content: data.content ?? "",
+      clientMessage: data.message,
       requestId,
       onRoomCreated: (result) => {
         if (requestId && result.createdRoomId) {

@@ -9,6 +9,19 @@ import { createMessage } from "./chat.service";
 import { createRoom, normalizeRoomType } from "./room.service";
 import { db, schema } from "~~/server/utils/db";
 
+/** 从 UIMessage.parts 中提取文本内容 */
+function extractTextFromParts(parts: UIMessage["parts"]): string {
+  return parts
+    .flatMap((part) => {
+      if (part.type !== "text") {
+        return [];
+      }
+      const text = part.text.trim();
+      return text ? [text] : [];
+    })
+    .join("\n");
+}
+
 const { users, roomMembers, rooms, roomMessages } = schema;
 
 export type UserWithModelConfig = typeof users.$inferSelect & {
@@ -54,7 +67,8 @@ export async function getRoomMembersForUser(
 
 export async function prepareRoomMessage(input: {
   senderId: string;
-  content: string;
+  /** 前端发送的完整消息 */
+  clientMessage?: UIMessage;
   roomId?: string;
   memberIds?: string[];
 }): Promise<PreparedChatCommand> {
@@ -62,10 +76,15 @@ export async function prepareRoomMessage(input: {
     senderId: input.senderId,
     roomId: input.roomId,
     memberIds: input.memberIds,
-    contentLength: input.content?.length,
+    hasClientMessage: !!input.clientMessage,
   });
 
-  const content = input.content.trim();
+  if (!input.clientMessage) {
+    throw new ChatCommandError("EMPTY_CONTENT", "消息内容不能为空", input.roomId);
+  }
+
+  const parts = input.clientMessage.parts;
+  const content = extractTextFromParts(parts);
   if (!content) {
     throw new ChatCommandError("EMPTY_CONTENT", "消息内容不能为空", input.roomId);
   }
@@ -121,7 +140,7 @@ export async function prepareRoomMessage(input: {
     const userMessage = await createUserMessage({
       roomId: session.id,
       senderId: input.senderId,
-      content,
+      parts,
     });
 
     console.log("[ChatCommand] User message created:", userMessage.id);
@@ -145,7 +164,7 @@ export async function prepareRoomMessage(input: {
       activeRoomId: session.id,
       roomType,
       userMessage,
-      uiMessage: toChatUiMessage(userMessage),
+      uiMessage: toChatUiMessage(userMessage, input.clientMessage?.id),
       recipientUserIds: otherParticipants.map((participant) => participant.userId),
       assistantTargetUser,
     };
@@ -197,7 +216,7 @@ export async function prepareRoomMessage(input: {
   const userMessage = await createUserMessage({
     roomId: createdRoom.id,
     senderId: input.senderId,
-    content,
+    parts,
   });
 
   const creation = {
@@ -209,7 +228,7 @@ export async function prepareRoomMessage(input: {
   return {
     ...creation,
     roomType: createdRoom.type,
-    uiMessage: toChatUiMessage(creation.userMessage),
+    uiMessage: toChatUiMessage(creation.userMessage, input.clientMessage?.id),
     recipientUserIds: memberIds,
     assistantTargetUser:
       createdRoom.type === "direct" &&
@@ -224,14 +243,14 @@ export async function prepareRoomMessage(input: {
 async function createUserMessage(input: {
   roomId: string;
   senderId: string;
-  content: string;
+  parts: UIMessage["parts"];
 }) {
   try {
     const message = await createMessage({
       roomId: input.roomId,
       senderId: input.senderId,
       role: "user",
-      parts: [{ type: "text", text: input.content }],
+      parts: input.parts as MessagePart[],
       status: "done",
     });
 
@@ -255,9 +274,10 @@ async function createUserMessage(input: {
 
 function toChatUiMessage(
   message: typeof roomMessages.$inferSelect,
+  clientMessageId?: string,
 ): UIMessage {
   return {
-    id: message.id,
+    id: clientMessageId ?? message.id,
     role: message.role,
     parts: ((message.parts as MessagePart[]) ?? []) as UIMessage["parts"],
     metadata: {

@@ -111,12 +111,11 @@ export function useChatClient() {
       });
       return null;
     }
-
+    console.log("Sending message to room", roomId, "with content:", content);
     try {
       const stream = await transport.sendMessages({
         trigger: "submit-message",
         chatId: roomId,
-        messageId: undefined,
         messages: [{
           id: crypto.randomUUID(),
           role: "user",

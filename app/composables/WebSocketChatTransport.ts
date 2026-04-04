@@ -63,19 +63,6 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
     return `ws-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
 
-  private extractTextContent(message: UI_MESSAGE): string {
-    return message.parts
-      .flatMap((part) => {
-        if (part.type !== "text") {
-          return [];
-        }
-
-        const text = part.text.trim();
-        return text ? [text] : [];
-      })
-      .join("\n");
-  }
-
   private cleanupPendingRequest(requestId: string): void {
     this.pendingStreams.delete(requestId);
     this.pendingRoomRequests.delete(requestId);
@@ -331,24 +318,23 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
   async sendMessages({
     trigger,
     chatId,
-    messageId,
     messages,
     abortSignal,
   }: {
     trigger: "submit-message" | "regenerate-message";
     chatId: string;
-    messageId: string | undefined;
     messages: UI_MESSAGE[];
     abortSignal: AbortSignal | undefined;
   }): Promise<ReadableStream<UIMessageChunk>> {
     if (trigger === "regenerate-message") {
       throw new Error("WebSocket transport 暂不支持 regenerate-message");
     }
+    console.log("Preparing to send messages to chat", chatId, "with trigger:", trigger);
+
 
     const lastMessage = messages[messages.length - 1];
-    const content = lastMessage ? this.extractTextContent(lastMessage) : "";
-    if (!content) {
-      throw new Error("最后一条消息缺少可发送的文本内容");
+    if (!lastMessage) {
+      throw new Error("没有可发送的消息");
     }
 
     const requestId = this.createRequestId();
@@ -383,8 +369,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
       type: "send",
       requestId,
       roomId: chatId,
-      content,
-      messageId,
+      message: lastMessage,
     };
 
     ws.send(JSON.stringify(payload));
@@ -436,11 +421,18 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
       },
     });
 
+    // 构造简单的文本消息
+    const message: UIMessage = {
+      id: this.createRequestId(),
+      role: "user",
+      parts: [{ type: "text", text: content }],
+    };
+
     const payload: ChatWsClientMessage = {
       type: "send",
       requestId,
       memberIds,
-      content,
+      message,
     };
 
     ws.send(JSON.stringify(payload));

@@ -17,7 +17,7 @@
           :starter-kit="editorStarterKit"
           :editor-props="editorInputProps"
           :ui="{
-            content: 'min-h-[80px] max-h-[240px] overflow-y-auto py-3 px-4',
+            content: 'min-h-[80px] max-h-[240px] overflow-y-auto py-0 px-4',
             base: 'w-full text-[15px] leading-relaxed outline-none [&_p]:my-0 [&_.mention]:font-medium text-default bg-transparent',
           }"
           class="flex w-full flex-col"

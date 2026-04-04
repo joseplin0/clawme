@@ -1,3 +1,4 @@
+import { type UIMessage } from "ai";
 import {
   ChatCommandError,
   getRoomMembersForUser,
@@ -24,7 +25,8 @@ export async function sendRoomMessage(input: {
   senderId: string;
   roomId?: string;
   memberIds?: string[];
-  content: string;
+  /** 前端发送的完整消息 */
+  clientMessage?: UIMessage;
   requestId?: string;
   onRoomCreated?: (result: SendRoomMessageResult) => void;
 }): Promise<SendRoomMessageResult> {
@@ -32,14 +34,14 @@ export async function sendRoomMessage(input: {
     senderId: input.senderId,
     roomId: input.roomId,
     memberIds: input.memberIds,
-    contentLength: input.content?.length,
+    hasClientMessage: !!input.clientMessage,
   });
 
   const prepared = await prepareRoomMessage({
     senderId: input.senderId,
     roomId: input.roomId,
     memberIds: input.memberIds,
-    content: input.content,
+    clientMessage: input.clientMessage,
   });
 
   console.log("[Core] Message prepared:", {
