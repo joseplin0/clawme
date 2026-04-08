@@ -1,6 +1,6 @@
 # 项目现状
 
-更新时间：2026-03-29
+更新时间：2026-04-08
 
 ## 一句话结论
 
@@ -8,7 +8,8 @@
 
 ## 机器校验
 
-- 2026-03-29 执行 `pnpm exec nuxi typecheck`，通过。
+- 2026-04-08 执行 `pnpm exec nuxi typecheck`，通过。
+- 2026-04-08 执行 `pnpm exec vitest run tests/nuxt/composables/WebSocketChatTransport.nuxt.spec.ts tests/nuxt/server/ws-chat.nuxt.spec.ts`，通过。
 - 2026-03-29 执行 `pnpm build`，通过。
 
 ## 已完成能力
@@ -19,6 +20,7 @@
 - 全局 `UApp`、默认布局和登录布局已接通。
 - 全局路由中间件会根据系统初始化状态和登录状态自动跳转 `/setup`、`/login`、`/moment`。
 - 已接入 `@nuxt/test-utils + vitest` 测试底座，仓库内已有聊天组件测试与 E2E 运行脚本。
+- 工作区已升级到 `vite@8.0.7`，当前通过 `pnpm.overrides` 统一锁定，依赖树已切到 Rolldown。
 
 ### 数据与初始化
 
@@ -59,6 +61,15 @@
 - `server/api/agent.post.ts` 仍是早期实验性路由，不属于当前主链路。
 - `server/ecosystem/jobs/LifePulseWorker.ts` 目前是空文件。
 - `server/ecosystem/evaluators/VectorMatch.ts` 目前是空文件。
+
+### 工具链注意事项
+
+- 升级到 Vite 8 后，执行 Vitest 仍会看到 `esbuild` -> `oxc` 的 deprecated warning。
+- 这条 warning 目前不是仓库内显式配置触发，而是上游测试链内部仍在注入 `esbuild` 选项：
+  - `vitest@3.2.4`
+  - `@nuxt/test-utils@3.23.0`
+- 当前仓库内没有额外可迁移的 `vite.esbuild` / `vitest.esbuild` 配置，因此不建议为了压掉该 warning 额外打补丁。
+- 后续如果要继续处理，优先关注 `vitest` 与 `@nuxt/test-utils` 的稳定版本是否完成 `oxc` 迁移，再考虑整组升级测试链。
 
 ## 与旧文档的主要偏差
 

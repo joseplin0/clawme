@@ -1,12 +1,14 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 let sendRoomMessage: typeof import("~~/server/chat/core").sendRoomMessage;
-let prepareRoomMessage: typeof import("~~/server/chat/chat-command.service").prepareRoomMessage;
+let chatCommandService: typeof import("~~/server/chat/chat-command.service");
+let wsEventBus: typeof import("~~/server/utils/ws-event-bus");
 
 beforeAll(async () => {
   vi.stubGlobal("defineWebSocketHandler", (handler: unknown) => handler);
   ({ sendRoomMessage } = await import("~~/server/chat/core"));
-  ({ prepareRoomMessage } = await import("~~/server/chat/chat-command.service"));
+  chatCommandService = await import("~~/server/chat/chat-command.service");
+  wsEventBus = await import("~~/server/utils/ws-event-bus");
 });
 
 function createPreparedMessage(overrides: Record<string, unknown> = {}) {
@@ -33,21 +35,25 @@ function createPreparedMessage(overrides: Record<string, unknown> = {}) {
 
 describe("sendRoomMessage", () => {
   it("direct-human 消息推送给单个接收者，并向发送方补 finish", async () => {
-    const publishRoomMessage = vi.fn();
-    const publishRoomChunk = vi.fn();
+    const publishRoomMessage = vi
+      .spyOn(wsEventBus, "publishRoomMessage")
+      .mockImplementation(() => {});
+    const publishRoomChunk = vi
+      .spyOn(wsEventBus, "publishRoomChunk")
+      .mockImplementation(() => {});
 
-    vi.mocked(prepareRoomMessage).mockResolvedValue(createPreparedMessage() as any);
-
-    vi.doMock("~~/server/utils/ws-event-bus", () => ({
-      publishRoomMessage,
-      publishRoomChunk,
-      publishWsError: vi.fn(),
-    }));
+    vi.spyOn(chatCommandService, "prepareRoomMessage").mockResolvedValue(
+      createPreparedMessage() as any,
+    );
 
     await sendRoomMessage({
       senderId: "sender-1",
       roomId: "room-1",
-      content: "你好",
+      clientMessage: {
+        id: "user-message-1",
+        role: "user",
+        parts: [{ type: "text", text: "你好" }],
+      },
       requestId: "req-1",
     });
 

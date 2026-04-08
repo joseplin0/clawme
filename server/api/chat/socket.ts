@@ -13,6 +13,9 @@ import { onPublishWs } from "~~/server/utils/ws-event-bus";
 
 type WSMessage = ChatWsClientMessage;
 type WSResponse = ChatWsServerMessage;
+type WSSendMessage = Extract<WSMessage, { type: "send" }>;
+type WSTypingMessage = Extract<WSMessage, { type: "typing" }>;
+type WSReadMessage = Extract<WSMessage, { type: "read" }>;
 
 export default defineWebSocketHandler({
   async upgrade(request: any) {
@@ -87,7 +90,7 @@ export default defineWebSocketHandler({
 
       if (!senderId) {
         sendWsError(peer, "UNAUTHORIZED", "用户未认证", {
-          requestId: parsedData.requestId,
+          requestId: getRequestId(parsedData),
         });
         return;
       }
@@ -106,16 +109,16 @@ export default defineWebSocketHandler({
           sendWsError(
             peer,
             "UNKNOWN_TYPE",
-            `未知的消息类型: ${parsedData.type}`,
+            `未知的消息类型: ${getMessageType(parsedData)}`,
             {
-              requestId: parsedData.requestId,
+              requestId: getRequestId(parsedData),
             },
           );
       }
     } catch (error) {
       console.error("[WS] Message handling error:", error);
       sendChatCommandError(peer, error, {
-        requestId: data?.requestId,
+        requestId: data ? getRequestId(data) : undefined,
         chatId: data?.roomId,
       });
     }
@@ -208,7 +211,19 @@ function sendRoomAck(
   );
 }
 
-async function handleMessageSend(peer: any, data: WSMessage, senderId: string) {
+function getRequestId(data: WSMessage): string | undefined {
+  return data.type === "send" ? data.requestId : undefined;
+}
+
+function getMessageType(data: WSMessage): string {
+  return (data as { type: string }).type;
+}
+
+async function handleMessageSend(
+  peer: any,
+  data: WSSendMessage,
+  senderId: string,
+) {
   const requestId = data.requestId;
 
   try {
@@ -233,7 +248,7 @@ async function handleMessageSend(peer: any, data: WSMessage, senderId: string) {
   }
 }
 
-async function handleTyping(peer: any, data: WSMessage, senderId: string) {
+async function handleTyping(peer: any, data: WSTypingMessage, senderId: string) {
   const roomId = data.roomId;
 
   if (!roomId) {
@@ -264,7 +279,7 @@ async function handleTyping(peer: any, data: WSMessage, senderId: string) {
   }
 }
 
-async function handleRead(peer: any, data: WSMessage, senderId: string) {
+async function handleRead(peer: any, data: WSReadMessage, senderId: string) {
   const roomId = data.roomId;
   const messageId = data.messageId;
 

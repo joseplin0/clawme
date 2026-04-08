@@ -1,5 +1,10 @@
 import type { OwnerSessionUser } from "~~/server/utils/auth";
 
 declare module "#auth-utils" {
-  type User = OwnerSessionUser;
+  interface User {
+    id: OwnerSessionUser["id"];
+    username: OwnerSessionUser["username"];
+    nickname: OwnerSessionUser["nickname"];
+    role: OwnerSessionUser["role"];
+  }
 }

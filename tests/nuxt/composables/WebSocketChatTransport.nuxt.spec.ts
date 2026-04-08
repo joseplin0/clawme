@@ -64,7 +64,10 @@ describe("WebSocketChatTransport", () => {
     expect(payload).toMatchObject({
       type: "send",
       memberIds: ["bot-1"],
-      content: "你好",
+      message: {
+        role: "user",
+        parts: [{ type: "text", text: "你好" }],
+      },
     });
     expect(payload.targetUserId).toBeUndefined();
 
@@ -88,7 +91,6 @@ describe("WebSocketChatTransport", () => {
     const stream = await transport.sendMessages({
       trigger: "submit-message",
       chatId: "room-1",
-      messageId: undefined,
       messages: [{
         id: "user-message-1",
         role: "user",
