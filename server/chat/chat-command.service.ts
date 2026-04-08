@@ -6,7 +6,7 @@ import {
   type SessionType,
 } from "~~/shared/types/clawme";
 import { createMessage } from "./chat.service";
-import { createRoom, normalizeRoomType } from "./room.service";
+import { createRoom, normalizeRoomType, type SystemMessageData } from "./room.service";
 import { db, schema } from "~~/server/utils/db";
 
 /** 从 UIMessage.parts 中提取文本内容 */
@@ -36,6 +36,7 @@ export interface PreparedChatCommand {
   uiMessage: UIMessage;
   recipientUserIds: string[];
   assistantTargetUser?: UserWithModelConfig;
+  systemMessages?: SystemMessageData[];
 }
 
 export class ChatCommandError extends Error {
@@ -237,6 +238,7 @@ export async function prepareRoomMessage(input: {
         isBotUserType(targetUsers[0].type)
         ? targetUsers[0]
         : undefined,
+    systemMessages: createdRoom.systemMessages,
   };
 }
 

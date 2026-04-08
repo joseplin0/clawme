@@ -61,6 +61,26 @@ export async function sendRoomMessage(input: {
     input.onRoomCreated(result);
   }
 
+  // 广播系统消息给所有房间成员
+  if (prepared.systemMessages && prepared.systemMessages.length > 0) {
+    const allMemberIds = [input.senderId, ...prepared.recipientUserIds];
+    for (const sysMsg of prepared.systemMessages) {
+      const uiMessage: UIMessage = {
+        id: sysMsg.id,
+        role: sysMsg.role,
+        parts: sysMsg.parts as UIMessage["parts"],
+        metadata: {
+          createdAt: sysMsg.createdAt.getTime(),
+          userId: sysMsg.senderId,
+        },
+      };
+      publishRoomMessage(allMemberIds, {
+        roomId: prepared.activeRoomId,
+        message: uiMessage,
+      });
+    }
+  }
+
   // 如果有 AI 助手目标，启动后台流式回复
   if (prepared.assistantTargetUser) {
     console.log("[Core] Starting assistant stream for user:", prepared.assistantTargetUser.username);

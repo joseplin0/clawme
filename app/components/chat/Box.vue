@@ -24,29 +24,49 @@
               <UChatShimmer text="对方正在输入..." />
             </div>
           </template>
-          <UChatMessage
-v-for="message in chatMessages" :id="message.id" :key="message.id" :role="message.role" :parts="message.parts" v-bind="getMessageDisplayProps(message)" :ui="{
-            root: 'flex w-full ',
-            container: 'flex-1 min-w-0 mx-2',
-          }">
-            <!-- Hide the default role/time header to look more like WeChat -->
-            <template #header>
-              <div style="display: none" />
-            </template>
-            <template #content>
-              <div
-class="px-3 py-[9px] text-[15px] leading-relaxed break-words rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
-                :class="message.metadata?.userId === currentUser?.id ? 'rounded-tr-sm bg-primary text-white' : 'rounded-tl-sm bg-white dark:bg-gray-800 text-default'">
+          <template v-for="message in chatMessages" :key="message.id">
+            <!-- System Message -->
+            <div
+              v-if="message.role === 'system'"
+              class="flex justify-center w-full my-2"
+            >
+              <span class="text-xs text-gray-400 dark:text-gray-500 px-3 py-1">
                 <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
-                  <UChatReasoning v-if="isReasoningUIPart(part)" :text="part.text" :streaming="getReasoningStreaming(message, index)" class="mb-2 text-sm opacity-90">
-                    <MDCCached :value="part.text" :cache-key="`reasoning-${message.id}-${index}`" class="*:first:mt-0 *:last:mb-0" />
-                  </UChatReasoning>
-                  <UChatTool v-else-if="isToolUIPart(part)" :text="getToolName(part)" :streaming="isToolStreaming(part)" class="mb-2 text-sm opacity-90" />
-                  <MDCCached v-else-if="isTextUIPart(part)" :value="part.text" :cache-key="`${message.id}-${index}`" class="*:first:mt-0 *:last:mb-0" />
+                  <span v-if="isTextUIPart(part)">{{ part.text }}</span>
                 </template>
-              </div>
-            </template>
-          </UChatMessage>
+              </span>
+            </div>
+            <!-- User/Assistant Message -->
+            <UChatMessage
+              v-else
+              :id="message.id"
+              :role="message.role"
+              :parts="message.parts"
+              v-bind="getMessageDisplayProps(message)"
+              :ui="{
+                root: 'flex w-full ',
+                container: 'flex-1 min-w-0 mx-2',
+              }"
+            >
+              <!-- Hide the default role/time header to look more like WeChat -->
+              <template #header>
+                <div style="display: none" />
+              </template>
+              <template #content>
+                <div
+                  class="px-3 py-[9px] text-[15px] leading-relaxed break-words rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+                  :class="message.metadata?.userId === currentUser?.id ? 'rounded-tr-sm bg-primary text-white' : 'rounded-tl-sm bg-white dark:bg-gray-800 text-default'">
+                  <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
+                    <UChatReasoning v-if="isReasoningUIPart(part)" :text="part.text" :streaming="getReasoningStreaming(message, index)" class="mb-2 text-sm opacity-90">
+                      <MDCCached :value="part.text" :cache-key="`reasoning-${message.id}-${index}`" class="*:first:mt-0 *:last:mb-0" />
+                    </UChatReasoning>
+                    <UChatTool v-else-if="isToolUIPart(part)" :text="getToolName(part)" :streaming="isToolStreaming(part)" class="mb-2 text-sm opacity-90" />
+                    <MDCCached v-else-if="isTextUIPart(part)" :value="part.text" :cache-key="`${message.id}-${index}`" class="*:first:mt-0 *:last:mb-0" />
+                  </template>
+                </div>
+              </template>
+            </UChatMessage>
+          </template>
         </UChatMessages>
       </UContainer>
     </div>

@@ -1,8 +1,8 @@
 import { eq, inArray } from "drizzle-orm";
-import type { UserProfile, ChatRoomRecord, SessionType } from "~~/shared/types/clawme";
+import type { UserProfile, ChatRoomRecord, SessionType, MessagePart } from "~~/shared/types/clawme";
 import { db, schema } from "~~/server/utils/db";
 
-const { roomMembers, rooms, users } = schema;
+const { roomMembers, rooms, users, roomMessages } = schema;
 
 type UserRecord = typeof users.$inferSelect;
 type RoomRecord = typeof rooms.$inferSelect;
@@ -11,6 +11,19 @@ export interface CreateRoomInput {
   creatorId: string;
   memberIds: string[];
   title?: string;
+}
+
+export interface SystemMessageData {
+  id: string;
+  roomId: string;
+  senderId: string;
+  role: "system";
+  parts: MessagePart[];
+  createdAt: Date;
+}
+
+export interface CreateRoomResult extends ChatRoomRecord {
+  systemMessages: SystemMessageData[];
 }
 
 export function normalizeRoomType(roomType: string | null | undefined): SessionType {
@@ -67,7 +80,7 @@ export async function getAllUserProfiles(): Promise<UserProfile[]> {
 
 export async function createRoom(
   input: CreateRoomInput,
-): Promise<ChatRoomRecord> {
+): Promise<CreateRoomResult> {
   const memberIds = Array.from(
     new Set(input.memberIds.filter((memberId) => memberId !== input.creatorId)),
   );
@@ -103,7 +116,7 @@ export async function createRoom(
   const roomType: SessionType = memberIds.length === 1 ? "direct" : "group";
   const roomTitle = input.title?.trim() || buildRoomTitle(creator, selectedMembers);
 
-  const room = await db.transaction(async (tx) => {
+  const { room, systemMessages: createdSystemMessages } = await db.transaction(async (tx) => {
     const [createdRoom] = await tx
       .insert(rooms)
       .values({
@@ -125,15 +138,51 @@ export async function createRoom(
       })),
     ]);
 
-    return createdRoom;
+    // Create system messages
+    const systemMessagesToInsert = [
+      {
+        roomId: createdRoom.id,
+        senderId: creator.id,
+        role: "system" as const,
+        parts: [{ type: "text", text: "已创建会话" }] as MessagePart[],
+        status: "done" as const,
+      },
+      ...selectedMembers.map((member) => ({
+        roomId: createdRoom.id,
+        senderId: creator.id,
+        role: "system" as const,
+        parts: [{ type: "text", text: `已邀请 ${member.nickname} 进入房间` }] as MessagePart[],
+        status: "done" as const,
+      })),
+    ];
+
+    const insertedMessages = await tx
+      .insert(roomMessages)
+      .values(systemMessagesToInsert)
+      .returning();
+
+    return {
+      room: createdRoom,
+      systemMessages: insertedMessages.map((m) => ({
+        id: m.id,
+        roomId: m.roomId,
+        senderId: m.senderId,
+        role: m.role as "system",
+        parts: m.parts as MessagePart[],
+        createdAt: m.createdAt,
+      })),
+    };
   });
 
-  return mapRoomToChatRoomRecord(room, uniqueUserIds);
+  return {
+    ...mapRoomToChatRoomRecord(room, uniqueUserIds),
+    systemMessages: createdSystemMessages,
+  };
 }
 
 export async function createRoomAsync(
   input: CreateRoomInput,
-): Promise<ChatRoomRecord> {
+): Promise<CreateRoomResult> {
   return await createRoom(input);
 }
 
