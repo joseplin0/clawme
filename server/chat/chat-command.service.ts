@@ -1,25 +1,57 @@
 import { type UIMessage } from "ai";
 import { eq, inArray } from "drizzle-orm";
 import {
+  isFileMessagePart,
+  isImageMessagePart,
   isBotUserType,
+  isTextMessagePart,
+  type MessageAttachmentSnapshot,
   type MessagePart,
   type SessionType,
 } from "~~/shared/types/clawme";
-import { createMessage } from "./chat.service";
+import { createMessage, createMessageAssetLinks } from "./chat.service";
 import { createRoom, normalizeRoomType, type SystemMessageData } from "./room.service";
 import { db, schema } from "~~/server/utils/db";
 
-/** 从 UIMessage.parts 中提取文本内容 */
-function extractTextFromParts(parts: UIMessage["parts"]): string {
-  return parts
-    .flatMap((part) => {
-      if (part.type !== "text") {
-        return [];
-      }
-      const text = part.text.trim();
-      return text ? [text] : [];
-    })
-    .join("\n");
+function hasMessageContent(parts: UIMessage["parts"]): boolean {
+  return parts.some((part) => {
+    if (isTextMessagePart(part)) {
+      return part.text.trim().length > 0;
+    }
+
+    return isImageMessagePart(part) || isFileMessagePart(part);
+  });
+}
+
+type AttachmentLinkInput = {
+  assetId: string;
+  snapshot: MessageAttachmentSnapshot;
+};
+
+function extractAttachmentLinks(parts: UIMessage["parts"]): AttachmentLinkInput[] {
+  return parts.flatMap((part) => {
+    if (!isImageMessagePart(part) && !isFileMessagePart(part)) {
+      return [];
+    }
+
+    if (!part.assetId) {
+      return [];
+    }
+
+    return [{
+      assetId: part.assetId,
+      snapshot: {
+        assetId: part.assetId,
+        type: part.type,
+        url: part.url,
+        filename: part.filename,
+        mediaType: part.mediaType,
+        size: part.size,
+        width: "width" in part ? part.width : undefined,
+        height: "height" in part ? part.height : undefined,
+      },
+    }];
+  });
 }
 
 const { users, roomMembers, rooms, roomMessages } = schema;
@@ -85,8 +117,9 @@ export async function prepareRoomMessage(input: {
   }
 
   const parts = input.clientMessage.parts;
-  const content = extractTextFromParts(parts);
-  if (!content) {
+  const quotedMessageId = input.clientMessage.metadata?.quotedMessageId;
+  const quotedExcerpt = input.clientMessage.metadata?.quotedExcerpt?.trim();
+  if (!hasMessageContent(parts)) {
     throw new ChatCommandError("EMPTY_CONTENT", "消息内容不能为空", input.roomId);
   }
 
@@ -127,6 +160,20 @@ export async function prepareRoomMessage(input: {
     }
 
     const roomType = normalizeRoomType(session.type);
+    if (quotedMessageId) {
+      const quotedMessage = await db.query.roomMessages.findFirst({
+        where: eq(roomMessages.id, quotedMessageId),
+      });
+
+      if (!quotedMessage || quotedMessage.roomId !== session.id) {
+        throw new ChatCommandError(
+          "INVALID_QUOTE",
+          "引用的消息不存在或不属于当前房间",
+          input.roomId,
+        );
+      }
+    }
+
     const otherParticipants = session.members.filter(
       (participant) => participant.userId !== input.senderId,
     );
@@ -142,6 +189,8 @@ export async function prepareRoomMessage(input: {
       roomId: session.id,
       senderId: input.senderId,
       parts,
+      quotedMessageId,
+      quotedExcerpt,
     });
 
     console.log("[ChatCommand] User message created:", userMessage.id);
@@ -218,6 +267,8 @@ export async function prepareRoomMessage(input: {
     roomId: createdRoom.id,
     senderId: input.senderId,
     parts,
+    quotedMessageId: null,
+    quotedExcerpt: null,
   });
 
   const creation = {
@@ -246,6 +297,8 @@ async function createUserMessage(input: {
   roomId: string;
   senderId: string;
   parts: UIMessage["parts"];
+  quotedMessageId?: string | null;
+  quotedExcerpt?: string | null;
 }) {
   try {
     const message = await createMessage({
@@ -254,7 +307,17 @@ async function createUserMessage(input: {
       role: "user",
       parts: input.parts as MessagePart[],
       status: "done",
+      quotedMessageId: input.quotedMessageId ?? null,
+      quotedExcerpt: input.quotedExcerpt ?? null,
     });
+
+    const attachmentLinks = extractAttachmentLinks(input.parts);
+    if (attachmentLinks.length > 0) {
+      await createMessageAssetLinks({
+        messageId: message.id,
+        assets: attachmentLinks,
+      });
+    }
 
     return {
       id: message.id,
@@ -263,6 +326,8 @@ async function createUserMessage(input: {
       role: message.role,
       parts: message.parts,
       status: message.status,
+      quotedMessageId: message.quotedMessageId,
+      quotedExcerpt: message.quotedExcerpt,
       createdAt: new Date(message.createdAt),
     } as typeof roomMessages.$inferSelect;
   } catch {
@@ -285,6 +350,8 @@ function toChatUiMessage(
     metadata: {
       createdAt: message.createdAt.getTime(),
       userId: message.senderId,
+      quotedMessageId: message.quotedMessageId ?? undefined,
+      quotedExcerpt: message.quotedExcerpt ?? undefined,
     },
   };
 }

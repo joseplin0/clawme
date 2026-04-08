@@ -11,11 +11,52 @@ export type MomentAttachmentKind = "DOCUMENT" | "IMAGE" | "LINK";
 export interface MessageMetadata {
   createdAt: number;
   userId: string;
+  quotedMessageId?: string;
+  quotedExcerpt?: string;
+  quotedMessage?: QuotedMessageSummary;
+}
+
+export interface MessageAttachmentSnapshot {
+  assetId?: string;
+  type: "image" | "file";
+  url: string;
+  filename: string;
+  mediaType: string;
+  size: number;
+  width?: number;
+  height?: number;
+}
+
+export interface QuotedMessageSummary {
+  id: string;
+  role: MessageRole;
+  senderId: string;
+  text?: string;
+  attachments: MessageAttachmentSnapshot[];
+  excerpt?: string;
 }
 
 // AI SDK compatible message part types
 export type TextPart = { type: "text"; text: string };
 export type ReasoningPart = { type: "reasoning"; text: string };
+export type ImagePart = {
+  type: "image";
+  assetId?: string;
+  url: string;
+  mediaType: string;
+  filename: string;
+  size: number;
+  width?: number;
+  height?: number;
+};
+export type FilePart = {
+  type: "file";
+  assetId?: string;
+  url: string;
+  mediaType: string;
+  filename: string;
+  size: number;
+};
 export type ToolCallPart = {
   type: "tool-call";
   toolCallId: string;
@@ -31,8 +72,48 @@ export type ToolResultPart = {
 export type MessagePart =
   | TextPart
   | ReasoningPart
+  | ImagePart
+  | FilePart
   | ToolCallPart
   | ToolResultPart;
+
+export function isTextMessagePart(part: unknown): part is TextPart {
+  return Boolean(
+    part &&
+      typeof part === "object" &&
+      (part as { type?: unknown }).type === "text" &&
+      typeof (part as { text?: unknown }).text === "string",
+  );
+}
+
+export function isReasoningMessagePart(part: unknown): part is ReasoningPart {
+  return Boolean(
+    part &&
+      typeof part === "object" &&
+      (part as { type?: unknown }).type === "reasoning" &&
+      typeof (part as { text?: unknown }).text === "string",
+  );
+}
+
+export function isImageMessagePart(part: unknown): part is ImagePart {
+  return Boolean(
+    part &&
+      typeof part === "object" &&
+      (part as { type?: unknown }).type === "image" &&
+      typeof (part as { url?: unknown }).url === "string" &&
+      typeof (part as { filename?: unknown }).filename === "string",
+  );
+}
+
+export function isFileMessagePart(part: unknown): part is FilePart {
+  return Boolean(
+    part &&
+      typeof part === "object" &&
+      (part as { type?: unknown }).type === "file" &&
+      typeof (part as { url?: unknown }).url === "string" &&
+      typeof (part as { filename?: unknown }).filename === "string",
+  );
+}
 
 export interface SystemConfigRecord {
   isInitialized: boolean;
@@ -112,6 +193,8 @@ export interface RoomMessageRecord {
   role: MessageRole;
   parts: MessagePart[];
   status: MessageStatus;
+  quotedMessageId?: string | null;
+  quotedExcerpt?: string | null;
   createdAt: string;
 }
 

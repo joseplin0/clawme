@@ -71,4 +71,60 @@ describe("sendRoomMessage", () => {
       },
     });
   });
+
+  it("附件消息也会被透传给接收者", async () => {
+    const publishRoomMessage = vi
+      .spyOn(wsEventBus, "publishRoomMessage")
+      .mockImplementation(() => {});
+
+    vi.spyOn(chatCommandService, "prepareRoomMessage").mockResolvedValue(
+      createPreparedMessage({
+        uiMessage: {
+          id: "user-message-attachment-1",
+          role: "user",
+          parts: [{
+            type: "file",
+            url: "data:text/plain;base64,SGVsbG8=",
+            mediaType: "text/plain",
+            filename: "demo.txt",
+            size: 5,
+          }],
+          metadata: {
+            userId: "sender-1",
+            createdAt: Date.now(),
+          },
+        },
+      }) as any,
+    );
+
+    await sendRoomMessage({
+      senderId: "sender-1",
+      roomId: "room-1",
+      clientMessage: {
+        id: "user-message-attachment-1",
+        role: "user",
+        parts: [{
+          type: "file",
+          url: "data:text/plain;base64,SGVsbG8=",
+          mediaType: "text/plain",
+          filename: "demo.txt",
+          size: 5,
+        }],
+      } as any,
+    });
+
+    expect(publishRoomMessage).toHaveBeenCalledTimes(1);
+    expect(publishRoomMessage.mock.calls[0]).toMatchObject([
+      ["user-2"],
+      {
+        roomId: "room-1",
+        message: {
+          parts: [{
+            type: "file",
+            filename: "demo.txt",
+          }],
+        },
+      },
+    ]);
+  });
 });

@@ -159,8 +159,12 @@ mockComponent("ChatComposer", {
       type: Array,
       default: () => [],
     },
+    quotedMessage: {
+      type: Object,
+      default: null,
+    },
   },
-  emits: ["submit", "stop", "reload"],
+  emits: ["submit", "stop", "reload", "clear-quote"],
   template: `
     <div
       data-testid="composer"
@@ -169,7 +173,30 @@ mockComponent("ChatComposer", {
       :data-placeholder="placeholder"
       :data-mention-count="String(mentionItems.length)"
     >
-      <button data-testid="submit" @click="$emit('submit', '问候')">提交</button>
+      <button
+        data-testid="submit"
+        @click="$emit('submit', { text: '问候', attachments: [], quotedMessageId: undefined, quotedExcerpt: undefined })"
+      >
+        提交
+      </button>
+      <button
+        data-testid="submit-attachment"
+        @click="$emit('submit', {
+          text: '',
+          attachments: [{
+            type: 'file',
+            assetId: 'asset-1',
+            url: 'data:text/plain;base64,SGVsbG8=',
+            mediaType: 'text/plain',
+            filename: 'demo.txt',
+            size: 5,
+          }],
+          quotedMessageId: undefined,
+          quotedExcerpt: undefined,
+        })"
+      >
+        附件提交
+      </button>
       <button data-testid="stop" @click="$emit('stop')">停止</button>
     </div>
   `,
@@ -264,9 +291,11 @@ describe("ChatBox", () => {
     await wrapper.get('[data-testid="submit"]').trigger("click");
 
     expect(boxState.chatInstances[0]!.sendMessage).toHaveBeenCalledWith({
-      text: "问候",
+      parts: [{ type: "text", text: "问候" }],
       metadata: expect.objectContaining({
         userId: "owner-1",
+        quotedMessageId: undefined,
+        quotedExcerpt: undefined,
       }),
     });
 
@@ -328,9 +357,53 @@ describe("ChatBox", () => {
     await wrapper.get('[data-testid="submit"]').trigger("click");
 
     expect(boxState.chatInstances[0]!.sendMessage).toHaveBeenCalledWith({
-      text: "问候",
+      parts: [{ type: "text", text: "问候" }],
       metadata: expect.objectContaining({
         userId: "owner-1",
+        quotedMessageId: undefined,
+        quotedExcerpt: undefined,
+      }),
+    });
+    expect(boxState.toastAdd).not.toHaveBeenCalled();
+  });
+
+  it("允许发送仅包含附件的消息", async () => {
+    const wrapper = await mountSuspended(Box, {
+      global: {
+        stubs: {
+          ChatCreateRoomTrigger: createRoomTriggerStub,
+        },
+      },
+      props: {
+        activeRoomId: "room-1",
+        rooms: [
+          createRoom({
+            id: "room-1",
+            title: "产品讨论",
+            memberIds: ["owner-1", "bot-1"],
+          }),
+        ],
+      },
+    });
+
+    await flushPromises();
+    await wrapper.get('[data-testid="submit-attachment"]').trigger("click");
+
+    expect(boxState.chatInstances[0]!.sendMessage).toHaveBeenCalledWith({
+      parts: [
+        {
+          type: "file",
+          assetId: "asset-1",
+          url: "data:text/plain;base64,SGVsbG8=",
+          mediaType: "text/plain",
+          filename: "demo.txt",
+          size: 5,
+        },
+      ],
+      metadata: expect.objectContaining({
+        userId: "owner-1",
+        quotedMessageId: undefined,
+        quotedExcerpt: undefined,
       }),
     });
     expect(boxState.toastAdd).not.toHaveBeenCalled();

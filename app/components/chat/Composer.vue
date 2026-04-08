@@ -4,6 +4,71 @@
     :style="{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }"
   >
     <div class="flex flex-col">
+      <input
+        ref="fileInputRef"
+        type="file"
+        class="hidden"
+        multiple
+        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.json,.zip,.rar,.7z"
+        @change="handleFileChange"
+      >
+
+      <div
+        v-if="quotedMessage"
+        class="mb-2 flex items-start justify-between gap-2 rounded-xl border border-default/50 bg-default/15 px-2.5 py-1.5"
+      >
+        <div class="min-w-0">
+          <p class="text-[11px] font-medium text-primary/80">引用 {{ quotedMessage.senderName }}</p>
+          <p class="mt-0.5 truncate text-[12px] leading-4 text-muted">{{ quotedPreviewText }}</p>
+        </div>
+        <UButton
+          icon="i-lucide-x"
+          variant="ghost"
+          color="neutral"
+          size="xs"
+          class="rounded-full"
+          @click="emit('clear-quote')"
+        />
+      </div>
+
+      <div v-if="attachments.length" class="mb-3 flex flex-wrap gap-2 px-2">
+        <div
+          v-for="(attachment, index) in attachments"
+          :key="`${attachment.filename}-${attachment.size}-${index}`"
+          class="flex items-center gap-3 rounded-xl border border-default/60 bg-default/40 px-3 py-2"
+        >
+          <img
+            v-if="attachment.type === 'image'"
+            :src="attachment.url"
+            :alt="attachment.filename"
+            class="h-12 w-12 rounded-lg object-cover"
+          >
+          <div
+            v-else
+            class="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary"
+          >
+            <UIcon name="i-lucide-file" class="h-5 w-5" />
+          </div>
+
+          <div class="min-w-0">
+            <p class="truncate text-sm font-medium text-default">
+              {{ attachment.filename }}
+            </p>
+            <p class="text-xs text-muted">
+              {{ formatFileSize(attachment.size) }}
+            </p>
+          </div>
+
+          <UButton
+            icon="i-lucide-x"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            class="rounded-full"
+            @click="removeAttachment(index)"
+          />
+        </div>
+      </div>
       
       <!-- Input Area -->
       <div class="flex-1 w-full flex">
@@ -43,6 +108,8 @@
             color="neutral"
             size="sm"
             class="rounded-md px-2 text-muted"
+            :disabled="!ready || status !== 'ready'"
+            @click="openFilePicker"
           />
         </div>
         
@@ -73,6 +140,7 @@
 import { computed, nextTick, ref, watch } from "vue";
 import type { ChatStatus } from "ai";
 import type { EditorMentionMenuItem } from "@nuxt/ui";
+import type { FilePart, ImagePart } from "~~/shared/types/clawme";
 
 type EditorHandle = {
   getText: (options?: { blockSeparator?: string }) => string;
@@ -83,24 +151,42 @@ type EditorHandle = {
   };
 };
 
+type ComposerAttachment = ImagePart | FilePart;
+type ComposerSubmitPayload = {
+  text: string;
+  attachments: ComposerAttachment[];
+  quotedMessageId?: string;
+  quotedExcerpt?: string;
+};
+
 const props = defineProps<{
   ready: boolean;
   status: ChatStatus;
   mentionItems: EditorMentionMenuItem[];
   placeholder: string;
+  quotedMessage?: {
+    id: string;
+    senderName: string;
+    previewText: string;
+  } | null;
 }>();
 
 const emit = defineEmits<{
-  submit: [text: string];
-  stop: [];
-  reload: [];
+  (e: "submit", payload: ComposerSubmitPayload): void;
+  (e: "stop" | "reload" | "clear-quote"): void;
 }>();
 
+const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
+const MAX_ATTACHMENT_COUNT = 5;
+
+const toast = useToast();
 const editorContent = ref("");
 const inputMessage = ref("");
+const attachments = ref<ComposerAttachment[]>([]);
 const editorRef = ref<{
   editor?: EditorHandle;
 } | null>(null);
+const fileInputRef = ref<HTMLInputElement | null>(null);
 
 const editorStarterKit = {
   blockquote: false as const,
@@ -138,8 +224,11 @@ const isPromptActionDisabled = computed(() => {
     return true;
   }
 
-  return props.status === "ready" ? !inputMessage.value.trim() : false;
+  return props.status === "ready"
+    ? !inputMessage.value.trim() && attachments.value.length === 0
+    : false;
 });
+const quotedPreviewText = computed(() => props.quotedMessage?.previewText || "");
 
 watch(
   [() => props.ready, () => editorRef.value?.editor],
@@ -161,23 +250,110 @@ function handlePromptAction() {
   }
 }
 
+function openFilePicker() {
+  if (!props.ready || props.status !== "ready") {
+    return;
+  }
+
+  fileInputRef.value?.click();
+}
+
+async function handleFileChange(event: Event) {
+  const input = event.target as HTMLInputElement | null;
+  const files = Array.from(input?.files ?? []);
+
+  if (!files.length) {
+    return;
+  }
+
+  const availableSlots = MAX_ATTACHMENT_COUNT - attachments.value.length;
+  if (availableSlots <= 0) {
+    toast.add({
+      title: "附件数量已达上限",
+      description: `单次最多发送 ${MAX_ATTACHMENT_COUNT} 个附件`,
+      color: "warning",
+      icon: "i-lucide-paperclip",
+    });
+    resetFileInput();
+    return;
+  }
+
+  const nextFiles = files.slice(0, availableSlots);
+
+  if (files.length > nextFiles.length) {
+    toast.add({
+      title: "部分附件未加入",
+      description: `单次最多发送 ${MAX_ATTACHMENT_COUNT} 个附件`,
+      color: "warning",
+      icon: "i-lucide-paperclip",
+    });
+  }
+
+  const converted = await Promise.all(
+    nextFiles.map(async (file) => {
+      if (file.size > MAX_ATTACHMENT_SIZE) {
+        toast.add({
+          title: "附件过大",
+          description: `${file.name} 超过 ${formatFileSize(MAX_ATTACHMENT_SIZE)}，暂不支持发送`,
+          color: "error",
+          icon: "i-lucide-file-warning",
+        });
+        return null;
+      }
+
+      try {
+        return await uploadFile(file);
+      } catch (error) {
+        toast.add({
+          title: "附件上传失败",
+          description: error instanceof Error ? error.message : `${file.name} 上传失败`,
+          color: "error",
+          icon: "i-lucide-cloud-off",
+        });
+        return null;
+      }
+    }),
+  );
+
+  attachments.value = [...attachments.value, ...converted.filter(Boolean)];
+  resetFileInput();
+}
+
+function resetFileInput() {
+  if (fileInputRef.value) {
+    fileInputRef.value.value = "";
+  }
+}
+
+function removeAttachment(index: number) {
+  attachments.value = attachments.value.filter((_, current) => current !== index);
+}
+
 function submit() {
   if (!props.ready || props.status !== "ready") {
     return;
   }
 
   const text = inputMessage.value.trim();
+  const currentAttachments = [...attachments.value];
 
-  if (!text) {
+  if (!text && currentAttachments.length === 0) {
     return;
   }
 
-  emit("submit", text);
+  emit("submit", {
+    text,
+    attachments: currentAttachments,
+    quotedMessageId: props.quotedMessage?.id,
+    quotedExcerpt: props.quotedMessage?.previewText,
+  });
   void clearComposer();
 }
 
 async function clearComposer() {
   const editor = editorRef.value?.editor;
+  attachments.value = [];
+  resetFileInput();
 
   if (!editor) {
     editorContent.value = "";
@@ -192,5 +368,56 @@ async function clearComposer() {
   if (props.ready) {
     editor.commands.focus();
   }
+}
+
+async function uploadFile(file: File): Promise<ComposerAttachment> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await $fetch<{
+    success: boolean;
+    assetId: string;
+    url: string;
+    mimeType: string;
+    originalName: string;
+    size: number;
+  }>("/api/upload", {
+    method: "POST",
+    body: formData,
+  });
+
+  const mediaType = response.mimeType || file.type || "application/octet-stream";
+
+  if (file.type.startsWith("image/")) {
+    return {
+      type: "image",
+      assetId: response.assetId,
+      url: response.url,
+      mediaType,
+      filename: response.originalName,
+      size: response.size,
+    };
+  }
+
+  return {
+    type: "file",
+    assetId: response.assetId,
+    url: response.url,
+    mediaType,
+    filename: response.originalName,
+    size: response.size,
+  };
+}
+
+function formatFileSize(size: number): string {
+  if (size < 1024) {
+    return `${size} B`;
+  }
+
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 </script>

@@ -4,6 +4,14 @@ import { requireOwnerSession } from "~~/server/utils/auth";
 import { db, schema } from "~~/server/utils/db";
 import { eq, asc } from "drizzle-orm";
 import { mapUserToUserProfile, normalizeRoomType } from "~~/server/chat/room.service";
+import {
+  isFileMessagePart,
+  isImageMessagePart,
+  isTextMessagePart,
+  type MessageAttachmentSnapshot,
+  type MessagePart,
+  type QuotedMessageSummary,
+} from "~~/shared/types/clawme";
 
 const { roomMessages, rooms } = schema;
 
@@ -41,6 +49,12 @@ export default defineEventHandler(async (event) => {
   const members = room.members.flatMap((member) =>
     member.user ? [mapUserToUserProfile(member.user)] : [],
   );
+  const quotedMessageMap = new Map(
+    room.messages.map((message) => [
+      message.id,
+      toQuotedMessageSummary(message),
+    ]),
+  );
 
   return {
     id: room.id,
@@ -56,7 +70,64 @@ export default defineEventHandler(async (event) => {
       metadata: {
         userId: m.senderId,
         createdAt: m.createdAt.getTime(),
+        quotedMessageId: m.quotedMessageId ?? undefined,
+        quotedExcerpt: m.quotedExcerpt ?? undefined,
+        quotedMessage: m.quotedMessageId
+          ? withQuotedExcerpt(
+            quotedMessageMap.get(m.quotedMessageId),
+            m.quotedExcerpt ?? undefined,
+          )
+          : undefined,
       },
     })),
   };
 });
+
+function withQuotedExcerpt(
+  quotedMessage: QuotedMessageSummary | undefined,
+  excerpt?: string,
+) {
+  if (!quotedMessage) {
+    return undefined;
+  }
+
+  return {
+    ...quotedMessage,
+    excerpt: excerpt?.trim() || quotedMessage.excerpt,
+  } satisfies QuotedMessageSummary;
+}
+
+function toQuotedMessageSummary(message: {
+  id: string;
+  role: "user" | "assistant" | "system";
+  senderId: string;
+  parts: unknown;
+}): QuotedMessageSummary {
+  const parts = Array.isArray(message.parts) ? (message.parts as MessagePart[]) : [];
+  const text = parts.find(isTextMessagePart)?.text?.trim() || undefined;
+  const attachments: MessageAttachmentSnapshot[] = parts.flatMap((part) => {
+    if (!isImageMessagePart(part) && !isFileMessagePart(part)) {
+      return [];
+    }
+
+    return [{
+      assetId: part.assetId,
+      type: part.type,
+      url: part.url,
+      filename: part.filename,
+      mediaType: part.mediaType,
+      size: part.size,
+      width: "width" in part ? part.width : undefined,
+      height: "height" in part ? part.height : undefined,
+    }];
+  });
+
+  return {
+    id: message.id,
+    role: message.role,
+    senderId: message.senderId,
+    text,
+    attachments,
+    excerpt: text,
+  };
+}

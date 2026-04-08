@@ -1,6 +1,11 @@
 import { eq } from "drizzle-orm";
 import type { ModelMessage } from "ai";
 import { db, schema } from "~~/server/utils/db";
+import {
+  isFileMessagePart,
+  isImageMessagePart,
+  isTextMessagePart,
+} from "~~/shared/types/clawme";
 import type { UserWithModelConfig } from "../chat-command.service";
 
 // 引入类型和各个 Provider
@@ -58,14 +63,17 @@ async function buildRoomModelMessages(roomId: string): Promise<ModelMessage[]> {
     const text = extractTextContent(
       Array.isArray(message.parts) ? message.parts : [],
     );
+    const content = message.quotedExcerpt?.trim()
+      ? [`引用内容：${message.quotedExcerpt.trim()}`, text].filter(Boolean).join("\n")
+      : text;
 
-    if (!text) {
+    if (!content) {
       continue;
     }
 
     modelMessages.push({
       role: message.role,
-      content: text,
+      content,
     });
   }
 
@@ -75,17 +83,20 @@ async function buildRoomModelMessages(roomId: string): Promise<ModelMessage[]> {
 function extractTextContent(parts: unknown[]): string {
   return parts
     .flatMap((part) => {
-      if (!part || typeof part !== "object") {
-        return [];
+      if (isTextMessagePart(part)) {
+        const text = part.text.trim();
+        return text ? [text] : [];
       }
 
-      const candidate = part as { type?: string; text?: unknown };
-      if (candidate.type !== "text" || typeof candidate.text !== "string") {
-        return [];
+      if (isImageMessagePart(part)) {
+        return [`[图片: ${part.filename}]`];
       }
 
-      const text = candidate.text.trim();
-      return text ? [text] : [];
+      if (isFileMessagePart(part)) {
+        return [`[附件: ${part.filename}]`];
+      }
+
+      return [];
     })
     .join("\n");
 }

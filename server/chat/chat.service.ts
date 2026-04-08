@@ -1,16 +1,40 @@
 import { desc, eq, inArray, sql } from "drizzle-orm";
 import type {
   ClawmeAppState,
+  MessageAttachmentSnapshot,
   RoomMessageRecord,
   MessagePart,
   MessageRole,
   MessageStatus,
 } from "~~/shared/types/clawme";
+import {
+  isFileMessagePart,
+  isImageMessagePart,
+  isTextMessagePart,
+} from "~~/shared/types/clawme";
 import { db, schema } from "~~/server/utils/db";
 import { normalizeRoomType } from "./room.service";
 
-const { rooms, roomMembers, roomMessages } = schema;
+const { messageAssets, rooms, roomMembers, roomMessages } = schema;
 type ChatStateSnapshot = Pick<ClawmeAppState, "bot" | "modelConfigs" | "rooms">;
+
+function getMessageSummary(parts: MessagePart[]): string | undefined {
+  for (const part of parts) {
+    if (isTextMessagePart(part) && part.text.trim()) {
+      return part.text.trim();
+    }
+
+    if (isImageMessagePart(part)) {
+      return `[图片] ${part.filename}`;
+    }
+
+    if (isFileMessagePart(part)) {
+      return `[附件] ${part.filename}`;
+    }
+  }
+
+  return undefined;
+}
 
 export async function createMessage(input: {
   roomId: string;
@@ -18,6 +42,8 @@ export async function createMessage(input: {
   role: MessageRole;
   parts: MessagePart[];
   status?: MessageStatus;
+  quotedMessageId?: string | null;
+  quotedExcerpt?: string | null;
 }) {
   const [message] = await db
     .insert(roomMessages)
@@ -27,6 +53,8 @@ export async function createMessage(input: {
       role: input.role,
       parts: input.parts,
       status: input.status ?? "done",
+      quotedMessageId: input.quotedMessageId ?? null,
+      quotedExcerpt: input.quotedExcerpt ?? null,
     })
     .returning();
 
@@ -41,8 +69,34 @@ export async function createMessage(input: {
     role: message.role as MessageRole,
     parts: (message.parts as MessagePart[]) ?? [],
     status: message.status as MessageStatus,
+    quotedMessageId: message.quotedMessageId,
+    quotedExcerpt: message.quotedExcerpt,
     createdAt: message.createdAt.toISOString(),
   };
+}
+
+export async function createMessageAssetLinks(input: {
+  messageId: string;
+  assets: Array<{
+    assetId: string;
+    snapshot: MessageAttachmentSnapshot;
+  }>;
+}) {
+  if (!input.assets.length) {
+    return [];
+  }
+
+  return await db
+    .insert(messageAssets)
+    .values(
+      input.assets.map((asset, index) => ({
+        messageId: input.messageId,
+        assetId: asset.assetId,
+        sort: index,
+        snapshot: asset.snapshot,
+      })),
+    )
+    .returning();
 }
 
 export async function updateMessage(
@@ -69,6 +123,8 @@ export async function updateMessage(
     role: message.role as MessageRole,
     parts: (message.parts as MessagePart[]) ?? [],
     status: message.status as MessageStatus,
+    quotedMessageId: message.quotedMessageId,
+    quotedExcerpt: message.quotedExcerpt,
     createdAt: message.createdAt.toISOString(),
   };
 }
@@ -117,8 +173,7 @@ export async function getChatRoomListData() {
     let lastMessageText: string | undefined;
     if (lastMsg) {
       const parts = (lastMsg.parts as MessagePart[]) ?? [];
-      const textPart = parts.find((p) => p.type === "text");
-      lastMessageText = textPart?.text;
+      lastMessageText = getMessageSummary(parts);
     }
     return {
       id: s.id,

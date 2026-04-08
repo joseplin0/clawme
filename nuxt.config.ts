@@ -54,6 +54,12 @@ export default defineNuxtConfig({
     experimental: {
       websocket: true,
     },
+    storage: {
+      "assets:uploads": {
+        driver: "fs",
+        base: "./.data/uploads",
+      },
+    },
   },
   runtimeConfig: {
     public: {

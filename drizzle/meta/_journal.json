@@ -29,6 +29,13 @@
       "when": 1775217824548,
       "tag": "0003_tan_thena",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775647200000,
+      "tag": "0004_chat_quote_assets",
+      "breakpoints": true
     }
   ]
 }

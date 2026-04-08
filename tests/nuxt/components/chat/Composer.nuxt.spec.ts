@@ -1,7 +1,7 @@
 import { mountSuspended, mockComponent } from "@nuxt/test-utils/runtime";
 import { flushPromises } from "@vue/test-utils";
 import { defineComponent, h, ref, watch } from "vue";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Composer from "~~/app/components/chat/Composer.vue";
 
 mockComponent("UEditor", defineComponent({
@@ -75,6 +75,15 @@ mockComponent("UEditorMentionMenu", {
   template: "<div data-testid=\"mention-menu\" />",
 });
 
+mockComponent("UButton", {
+  emits: ["click"],
+  template: "<button data-testid=\"button\" @click=\"$emit('click')\"><slot /></button>",
+});
+
+mockComponent("UIcon", {
+  template: "<span data-testid=\"icon\" />",
+});
+
 mockComponent("UChatPromptSubmit", {
   props: {
     disabled: {
@@ -100,6 +109,21 @@ mockComponent("UChatPromptSubmit", {
 });
 
 describe("ChatComposer", () => {
+  beforeEach(() => {
+    vi.stubGlobal("$fetch", vi.fn(async () => ({
+      success: true,
+      assetId: "asset-1",
+      url: "/api/files/uploaded-demo.txt",
+      mimeType: "text/plain",
+      originalName: "demo.txt",
+      size: 5,
+    })));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("在可发送时提交修剪后的文本并清空输入框", async () => {
     const wrapper = await mountSuspended(Composer, {
       props: {
@@ -119,11 +143,61 @@ describe("ChatComposer", () => {
     await wrapper.get('[data-testid="prompt"]').trigger("click");
     await flushPromises();
 
-    expect(wrapper.emitted("submit")).toEqual([["你好，虾米"]]);
+    expect(wrapper.emitted("submit")).toEqual([[
+      {
+        text: "你好，虾米",
+        attachments: [],
+        quotedMessageId: undefined,
+        quotedExcerpt: undefined,
+      },
+    ]]);
     expect(
       (wrapper.get('[data-testid="editor"]').element as HTMLTextAreaElement)
         .value,
     ).toBe("");
+  });
+
+  it("支持仅发送附件消息", async () => {
+    const wrapper = await mountSuspended(Composer, {
+      props: {
+        ready: true,
+        status: "ready",
+        placeholder: "发送消息...",
+        mentionItems: [],
+      },
+    });
+
+    const fileInput = wrapper.get('input[type="file"]');
+    const file = new File(["hello"], "demo.txt", { type: "text/plain" });
+
+    Object.defineProperty(fileInput.element, "files", {
+      configurable: true,
+      value: [file],
+    });
+
+    await fileInput.trigger("change");
+    await flushPromises();
+
+    await wrapper.get('[data-testid="prompt"]').trigger("click");
+    await flushPromises();
+
+    const submitEvent = wrapper.emitted("submit")?.[0]?.[0] as {
+      text: string;
+      quotedMessageId?: string;
+      quotedExcerpt?: string;
+      attachments: Array<{ type: string; assetId?: string; filename: string; url: string }>;
+    };
+
+    expect(submitEvent.text).toBe("");
+    expect(submitEvent.attachments).toHaveLength(1);
+    expect(submitEvent.attachments[0]).toMatchObject({
+      type: "file",
+      assetId: "asset-1",
+      filename: "demo.txt",
+      url: "/api/files/uploaded-demo.txt",
+    });
+    expect(submitEvent.quotedMessageId).toBeUndefined();
+    expect(submitEvent.quotedExcerpt).toBeUndefined();
   });
 
   it("在未就绪时禁用输入与发送按钮", async () => {

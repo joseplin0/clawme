@@ -44,22 +44,94 @@ v-else :id="message.id" :role="message.role" :parts="message.parts"
               v-bind="getMessageDisplayProps(message)">
 
               <template #content>
+                <div
+                  v-if="message.metadata?.quotedMessage"
+                  class="mb-2 rounded-xl border border-default/50 bg-default/15 px-2.5 py-1.5"
+                >
+                  <p class="text-[11px] font-medium text-primary/80">
+                    {{ getQuotedSenderName(message) }}
+                  </p>
+                  <p class="mt-0.5 truncate text-[12px] leading-4 text-muted">
+                    {{ getQuotedPreview(message.metadata.quotedMessage) }}
+                  </p>
+                </div>
 
-                <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
-                  <UChatReasoning
-v-if="isReasoningUIPart(part)" :text="part.text"
-                    :streaming="getReasoningStreaming(message, index)" class="mb-2 text-sm opacity-90">
-                    <MDC
-:value="part.text" :cache-key="`reasoning-${message.id}-${index}`"
-                      class="*:first:mt-0 *:last:mb-0" />
-                  </UChatReasoning>
-                  <UChatTool
-v-else-if="isToolUIPart(part)" :text="getToolName(part)" :streaming="isToolStreaming(part)"
-                    class="mb-2 text-sm opacity-90" />
-                  <MDCCached
-v-else-if="isTextUIPart(part)" :value="part.text" :cache-key="`${message.id}-${index}`"
-                    class="*:first:mt-0 *:last:mb-0" />
-                </template>
+                <div class="relative" @mouseup="handleMessageMouseUp(message, $event)">
+                  <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
+                    <UChatReasoning
+                      v-if="isReasoningUIPart(part)"
+                      :text="part.text"
+                      :streaming="getReasoningStreaming(message, index)"
+                      class="mb-2 text-sm opacity-90"
+                    >
+                      <MDC
+                        :value="part.text"
+                        :cache-key="`reasoning-${message.id}-${index}`"
+                        class="*:first:mt-0 *:last:mb-0"
+                      />
+                    </UChatReasoning>
+                    <UChatTool
+                      v-else-if="isToolUIPart(part)"
+                      :text="getToolName(part)"
+                      :streaming="isToolStreaming(part)"
+                      class="mb-2 text-sm opacity-90"
+                    />
+                    <div
+                      v-else-if="isImageMessagePart(part)"
+                      class="mb-2 overflow-hidden rounded-2xl border border-default/60 bg-default/20"
+                    >
+                      <img
+                        :src="part.url"
+                        :alt="part.filename"
+                        class="max-h-80 w-full object-cover"
+                      >
+                      <div class="flex items-center justify-between gap-3 px-3 py-2 text-xs text-muted">
+                        <span class="truncate">{{ part.filename }}</span>
+                        <span>{{ formatFileSize(part.size) }}</span>
+                      </div>
+                    </div>
+                    <a
+                      v-else-if="isFileMessagePart(part)"
+                      :href="part.url"
+                      :download="part.filename"
+                      target="_blank"
+                      rel="noreferrer"
+                      class="mb-2 flex items-center gap-3 rounded-2xl border border-default/60 bg-default/20 px-3 py-3 transition-colors hover:bg-default/30"
+                    >
+                      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <UIcon name="i-lucide-file" class="h-5 w-5" />
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-medium text-default">{{ part.filename }}</p>
+                        <p class="text-xs text-muted">{{ formatFileSize(part.size) }}</p>
+                      </div>
+                      <UIcon name="i-lucide-download" class="h-4 w-4 text-muted" />
+                    </a>
+                    <MDCCached
+                      v-else-if="isTextUIPart(part)"
+                      :value="part.text"
+                      :cache-key="`${message.id}-${index}`"
+                      class="*:first:mt-0 *:last:mb-0"
+                    />
+                  </template>
+
+                  <div
+                    v-if="selectedQuoteCandidate?.messageId === message.id"
+                    class="mt-1 flex justify-end"
+                  >
+                    <UButton
+                      icon="i-lucide-reply"
+                      variant="soft"
+                      color="neutral"
+                      size="xs"
+                      class="rounded-full px-2 py-1 text-[11px]"
+                      @mousedown.prevent
+                      @click="applyQuoteSelection"
+                    >
+                      引用
+                    </UButton>
+                  </div>
+                </div>
 
               </template>
             </UChatMessage>
@@ -71,8 +143,8 @@ v-else-if="isTextUIPart(part)" :value="part.text" :cache-key="`${message.id}-${i
     <!-- Chat Composer -->
     <ChatComposer
 :key="activeRoomId || 'empty'" :ready="isChatReady" :status="chatStatus"
-      :placeholder="composerPlaceholder" :mention-items="mentionItems" @submit="handleSubmit" @stop="handleStop"
-      @reload="handleReload" />
+      :placeholder="composerPlaceholder" :mention-items="mentionItems" :quoted-message="quotedComposerMessage"
+      @submit="handleSubmit" @stop="handleStop" @reload="handleReload" @clear-quote="clearQuotedMessage" />
 
     <!-- Right Drawer for User List -->
     <USlideover v-model:open="isDrawerOpen" title="房间成员" side="right">
@@ -121,8 +193,16 @@ import type {
   ChatRoomRecord,
   ChatRoomDetailResponse,
   ClawmeUIMessage,
+  FilePart,
+  ImagePart,
+  MessagePart,
+  QuotedMessageSummary,
 } from "~~/shared/types/clawme";
-import { isBotUserType } from "~~/shared/types/clawme";
+import {
+  isBotUserType,
+  isFileMessagePart,
+  isImageMessagePart,
+} from "~~/shared/types/clawme";
 import {
   isReasoningStreaming as getNuxtReasoningStreaming,
   isToolStreaming,
@@ -157,6 +237,11 @@ watch(
 );
 
 const roomMembers = ref<UserProfile[]>([]);
+const quotedMessage = ref<QuotedMessageSummary | null>(null);
+const selectedQuoteCandidate = ref<{
+  messageId: string;
+  excerpt: string;
+} | null>(null);
 const externalMessages = ref<Record<string, ClawmeUIMessage>>({});
 const externalMessageOrder = ref<string[]>([]);
 const externalChunkControllers = new Map<
@@ -203,10 +288,12 @@ watch(activeRoomId, async (id) => {
 
   if (id) {
     resetExternalStreams();
+    quotedMessage.value = null;
     await initializeChat();
   } else {
     chat.value = null;
     roomMembers.value = [];
+    quotedMessage.value = null;
     resetExternalStreams();
   }
 });
@@ -245,6 +332,7 @@ onUnmounted(() => {
   unsubscribeIncomingMessage();
   unsubscribeIncomingChunk();
   resetExternalStreams();
+  clearSelectionQuote();
 });
 
 async function stopActiveChat() {
@@ -300,9 +388,13 @@ function handleRoomCreated(room: ChatRoomRecord) {
   emit("created", room);
 }
 
-function handleSubmit(text: string) {
+function handleSubmit(payload: {
+  text: string;
+  attachments: Array<ImagePart | FilePart>;
+  quotedMessageId?: string;
+  quotedExcerpt?: string;
+}) {
   if (
-    !text.trim() ||
     !chat.value ||
     !currentUser.value?.id ||
     chatStatus.value !== "ready"
@@ -310,13 +402,35 @@ function handleSubmit(text: string) {
     return;
   }
 
+  const parts: MessagePart[] = [];
+  const text = payload.text.trim();
+
+  if (text) {
+    parts.push({
+      type: "text",
+      text,
+    });
+  }
+
+  parts.push(...payload.attachments);
+
+  if (!parts.length) {
+    return;
+  }
+
   chat.value.sendMessage({
-    text,
+    parts: parts as ClawmeUIMessage["parts"],
     metadata: {
       userId: currentUser.value.id,
       createdAt: Date.now(),
+      quotedMessageId: payload.quotedMessageId,
+      quotedExcerpt: payload.quotedExcerpt,
+      quotedMessage: payload.quotedMessageId
+        ? quotedMessage.value ?? undefined
+        : undefined,
     },
   });
+  clearQuotedMessage();
 }
 
 function handleReload() {
@@ -335,6 +449,17 @@ function handleStop() {
 const composerPlaceholder = computed(() =>
   !activeRoomId.value ? "请先选择房间..." : "发送消息...",
 );
+const quotedComposerMessage = computed(() => {
+  if (!quotedMessage.value) {
+    return null;
+  }
+
+  return {
+    id: quotedMessage.value.id,
+    senderName: getUserById(quotedMessage.value.senderId)?.nickname ?? "消息",
+    previewText: getQuotedPreview(quotedMessage.value),
+  };
+});
 
 const mentionUsers = computed<UserProfile[]>(() => {
   const currentUserId = currentUser.value?.id;
@@ -374,6 +499,15 @@ function getMessageUserProps(userId: string) {
 
 function getMessageDisplayProps(message: ClawmeUIMessage) {
   return getMessageUserProps(message.metadata?.userId ?? "");
+}
+
+function setQuotedMessage(message: ClawmeUIMessage) {
+  quotedMessage.value = toQuotedMessageSummary(message);
+}
+
+function clearQuotedMessage() {
+  quotedMessage.value = null;
+  clearSelectionQuote();
 }
 
 function getReasoningStreaming(message: ClawmeUIMessage, index: number) {
@@ -494,6 +628,111 @@ function resetExternalStreams() {
   externalMessageOrder.value = [];
 }
 
+function toQuotedMessageSummary(message: ClawmeUIMessage): QuotedMessageSummary {
+  return {
+    id: message.id,
+    role: message.role,
+    senderId: message.metadata?.userId ?? "",
+    text: message.parts
+      .find((part) => isTextUIPart(part) && part.text.trim())
+      ?.text?.trim(),
+    attachments: message.parts.flatMap((part) => {
+      if (isImageMessagePart(part) || isFileMessagePart(part)) {
+        return [{
+          assetId: part.assetId,
+          type: part.type,
+          url: part.url,
+          filename: part.filename,
+          mediaType: part.mediaType,
+          size: part.size,
+          width: "width" in part ? part.width : undefined,
+          height: "height" in part ? part.height : undefined,
+        }];
+      }
+
+      return [];
+    }),
+    excerpt: message.metadata?.quotedExcerpt ?? message.metadata?.quotedMessage?.excerpt,
+  };
+}
+
+function getQuotedPreview(quoted: QuotedMessageSummary) {
+  if (quoted.excerpt?.trim()) {
+    return quoted.excerpt.trim();
+  }
+
+  if (quoted.text?.trim()) {
+    return quoted.text.trim();
+  }
+
+  const attachment = quoted.attachments[0];
+  if (attachment) {
+    return attachment.type === "image"
+      ? `[图片] ${attachment.filename}`
+      : `[附件] ${attachment.filename}`;
+  }
+
+  return "引用了一条消息";
+}
+
+function getQuotedSenderName(message: ClawmeUIMessage) {
+  const senderId = message.metadata?.quotedMessage?.senderId;
+  return senderId ? getUserById(senderId)?.nickname ?? "引用消息" : "引用消息";
+}
+
+function handleMessageMouseUp(message: ClawmeUIMessage, event: MouseEvent) {
+  const container = event.currentTarget as HTMLElement | null;
+  const selection = globalThis.getSelection?.();
+  const text = selection?.toString().trim() ?? "";
+
+  if (!container || !selection || !text) {
+    clearSelectionQuote();
+    return;
+  }
+
+  const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+  if (!range || !container.contains(range.commonAncestorContainer)) {
+    clearSelectionQuote();
+    return;
+  }
+
+  selectedQuoteCandidate.value = {
+    messageId: message.id,
+    excerpt: clampQuotedExcerpt(text),
+  };
+}
+
+function applyQuoteSelection() {
+  if (!selectedQuoteCandidate.value || !chat.value) {
+    return;
+  }
+
+  const targetMessage = chat.value.messages.find(
+    (message) => message.id === selectedQuoteCandidate.value?.messageId,
+  ) as ClawmeUIMessage | undefined;
+
+  if (!targetMessage) {
+    clearSelectionQuote();
+    return;
+  }
+
+  quotedMessage.value = {
+    ...toQuotedMessageSummary(targetMessage),
+    excerpt: selectedQuoteCandidate.value.excerpt,
+  };
+  clearSelectionQuote();
+}
+
+function clearSelectionQuote() {
+  selectedQuoteCandidate.value = null;
+  globalThis.getSelection?.()?.removeAllRanges?.();
+}
+
+function clampQuotedExcerpt(text: string) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  return normalized.length > 140 ? `${normalized.slice(0, 140)}...` : normalized;
+}
+
 function hasRenderableParts(message: ClawmeUIMessage) {
   if (message.role === "system") {
     return message.parts.some((part) => isTextUIPart(part) && part.text.trim());
@@ -504,7 +743,19 @@ function hasRenderableParts(message: ClawmeUIMessage) {
       return part.text.trim().length > 0;
     }
 
-    return isToolUIPart(part);
+    return isToolUIPart(part) || isImageMessagePart(part) || isFileMessagePart(part);
   });
+}
+
+function formatFileSize(size: number) {
+  if (size < 1024) {
+    return `${size} B`;
+  }
+
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 </script>

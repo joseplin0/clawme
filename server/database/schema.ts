@@ -312,9 +312,40 @@ export const roomMessages = pgTable(
     status: varchar("status", { enum: ["generating", "done", "error"] })
       .default("done")
       .notNull(),
+    quotedMessageId: uuid("quoted_message_id"),
+    quotedExcerpt: text("quoted_excerpt"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [index("idx_rooms_messages_room_id").on(table.roomId)],
+  (table) => [
+    foreignKey({
+      columns: [table.quotedMessageId],
+      foreignColumns: [table.id],
+      name: "rooms_messages_quoted_message_id_rooms_messages_id_fk",
+    }).onDelete("set null"),
+    index("idx_rooms_messages_room_id").on(table.roomId),
+    index("idx_rooms_messages_quoted_message_id").on(table.quotedMessageId),
+  ],
+);
+
+/** 聊天消息与资源的关联表。 */
+export const messageAssets = pgTable(
+  "message_asset",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    messageId: uuid("message_id")
+      .notNull()
+      .references(() => roomMessages.id, { onDelete: "cascade" }),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    sort: integer("sort").default(0).notNull(),
+    snapshot: json("snapshot").notNull().$type<unknown>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("message_asset_message_id_idx").on(table.messageId),
+    index("message_asset_asset_id_idx").on(table.assetId),
+  ],
 );
 
 /** 工作流定义表。 */

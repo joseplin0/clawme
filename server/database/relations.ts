@@ -6,6 +6,7 @@ import {
   modelConfigs,
   mcp,
   likes,
+  messageAssets,
   momentAssets,
   momentCollections,
   momentTags,
@@ -162,6 +163,7 @@ export const assetsRelations = relations(assets, ({ one, many }) => ({
     references: [users.id],
   }),
   moments: many(momentAssets),
+  messageAssets: many(messageAssets),
 }));
 
 // MomentAsset relations
@@ -243,5 +245,25 @@ export const roomMessagesRelations = relations(
       references: [users.id],
     }),
     lastReaders: many(roomMembers),
+    quotedMessage: one(roomMessages, {
+      fields: [roomMessages.quotedMessageId],
+      references: [roomMessages.id],
+      relationName: "RoomMessageQuote",
+    }),
+    quotedByMessages: many(roomMessages, {
+      relationName: "RoomMessageQuote",
+    }),
+    assets: many(messageAssets),
   }),
 );
+
+export const messageAssetsRelations = relations(messageAssets, ({ one }) => ({
+  message: one(roomMessages, {
+    fields: [messageAssets.messageId],
+    references: [roomMessages.id],
+  }),
+  asset: one(assets, {
+    fields: [messageAssets.assetId],
+    references: [assets.id],
+  }),
+}));
