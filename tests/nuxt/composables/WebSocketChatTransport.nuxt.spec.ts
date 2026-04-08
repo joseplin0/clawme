@@ -186,4 +186,44 @@ describe("WebSocketChatTransport", () => {
       undefined,
     );
   });
+
+  it("将非本地 pending stream 的 room-message chunk payload 路由到外部 chunk 回调", async () => {
+    vi.stubGlobal("WebSocket", FakeWebSocket as unknown as typeof WebSocket);
+
+    const transport = new WebSocketChatTransport({
+      url: "ws://localhost:3000/api/chat/socket",
+    });
+    const callback = vi.fn();
+    transport.onIncomingChunk(callback);
+
+    await transport.sendMessageToMembers({
+      memberIds: ["bot-1"],
+      content: "你好",
+    });
+
+    const socket = FakeWebSocket.instances[0];
+    socket!.emitMessage({
+      type: "room-message",
+      roomId: "room-1",
+      requestId: "external-req-1",
+      payload: {
+        kind: "chunk",
+        chunk: {
+          type: "text-delta",
+          id: "assistant-text-1",
+          delta: "外部流",
+        },
+      },
+    });
+
+    expect(callback).toHaveBeenCalledWith(
+      "room-1",
+      "external-req-1",
+      expect.objectContaining({
+        type: "text-delta",
+        delta: "外部流",
+      }),
+      undefined,
+    );
+  });
 });

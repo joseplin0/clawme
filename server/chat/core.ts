@@ -96,6 +96,7 @@ export async function sendRoomMessage(input: {
       roomId: prepared.activeRoomId,
       requestId: input.requestId,
       senderUserId: input.senderId,
+      spectatorUserIds: prepared.recipientUserIds,
       assistantUser: prepared.assistantTargetUser,
     }).catch((error) => {
       console.error("[Core] Assistant stream error:", error);
@@ -128,6 +129,7 @@ async function streamAssistantReply(input: {
   roomId: string;
   requestId?: string;
   senderUserId: string;
+  spectatorUserIds?: string[];
   assistantUser: UserWithModelConfig;
 }) {
   console.log("[Core] streamAssistantReply started:", {
@@ -147,6 +149,7 @@ async function streamAssistantReply(input: {
       roomId: input.roomId,
       requestId: input.requestId,
       senderUserId: input.senderUserId,
+      spectatorUserIds: input.spectatorUserIds,
       prepared: assistantReply,
     });
 
@@ -165,9 +168,14 @@ async function consumeAssistantStream(input: {
   roomId: string;
   requestId?: string;
   senderUserId: string;
+  spectatorUserIds?: string[];
   prepared: Awaited<ReturnType<typeof createAssistantMessageStreamFromRoom>>;
 }) {
   const stream = input.prepared.stream;
+  const targetUserIds = [
+    input.senderUserId,
+    ...(input.spectatorUserIds ?? []),
+  ];
   console.log("[Core] consumeAssistantStream started, stream type:", typeof stream, "isReadableStream:", stream instanceof ReadableStream);
 
   if (stream instanceof ReadableStream) {
@@ -182,7 +190,7 @@ async function consumeAssistantStream(input: {
 
         chunkCount++;
         console.log("[Core] Publishing chunk #", chunkCount);
-        publishRoomChunk([input.senderUserId], {
+        publishRoomChunk(targetUserIds, {
           roomId: input.roomId,
           requestId: input.requestId,
           chunk: value,
@@ -198,7 +206,7 @@ async function consumeAssistantStream(input: {
     for await (const chunk of stream) {
       chunkCount++;
       console.log("[Core] Publishing chunk #", chunkCount);
-      publishRoomChunk([input.senderUserId], {
+      publishRoomChunk(targetUserIds, {
         roomId: input.roomId,
         requestId: input.requestId,
         chunk,
@@ -214,7 +222,7 @@ async function consumeAssistantStream(input: {
   // 发送完成信号
   if (input.requestId) {
     console.log("[Core] Sending finish chunk");
-    publishRoomChunk([input.senderUserId], {
+    publishRoomChunk(targetUserIds, {
       roomId: input.roomId,
       requestId: input.requestId,
       chunk: { type: "finish" },

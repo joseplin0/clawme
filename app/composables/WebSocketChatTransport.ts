@@ -27,6 +27,13 @@ type PendingRoomRequest = {
   reject: (error: Error) => void;
 };
 
+type IncomingChunkCallback = (
+  chatId: string,
+  requestId: string,
+  chunk: UIMessageChunk,
+  roomId?: string,
+) => void;
+
 export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
   implements ChatTransport<UI_MESSAGE> {
   private ws: WebSocket | null = null;
@@ -41,6 +48,7 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
   private messageCallbacks = new Set<
     (chatId: string, message: UIMessage, roomId?: string) => void
   >();
+  private chunkCallbacks = new Set<IncomingChunkCallback>();
   private stateChangeCallbacks = new Set<(state: WebSocketConnectionState) => void>();
   private connectionPromise: Promise<WebSocket> | null = null;
 
@@ -260,7 +268,15 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
         case "room-message":
           console.log(`[WS] Received message for room ${data.roomId}, requestId: ${data.requestId}`);
           if (data.payload.kind === "chunk" && data.requestId) {
-            this.handleStreamChunk(data.requestId, data.payload.chunk);
+            if (this.pendingStreams.has(data.requestId)) {
+              this.handleStreamChunk(data.requestId, data.payload.chunk);
+            } else {
+              this.handleIncomingChunk(
+                data.roomId,
+                data.requestId,
+                data.payload.chunk,
+              );
+            }
           }
           if (data.payload.kind === "message") {
             this.handleIncomingMessage(data.roomId, data.payload.message);
@@ -312,6 +328,17 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
   ): void {
     for (const callback of this.messageCallbacks) {
       callback(chatId, message, roomId);
+    }
+  }
+
+  private handleIncomingChunk(
+    chatId: string,
+    requestId: string,
+    chunk: UIMessageChunk,
+    roomId?: string,
+  ): void {
+    for (const callback of this.chunkCallbacks) {
+      callback(chatId, requestId, chunk, roomId);
     }
   }
 
@@ -449,6 +476,11 @@ export class WebSocketChatTransport<UI_MESSAGE extends UIMessage>
   ): () => void {
     this.messageCallbacks.add(callback);
     return () => this.messageCallbacks.delete(callback);
+  }
+
+  onIncomingChunk(callback: IncomingChunkCallback): () => void {
+    this.chunkCallbacks.add(callback);
+    return () => this.chunkCallbacks.delete(callback);
   }
 
   async sendTyping(roomId: string): Promise<void> {

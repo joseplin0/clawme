@@ -192,6 +192,12 @@ export function useChatClient() {
     return transport.onIncomingMessage(callback);
   }
 
+  function onIncomingChunk(
+    callback: (chatId: string, requestId: string, chunk: any, roomId?: string) => void,
+  ): () => void {
+    return transport.onIncomingChunk(callback);
+  }
+
   /**
    * 手动重连
    */
@@ -226,6 +232,7 @@ export function useChatClient() {
     sendTyping,
     sendRead,
     onIncomingMessage,
+    onIncomingChunk,
     reconnect,
     close,
 

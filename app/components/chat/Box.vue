@@ -1,7 +1,8 @@
 <template>
   <section class="relative flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-white dark:bg-gray-900">
     <!-- Chat Header -->
-    <header class="flex items-center justify-between h-14 px-4 bg-default/80 backdrop-blur-xl border-b border-default/50 shrink-0 z-10">
+    <header
+      class="flex items-center justify-between h-14 px-4 bg-default/80 backdrop-blur-xl border-b border-default/50 shrink-0 z-10">
       <div class="flex items-center gap-3">
         <span class="font-medium outline-none text-[15px]">{{ selectedRoom?.title || '未命名房间' }}</span>
         <UBadge v-if="selectedRoom && !isDirectRoom" size="xs" color="warning" variant="subtle">群组</UBadge>
@@ -11,25 +12,26 @@
         <LazyChatCreate :member-ids="quickCreateMemberIds" @created="handleRoomCreated">
           <UButton variant="ghost" color="neutral" icon="i-lucide-plus" size="sm" class="rounded-full" />
         </LazyChatCreate>
-        <UButton variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class="rounded-full" @click="isDrawerOpen = true" />
+        <UButton
+variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class="rounded-full"
+          @click="isDrawerOpen = true" />
       </div>
     </header>
 
     <!-- Chat Messages -->
     <div class="flex min-h-0 flex-1 relative bg-gray-50/80 dark:bg-black/20 shadow-[inset_0_4px_16px_rgba(0,0,0,0.04)]">
-      <UContainer class="flex min-h-0 flex-1 w-full mx-auto px-4 sm:px-8 lg:px-12 py-4 overflow-y-auto">
-        <UChatMessages :messages="chatMessages" :status="chatStatus" should-auto-scroll class="w-full space-y-4 p-4" :spacing-offset="100">
+      <UContainer class="flex min-h-0 flex-1 w-full mx-auto overflow-y-auto px-4 pt-4 pb-10 sm:px-8 lg:px-12">
+        <UChatMessages
+:messages="displayMessages" :status="chatStatus" should-auto-scroll auto-scroll
+          class="w-full space-y-4 p-4" :spacing-offset="100">
           <template #indicator>
             <div class="flex items-center space-x-2 text-muted text-sm px-4 py-2 mt-2">
               <UChatShimmer text="对方正在输入..." />
             </div>
           </template>
-          <template v-for="message in chatMessages" :key="message.id">
+          <template v-for="message in displayMessages" :key="message.id">
             <!-- System Message -->
-            <div
-              v-if="message.role === 'system'"
-              class="flex justify-center w-full my-2"
-            >
+            <div v-if="message.role === 'system'" class="flex justify-center w-full my-2">
               <span class="text-xs text-gray-400 dark:text-gray-500 px-3 py-1">
                 <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
                   <span v-if="isTextUIPart(part)">{{ part.text }}</span>
@@ -38,32 +40,30 @@
             </div>
             <!-- User/Assistant Message -->
             <UChatMessage
-              v-else
-              :id="message.id"
-              :role="message.role"
-              :parts="message.parts"
-              v-bind="getMessageDisplayProps(message)"
-              :ui="{
+v-else :id="message.id" :role="message.role" :parts="message.parts"
+              v-bind="getMessageDisplayProps(message)" :ui="{
                 root: 'flex w-full ',
                 container: 'flex-1 min-w-0 mx-2',
-              }"
-            >
-              <!-- Hide the default role/time header to look more like WeChat -->
-              <template #header>
-                <div style="display: none" />
-              </template>
+              }">
+
               <template #content>
-                <div
-                  class="px-3 py-[9px] text-[15px] leading-relaxed break-words rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
-                  :class="message.metadata?.userId === currentUser?.id ? 'rounded-tr-sm bg-primary text-white' : 'rounded-tl-sm bg-white dark:bg-gray-800 text-default'">
-                  <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
-                    <UChatReasoning v-if="isReasoningUIPart(part)" :text="part.text" :streaming="getReasoningStreaming(message, index)" class="mb-2 text-sm opacity-90">
-                      <MDCCached :value="part.text" :cache-key="`reasoning-${message.id}-${index}`" class="*:first:mt-0 *:last:mb-0" />
-                    </UChatReasoning>
-                    <UChatTool v-else-if="isToolUIPart(part)" :text="getToolName(part)" :streaming="isToolStreaming(part)" class="mb-2 text-sm opacity-90" />
-                    <MDCCached v-else-if="isTextUIPart(part)" :value="part.text" :cache-key="`${message.id}-${index}`" class="*:first:mt-0 *:last:mb-0" />
-                  </template>
-                </div>
+
+                <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
+                  <UChatReasoning
+v-if="isReasoningUIPart(part)" :text="part.text"
+                    :streaming="getReasoningStreaming(message, index)" class="mb-2 text-sm opacity-90">
+                    <MDC
+:value="part.text" :cache-key="`reasoning-${message.id}-${index}`"
+                      class="*:first:mt-0 *:last:mb-0" />
+                  </UChatReasoning>
+                  <UChatTool
+v-else-if="isToolUIPart(part)" :text="getToolName(part)" :streaming="isToolStreaming(part)"
+                    class="mb-2 text-sm opacity-90" />
+                  <MDCCached
+v-else-if="isTextUIPart(part)" :value="part.text" :cache-key="`${message.id}-${index}`"
+                    class="*:first:mt-0 *:last:mb-0" />
+                </template>
+
               </template>
             </UChatMessage>
           </template>
@@ -73,7 +73,8 @@
 
     <!-- Chat Composer -->
     <ChatComposer
-:key="activeRoomId || 'empty'" :ready="isChatReady" :status="chatStatus" :placeholder="composerPlaceholder" :mention-items="mentionItems" @submit="handleSubmit" @stop="handleStop"
+:key="activeRoomId || 'empty'" :ready="isChatReady" :status="chatStatus"
+      :placeholder="composerPlaceholder" :mention-items="mentionItems" @submit="handleSubmit" @stop="handleStop"
       @reload="handleReload" />
 
     <!-- Right Drawer for User List -->
@@ -114,6 +115,8 @@ import {
   isReasoningUIPart,
   isTextUIPart,
   isToolUIPart,
+  readUIMessageStream,
+  type UIMessageChunk,
   type ChatStatus,
 } from "ai";
 import type {
@@ -146,7 +149,7 @@ const { user: currentUser } = useUserSession();
 
 // Use global users cache
 const { getUser, fetchUsers, setUsers } = useUsers();
-const { transport, onIncomingMessage } = useGlobalChatClient();
+const { transport, onIncomingMessage, onIncomingChunk } = useGlobalChatClient();
 
 watch(
   () => props.activeRoomId,
@@ -157,11 +160,25 @@ watch(
 );
 
 const roomMembers = ref<UserProfile[]>([]);
+const externalMessages = ref<Record<string, ClawmeUIMessage>>({});
+const externalMessageOrder = ref<string[]>([]);
+const externalChunkControllers = new Map<
+  string,
+  ReadableStreamDefaultController<UIMessageChunk>
+>();
 
 // Initialize Chat instance
 const chat = shallowRef<Chat<ClawmeUIMessage> | null>(null);
 const chatMessages = computed<ClawmeUIMessage[]>(
   () => chat.value?.messages ?? [],
+);
+const displayMessages = computed<ClawmeUIMessage[]>(() =>
+  [
+    ...chatMessages.value,
+    ...externalMessageOrder.value
+      .map((requestId) => externalMessages.value[requestId])
+      .filter((message): message is ClawmeUIMessage => Boolean(message)),
+  ].filter((message) => hasRenderableParts(message)),
 );
 const chatStatus = computed<ChatStatus>(() => chat.value?.status ?? "ready");
 const selectedRoom = computed(
@@ -188,10 +205,12 @@ watch(activeRoomId, async (id) => {
   isDrawerOpen.value = false;
 
   if (id) {
+    resetExternalStreams();
     await initializeChat();
   } else {
     chat.value = null;
     roomMembers.value = [];
+    resetExternalStreams();
   }
 });
 
@@ -210,12 +229,25 @@ const unsubscribeIncomingMessage = onIncomingMessage(
     }
 
     chat.value.messages = [...chat.value.messages, message as ClawmeUIMessage];
+    removeExternalMessageByMessageId(message.id);
+  },
+);
+
+const unsubscribeIncomingChunk = onIncomingChunk(
+  async (chatId, requestId, chunk) => {
+    if (!activeRoomId.value || chatId !== activeRoomId.value) {
+      return;
+    }
+
+    enqueueExternalChunk(requestId, chunk);
   },
 );
 
 onUnmounted(() => {
   void stopActiveChat();
   unsubscribeIncomingMessage();
+  unsubscribeIncomingChunk();
+  resetExternalStreams();
 });
 
 async function stopActiveChat() {
@@ -339,7 +371,6 @@ function getMessageUserProps(userId: string) {
     avatar: {
       src: user?.avatar ?? undefined,
       alt: user?.nickname ?? (isCurrentUser ? "用户" : "助手"),
-      size: "sm" as const,
     },
   };
 }
@@ -354,5 +385,129 @@ function getReasoningStreaming(message: ClawmeUIMessage, index: number) {
   }
 
   return getNuxtReasoningStreaming(message, index, chat.value);
+}
+
+function getExternalAuthorId() {
+  const currentUserId = currentUser.value?.id;
+  return roomMembers.value.find(
+    (user) => user.id !== currentUserId && isBotUserType(user.type),
+  )?.id ?? "";
+}
+
+function createExternalMessage(requestId: string): ClawmeUIMessage {
+  return {
+    id: `external-${requestId}`,
+    role: "assistant",
+    parts: [],
+    metadata: {
+      createdAt: Date.now(),
+      userId: getExternalAuthorId(),
+    },
+  };
+}
+
+function ensureExternalChunkStream(requestId: string) {
+  if (externalChunkControllers.has(requestId)) {
+    return;
+  }
+
+  externalMessageOrder.value = [...externalMessageOrder.value, requestId];
+
+  const stream = new ReadableStream<UIMessageChunk>({
+    start(controller) {
+      externalChunkControllers.set(requestId, controller);
+    },
+    cancel() {
+      externalChunkControllers.delete(requestId);
+    },
+  });
+
+  const initialMessage = createExternalMessage(requestId);
+
+  void (async () => {
+    try {
+      for await (const message of readUIMessageStream<ClawmeUIMessage>({
+        message: initialMessage,
+        stream,
+      })) {
+        externalMessages.value = {
+          ...externalMessages.value,
+          [requestId]: {
+            ...message,
+            metadata: {
+              createdAt:
+                message.metadata?.createdAt ?? initialMessage.metadata.createdAt,
+              userId: message.metadata?.userId ?? initialMessage.metadata.userId,
+            },
+          },
+        };
+      }
+    } finally {
+      externalChunkControllers.delete(requestId);
+    }
+  })();
+}
+
+function enqueueExternalChunk(requestId: string, chunk: UIMessageChunk) {
+  ensureExternalChunkStream(requestId);
+  const controller = externalChunkControllers.get(requestId);
+
+  if (!controller) {
+    return;
+  }
+
+  controller.enqueue(chunk);
+
+  if (chunk.type === "finish" || chunk.type === "error" || chunk.type === "abort") {
+    controller.close();
+  }
+}
+
+function removeExternalMessageByMessageId(messageId: string) {
+  const requestId = externalMessageOrder.value.find(
+    (candidate) => externalMessages.value[candidate]?.id === messageId,
+  );
+
+  if (!requestId) {
+    return;
+  }
+
+  externalMessages.value = Object.fromEntries(
+    Object.entries(externalMessages.value).filter(
+      ([candidate]) => candidate !== requestId,
+    ),
+  );
+  externalMessageOrder.value = externalMessageOrder.value.filter(
+    (candidate) => candidate !== requestId,
+  );
+  externalChunkControllers.delete(requestId);
+}
+
+function resetExternalStreams() {
+  for (const controller of externalChunkControllers.values()) {
+    try {
+      controller.close();
+    } catch {
+      // stream may already be closed
+    }
+  }
+
+  externalChunkControllers.clear();
+  externalMessages.value = {};
+  externalMessageOrder.value = [];
+}
+
+function hasRenderableParts(message: ClawmeUIMessage) {
+  if (message.role === "system") {
+    return message.parts.some((part) => isTextUIPart(part) && part.text.trim());
+  }
+
+  return message.parts.some((part) => {
+    if (isTextUIPart(part) || isReasoningUIPart(part)) {
+      return part.text.trim().length > 0;
+    }
+
+    return isToolUIPart(part);
+  });
 }
 </script>

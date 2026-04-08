@@ -28,7 +28,7 @@ interface RoomListResponse {
   activeRoomId: string | null;
 }
 
-const { data: roomData, refresh } = useFetch<RoomListResponse>(
+const { data: roomData, refresh } = await useFetch<RoomListResponse>(
   "/api/chat/room",
   { lazy: true },
 );

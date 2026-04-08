@@ -14,6 +14,7 @@ const boxState = vi.hoisted(() => ({
   fetchUsers: vi.fn().mockResolvedValue([]),
   setUsers: vi.fn(),
   onIncomingMessage: vi.fn(() => vi.fn()),
+  onIncomingChunk: vi.fn(() => vi.fn()),
   currentUser: {
     value: {
       id: "owner-1",
@@ -75,6 +76,7 @@ mockNuxtImport("useGlobalChatClient", () => () => ({
     kind: "test-transport",
   },
   onIncomingMessage: boxState.onIncomingMessage,
+  onIncomingChunk: boxState.onIncomingChunk,
 }));
 
 mockNuxtImport("useUserSession", () => () => ({
@@ -202,6 +204,7 @@ describe("ChatBox", () => {
     boxState.fetchUsers.mockClear();
     boxState.setUsers.mockClear();
     boxState.onIncomingMessage.mockClear();
+    boxState.onIncomingChunk.mockClear();
     boxState.fetchMock.mockReset();
     boxState.chatInstances.length = 0;
     boxState.currentUser.value = {
