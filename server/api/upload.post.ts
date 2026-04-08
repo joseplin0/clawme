@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  await storage.setItem<UploadMetadata>(`${filename}:meta`, {
+  await storage.setItem<UploadMetadata>(buildMetadataKey(filename), {
     filename,
     originalName: uploadedFile.filename,
     mimeType,
@@ -87,4 +87,8 @@ function sanitizeFilename(filename: string) {
 
 function inferAssetType(mimeType: string): "image" | "file" {
   return mimeType.startsWith("image/") ? "image" : "file";
+}
+
+function buildMetadataKey(filename: string) {
+  return `meta/${filename}.json`;
 }

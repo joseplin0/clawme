@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   const storage = useStorage(STORAGE_NAMESPACE);
   const [file, metadata] = await Promise.all([
     storage.getItemRaw(filename),
-    storage.getItem<UploadMetadata>(`${filename}:meta`),
+    storage.getItem<UploadMetadata>(buildMetadataKey(filename)),
   ]);
 
   if (!file || !metadata) {
@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
   }
 
   setHeader(event, "Content-Type", metadata.mimeType || "application/octet-stream");
-  setHeader(event, "Content-Length", String(metadata.size));
+  setHeader(event, "Content-Length", metadata.size);
   setHeader(
     event,
     "Content-Disposition",
@@ -50,4 +50,8 @@ function buildDisposition(filename: string, mimeType: string) {
   const encodedName = encodeURIComponent(filename);
   const kind = mimeType.startsWith("image/") ? "inline" : "attachment";
   return `${kind}; filename*=UTF-8''${encodedName}`;
+}
+
+function buildMetadataKey(filename: string) {
+  return `meta/${filename}.json`;
 }
