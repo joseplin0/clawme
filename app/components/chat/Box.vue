@@ -41,10 +41,7 @@ variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class=
             <!-- User/Assistant Message -->
             <UChatMessage
 v-else :id="message.id" :role="message.role" :parts="message.parts"
-              v-bind="getMessageDisplayProps(message)" :ui="{
-                root: 'flex w-full ',
-                container: 'flex-1 min-w-0 mx-2',
-              }">
+              v-bind="getMessageDisplayProps(message)">
 
               <template #content>
 
