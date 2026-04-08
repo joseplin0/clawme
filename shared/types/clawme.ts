@@ -40,6 +40,32 @@ export interface SystemConfigRecord {
   updatedAt: string;
 }
 
+export type StartupCheckStatus = "pending" | "ok" | "warn" | "error";
+
+export interface StartupCheckRecord {
+  key: string;
+  label: string;
+  status: StartupCheckStatus;
+  detail: string;
+  startedAt: string;
+  updatedAt: string;
+  durationMs: number | null;
+}
+
+export interface StartupDiagnostics {
+  status: StartupCheckStatus;
+  ready: boolean;
+  hasBlockingIssue: boolean;
+  startedAt: string;
+  updatedAt: string;
+  checks: StartupCheckRecord[];
+}
+
+export interface SystemStatusResponse {
+  isInitialized: boolean;
+  startup: StartupDiagnostics;
+}
+
 export interface UserProfile {
   id: string;
   type: UserType;
