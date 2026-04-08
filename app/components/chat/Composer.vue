@@ -219,6 +219,12 @@ const editorInputProps = {
   },
 };
 
+function isComposerAttachment(
+  attachment: ComposerAttachment | null,
+): attachment is ComposerAttachment {
+  return attachment !== null;
+}
+
 const isPromptActionDisabled = computed(() => {
   if (!props.ready) {
     return true;
@@ -315,7 +321,10 @@ async function handleFileChange(event: Event) {
     }),
   );
 
-  attachments.value = [...attachments.value, ...converted.filter(Boolean)];
+  attachments.value = [
+    ...attachments.value,
+    ...converted.filter(isComposerAttachment),
+  ];
   resetFileInput();
 }
 

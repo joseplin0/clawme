@@ -22,7 +22,11 @@ variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class=
     <div class="flex min-h-0 flex-1 relative bg-gray-50/80 dark:bg-black/20 shadow-[inset_0_4px_16px_rgba(0,0,0,0.04)]">
       <UContainer class="flex min-h-0 flex-1 w-full mx-auto overflow-y-auto px-4 pt-4 pb-10 sm:px-8 lg:px-12">
         <UChatMessages
-:messages="displayMessages" :status="chatStatus" should-auto-scroll auto-scroll
+          v-if="isMessagesReady"
+          :messages="displayMessages"
+          :status="chatStatus"
+          should-auto-scroll
+          should-scroll-to-bottom
           class="w-full space-y-4 p-4" :spacing-offset="100">
           <template #indicator>
             <div class="flex items-center space-x-2 text-muted text-sm px-4 py-2 mt-2">
@@ -49,6 +53,24 @@ variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class=
             />
           </template>
         </UChatMessages>
+        <div v-else class="w-full space-y-4 p-4">
+          <div
+            v-for="(item, index) in messageSkeletons"
+            :key="index"
+            class="flex items-start gap-3"
+            :class="item.side === 'right' ? 'justify-end' : 'justify-start'"
+          >
+            <USkeleton v-if="item.side === 'left'" class="h-8 w-8 shrink-0 rounded-full" />
+            <div
+              class="space-y-2"
+              :class="item.side === 'right' ? 'items-end' : 'items-start'"
+            >
+              <USkeleton class="h-4 rounded-full" :class="item.titleWidth" />
+              <USkeleton class="h-16 rounded-2xl" :class="item.bodyWidth" />
+            </div>
+            <USkeleton v-if="item.side === 'right'" class="h-8 w-8 shrink-0 rounded-full" />
+          </div>
+        </div>
       </UContainer>
     </div>
 
@@ -105,6 +127,7 @@ import type {
   ClawmeUIMessage,
   FilePart,
   ImagePart,
+  MessageAttachmentSnapshot,
   MessagePart,
   QuotedMessageSummary,
 } from "~~/shared/types/clawme";
@@ -118,30 +141,14 @@ import type { EditorMentionMenuItem } from "@nuxt/ui";
 
 const toast = useToast();
 
-const props = defineProps<{
-  activeRoomId: string | null;
-  rooms: ChatRoomRecord[];
-}>();
-
-const emit = defineEmits<{
-  created: [room: ChatRoomRecord];
-}>();
-
 const isDrawerOpen = ref(false);
-const activeRoomId = ref<string | null>(props.activeRoomId);
+const isMessagesReady = ref(false);
+const { rooms, activeRoomId, upsertRoom } = useChatRooms();
 const { user: currentUser } = useUserSession();
 
 // Use global users cache
 const { getUser, fetchUsers, setUsers } = useUsers();
 const { transport, onIncomingMessage, onIncomingChunk } = useGlobalChatClient();
-
-watch(
-  () => props.activeRoomId,
-  (value) => {
-    activeRoomId.value = value;
-  },
-  { immediate: true },
-);
 
 const roomMembers = ref<UserProfile[]>([]);
 const quotedMessage = ref<QuotedMessageSummary | null>(null);
@@ -167,9 +174,14 @@ const displayMessages = computed<ClawmeUIMessage[]>(() =>
 );
 const chatStatus = computed<ChatStatus>(() => chat.value?.status ?? "ready");
 const selectedRoom = computed(
-  () => props.rooms.find((s) => s.id === activeRoomId.value) ?? null,
+  () => rooms.value.find((s) => s.id === activeRoomId.value) ?? null,
 );
 const isDirectRoom = computed(() => selectedRoom.value?.type === "direct");
+const messageSkeletons = [
+  { side: "left", titleWidth: "w-20", bodyWidth: "w-56 sm:w-72" },
+  { side: "right", titleWidth: "w-16 ml-auto", bodyWidth: "w-48 sm:w-64" },
+  { side: "left", titleWidth: "w-24", bodyWidth: "w-64 sm:w-80" },
+] as const;
 const quickCreateMemberIds = computed(() =>
   roomMembers.value
     .filter((user) => user.id !== currentUser.value?.id)
@@ -192,11 +204,13 @@ watch(activeRoomId, async (id) => {
   if (id) {
     resetExternalStreams();
     quotedMessage.value = null;
+    isMessagesReady.value = false;
     await initializeChat();
   } else {
     chat.value = null;
     roomMembers.value = [];
     quotedMessage.value = null;
+    isMessagesReady.value = false;
     resetExternalStreams();
   }
 });
@@ -250,6 +264,7 @@ async function initializeChat() {
   if (!activeRoomId.value) return;
 
   roomMembers.value = [];
+  isMessagesReady.value = false;
 
   try {
     const response = await $fetch<ChatRoomDetailResponse>(
@@ -276,6 +291,7 @@ async function initializeChat() {
         },
       }),
     );
+    isMessagesReady.value = true;
   } catch (error) {
     console.error("Failed to initialize chat:", error);
     toast.add({
@@ -284,11 +300,12 @@ async function initializeChat() {
       color: "error",
       icon: "i-lucide-triangle-alert",
     });
+    isMessagesReady.value = false;
   }
 }
 
 function handleRoomCreated(room: ChatRoomRecord) {
-  emit("created", room);
+  upsertRoom(room);
 }
 
 function handleSubmit(payload: {
@@ -457,6 +474,10 @@ function ensureExternalChunkStream(requestId: string) {
   });
 
   const initialMessage = createExternalMessage(requestId);
+  const initialMetadata = initialMessage.metadata ?? {
+    createdAt: Date.now(),
+    userId: getExternalAuthorId(),
+  };
 
   void (async () => {
     try {
@@ -470,8 +491,8 @@ function ensureExternalChunkStream(requestId: string) {
             ...message,
             metadata: {
               createdAt:
-                message.metadata?.createdAt ?? initialMessage.metadata.createdAt,
-              userId: message.metadata?.userId ?? initialMessage.metadata.userId,
+                message.metadata?.createdAt ?? initialMetadata.createdAt,
+              userId: message.metadata?.userId ?? initialMetadata.userId,
             },
           },
         };
@@ -532,31 +553,47 @@ function resetExternalStreams() {
 }
 
 function toQuotedMessageSummary(message: ClawmeUIMessage): QuotedMessageSummary {
+  const textPart = message.parts.find(
+    (part): part is Extract<MessagePart, { type: "text" }> =>
+      isTextUIPart(part) && part.text.trim().length > 0,
+  );
+
   return {
     id: message.id,
     role: message.role,
     senderId: message.metadata?.userId ?? "",
-    text: message.parts
-      .find((part) => isTextUIPart(part) && part.text.trim())
-      ?.text?.trim(),
-    attachments: message.parts.flatMap((part) => {
-      if (isImageMessagePart(part) || isFileMessagePart(part)) {
-        return [{
-          assetId: part.assetId,
-          type: part.type,
-          url: part.url,
-          filename: part.filename,
-          mediaType: part.mediaType,
-          size: part.size,
-          width: "width" in part ? part.width : undefined,
-          height: "height" in part ? part.height : undefined,
-        }];
-      }
-
-      return [];
-    }),
+    text: textPart?.text.trim(),
+    attachments: message.parts.flatMap(toAttachmentSnapshot),
     excerpt: message.metadata?.quotedExcerpt ?? message.metadata?.quotedMessage?.excerpt,
   };
+}
+
+function toAttachmentSnapshot(part: unknown): MessageAttachmentSnapshot[] {
+  if (isImageMessagePart(part)) {
+    return [{
+      assetId: part.assetId,
+      type: part.type,
+      url: part.url,
+      filename: part.filename,
+      mediaType: part.mediaType,
+      size: part.size,
+      width: part.width,
+      height: part.height,
+    }];
+  }
+
+  if (isFileMessagePart(part)) {
+    return [{
+      assetId: part.assetId,
+      type: part.type,
+      url: part.url,
+      filename: part.filename,
+      mediaType: part.mediaType,
+      size: part.size,
+    }];
+  }
+
+  return [];
 }
 
 function getQuotedPreview(quoted: QuotedMessageSummary) {

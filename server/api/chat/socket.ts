@@ -3,6 +3,7 @@ import type {
   ChatWsConnectionAuth,
   ChatWsServerMessage,
 } from "~~/shared/types/chat-ws";
+import type { ClawmeUIMessage } from "~~/shared/types/clawme";
 import {
   ChatCommandError,
   getRoomMembersForUser,
@@ -11,8 +12,8 @@ import {
 import { resolveOwnerSocketUser } from "~~/server/utils/auth";
 import { onPublishWs } from "~~/server/utils/ws-event-bus";
 
-type WSMessage = ChatWsClientMessage;
-type WSResponse = ChatWsServerMessage;
+type WSMessage = ChatWsClientMessage<ClawmeUIMessage>;
+type WSResponse = ChatWsServerMessage<ClawmeUIMessage>;
 type WSSendMessage = Extract<WSMessage, { type: "send" }>;
 type WSTypingMessage = Extract<WSMessage, { type: "typing" }>;
 type WSReadMessage = Extract<WSMessage, { type: "read" }>;

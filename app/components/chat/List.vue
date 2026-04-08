@@ -17,16 +17,48 @@ v-model="searchQuery" icon="i-lucide-search" placeholder="搜索房间..." varia
       </div>
     </template>
 
-    <UScrollArea
-v-slot="{ item }" :items="filteredRooms" :virtualize="{
-      estimateSize: 76,
-      skipMeasurement: true,
-    }" class="min-h-0 flex-1 w-full">
+    <div v-if="showRoomSkeletons" class="min-h-0 flex-1 w-full space-y-2 px-1">
       <div
-data-testid="room-item"
+        v-for="(item, index) in roomSkeletons"
+        :key="index"
+        class="flex items-center gap-3 rounded-lg p-3"
+      >
+        <USkeleton class="h-10 w-10 shrink-0 rounded-full" />
+        <div class="min-w-0 flex-1 space-y-2">
+          <div class="flex items-center justify-between gap-3">
+            <USkeleton class="h-4 rounded-full" :class="item.titleWidth" />
+            <USkeleton class="h-3 w-10 shrink-0 rounded-full" />
+          </div>
+          <USkeleton class="h-3 rounded-full" :class="item.previewWidth" />
+        </div>
+      </div>
+    </div>
+    <div
+      v-else-if="showEmptyState"
+      class="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center"
+    >
+      <div class="flex h-12 min-w-12 items-center justify-center rounded-2xl bg-default/40 px-3 text-xs font-medium text-muted">
+        {{ emptyStateBadge }}
+      </div>
+      <p class="mt-4 text-sm font-medium text-default">{{ emptyStateTitle }}</p>
+      <p class="mt-1 text-xs leading-5 text-muted">{{ emptyStateDescription }}</p>
+    </div>
+    <UScrollArea
+      v-else
+      v-slot="{ item }"
+      :items="filteredRooms"
+      :virtualize="{
+        estimateSize: 76,
+        skipMeasurement: true,
+      }"
+      class="min-h-0 flex-1 w-full"
+    >
+      <div
+        data-testid="room-item"
         class="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors duration-200"
-        :class="item.id === modelValue ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'"
-        @click="handleSelectRoom(item.id)">
+        :class="item.id === activeRoomId ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'"
+        @click="handleSelectRoom(item.id)"
+      >
         <!-- Avatar Placeholder (can be customized using room participants logic) -->
         <UAvatar :text="item.title.slice(0, 1)" size="md" />
         <div class="flex flex-col flex-1 min-w-0 justify-center">
@@ -45,40 +77,66 @@ data-testid="room-item"
 import type { ChatRoomRecord } from "~~/shared/types/clawme";
 
 const props = defineProps<{
-  modelValue: string | null;
   open?: boolean;
-  rooms: ChatRoomRecord[];
   hasMore?: boolean;
-  isLoading?: boolean;
 }>();
 
 const emit = defineEmits<{
-  "update:modelValue": [value: string | null];
   "update:open": [value: boolean];
-  created: [room: ChatRoomRecord];
   loadMore: [];
 }>();
 
+const { rooms, activeRoomId, pending, initialized, fetchRooms, upsertRoom } = useChatRooms();
 const searchQuery = ref("");
 const sidebarOpen = computed({
   get: () => props.open ?? false,
   set: (value: boolean) => emit("update:open", value),
 });
+const roomSkeletons = [
+  { titleWidth: "w-28", previewWidth: "w-40" },
+  { titleWidth: "w-24", previewWidth: "w-32" },
+  { titleWidth: "w-32", previewWidth: "w-44" },
+  { titleWidth: "w-20", previewWidth: "w-28" },
+] as const;
+const showRoomSkeletons = computed(
+  () => pending.value && rooms.value.length === 0,
+);
 
 const filteredRooms = computed(() => {
-  if (!searchQuery.value) return props.rooms;
+  if (!searchQuery.value) return rooms.value;
   const query = searchQuery.value.toLowerCase();
-  return props.rooms.filter((s) => s.title.toLowerCase().includes(query));
+  return rooms.value.filter((s) => s.title.toLowerCase().includes(query));
 });
+const showEmptyState = computed(
+  () => !pending.value && filteredRooms.value.length === 0,
+);
+const isSearching = computed(() => searchQuery.value.trim().length > 0);
+const emptyStateTitle = computed(() =>
+  isSearching.value ? "没有找到匹配房间" : "还没有聊天房间",
+);
+const emptyStateDescription = computed(() =>
+  isSearching.value
+    ? "试试别的关键词，或者直接创建一个新房间。"
+    : "点击右上角加号，开始新的聊天。",
+);
+const emptyStateBadge = computed(() =>
+  isSearching.value ? "搜索" : "会话",
+);
 
 function handleRoomCreated(room: ChatRoomRecord) {
-  emit("created", room);
+  upsertRoom(room);
 }
 
 function handleSelectRoom(roomId: string) {
-  emit("update:modelValue", roomId);
+  activeRoomId.value = roomId;
   sidebarOpen.value = false;
 }
+
+onMounted(() => {
+  if (!initialized.value) {
+    void fetchRooms();
+  }
+});
 
 function formatRelativeTime(value?: string) {
   if (!value) {

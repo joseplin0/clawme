@@ -5,6 +5,7 @@ import {
   isImageMessagePart,
   isBotUserType,
   isTextMessagePart,
+  type MessageMetadata,
   type MessageAttachmentSnapshot,
   type MessagePart,
   type SessionType,
@@ -29,11 +30,11 @@ type AttachmentLinkInput = {
 };
 
 function extractAttachmentLinks(parts: UIMessage["parts"]): AttachmentLinkInput[] {
-  return parts.flatMap((part) => {
-    if (!isImageMessagePart(part) && !isFileMessagePart(part)) {
-      return [];
-    }
+  return parts.flatMap(toAttachmentLinkInput);
+}
 
+function toAttachmentLinkInput(part: unknown): AttachmentLinkInput[] {
+  if (isImageMessagePart(part)) {
     if (!part.assetId) {
       return [];
     }
@@ -47,11 +48,31 @@ function extractAttachmentLinks(parts: UIMessage["parts"]): AttachmentLinkInput[
         filename: part.filename,
         mediaType: part.mediaType,
         size: part.size,
-        width: "width" in part ? part.width : undefined,
-        height: "height" in part ? part.height : undefined,
+        width: part.width,
+        height: part.height,
       },
     }];
-  });
+  }
+
+  if (isFileMessagePart(part)) {
+    if (!part.assetId) {
+      return [];
+    }
+
+    return [{
+      assetId: part.assetId,
+      snapshot: {
+        assetId: part.assetId,
+        type: part.type,
+        url: part.url,
+        filename: part.filename,
+        mediaType: part.mediaType,
+        size: part.size,
+      },
+    }];
+  }
+
+  return [];
 }
 
 const { users, roomMembers, rooms, roomMessages } = schema;
@@ -101,7 +122,7 @@ export async function getRoomMembersForUser(
 export async function prepareRoomMessage(input: {
   senderId: string;
   /** 前端发送的完整消息 */
-  clientMessage?: UIMessage;
+  clientMessage?: UIMessage<MessageMetadata>;
   roomId?: string;
   memberIds?: string[];
 }): Promise<PreparedChatCommand> {

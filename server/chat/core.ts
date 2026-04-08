@@ -1,4 +1,5 @@
 import { type UIMessage } from "ai";
+import type { MessageMetadata } from "~~/shared/types/clawme";
 import {
   ChatCommandError,
   getRoomMembersForUser,
@@ -26,7 +27,7 @@ export async function sendRoomMessage(input: {
   roomId?: string;
   memberIds?: string[];
   /** 前端发送的完整消息 */
-  clientMessage?: UIMessage;
+  clientMessage?: UIMessage<MessageMetadata>;
   requestId?: string;
   onRoomCreated?: (result: SendRoomMessageResult) => void;
 }): Promise<SendRoomMessageResult> {
@@ -65,10 +66,10 @@ export async function sendRoomMessage(input: {
   if (prepared.systemMessages && prepared.systemMessages.length > 0) {
     const allMemberIds = [input.senderId, ...prepared.recipientUserIds];
     for (const sysMsg of prepared.systemMessages) {
-      const uiMessage: UIMessage = {
+      const uiMessage: UIMessage<MessageMetadata> = {
         id: sysMsg.id,
         role: sysMsg.role,
-        parts: sysMsg.parts as UIMessage["parts"],
+        parts: sysMsg.parts as UIMessage<MessageMetadata>["parts"],
         metadata: {
           createdAt: sysMsg.createdAt.getTime(),
           userId: sysMsg.senderId,

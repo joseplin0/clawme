@@ -47,19 +47,19 @@
             class="mb-2 w-full max-w-xs overflow-hidden rounded-2xl border border-default/60 bg-default/20 sm:max-w-sm"
           >
             <img
-              :src="part.url"
-              :alt="part.filename"
+              :src="getImagePart(part).url"
+              :alt="getImagePart(part).filename"
               class="max-h-56 w-full object-cover"
             >
             <div class="flex items-center justify-between gap-3 px-3 py-2 text-xs text-muted">
-              <span class="truncate">{{ part.filename }}</span>
-              <span>{{ formatFileSize(part.size) }}</span>
+              <span class="truncate">{{ getImagePart(part).filename }}</span>
+              <span>{{ formatFileSize(getImagePart(part).size) }}</span>
             </div>
           </div>
           <a
             v-else-if="isFileMessagePart(part)"
-            :href="part.url"
-            :download="part.filename"
+            :href="getFilePart(part).url"
+            :download="getFilePart(part).filename"
             target="_blank"
             rel="noreferrer"
             class="mb-2 flex items-center gap-3 rounded-2xl border border-default/60 bg-default/20 px-3 py-3 transition-colors hover:bg-default/30"
@@ -68,8 +68,8 @@
               <UIcon name="i-lucide-file" class="h-5 w-5" />
             </div>
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-default">{{ part.filename }}</p>
-              <p class="text-xs text-muted">{{ formatFileSize(part.size) }}</p>
+              <p class="truncate text-sm font-medium text-default">{{ getFilePart(part).filename }}</p>
+              <p class="text-xs text-muted">{{ formatFileSize(getFilePart(part).size) }}</p>
             </div>
             <UIcon name="i-lucide-download" class="h-4 w-4 text-muted" />
           </a>
@@ -121,6 +121,8 @@ import {
 import { isToolStreaming } from "@nuxt/ui/utils/ai";
 import type {
   ClawmeUIMessage,
+  FilePart,
+  ImagePart,
   MessagePart,
   QuotedMessageSummary,
 } from "~~/shared/types/clawme";
@@ -179,6 +181,14 @@ function getQuotedSenderName(message: ClawmeUIMessage) {
 
 function getLeadingMessageParts(message: ClawmeUIMessage) {
   return message.parts.filter((part) => !isTextUIPart(part));
+}
+
+function getImagePart(part: unknown): ImagePart {
+  return part as ImagePart;
+}
+
+function getFilePart(part: unknown): FilePart {
+  return part as FilePart;
 }
 
 function getMessageTextContent(message: ClawmeUIMessage) {
