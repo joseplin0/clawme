@@ -43,12 +43,9 @@ variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class=
               v-else
               :message="message"
               :display-props="getMessageDisplayProps(message)"
-              :is-quote-selection-active="selectedQuoteCandidate?.messageId === message.id"
               :get-reasoning-streaming="(index) => getReasoningStreaming(message, index)"
               :resolve-user-name="resolveUserName"
               @select-quote="handleSelectQuote(message, $event)"
-              @clear-quote-selection="clearSelectionQuote"
-              @apply-quote-selection="applyQuoteSelection"
             />
           </template>
         </UChatMessages>
@@ -148,10 +145,6 @@ watch(
 
 const roomMembers = ref<UserProfile[]>([]);
 const quotedMessage = ref<QuotedMessageSummary | null>(null);
-const selectedQuoteCandidate = ref<{
-  messageId: string;
-  excerpt: string;
-} | null>(null);
 const externalMessages = ref<Record<string, ClawmeUIMessage>>({});
 const externalMessageOrder = ref<string[]>([]);
 const externalChunkControllers = new Map<
@@ -242,7 +235,7 @@ onUnmounted(() => {
   unsubscribeIncomingMessage();
   unsubscribeIncomingChunk();
   resetExternalStreams();
-  clearSelectionQuote();
+  globalThis.getSelection?.()?.removeAllRanges?.();
 });
 
 async function stopActiveChat() {
@@ -415,13 +408,9 @@ function resolveUserName(userId: string) {
   return getUserById(userId)?.nickname;
 }
 
-function setQuotedMessage(message: ClawmeUIMessage) {
-  quotedMessage.value = toQuotedMessageSummary(message);
-}
-
 function clearQuotedMessage() {
   quotedMessage.value = null;
-  clearSelectionQuote();
+  globalThis.getSelection?.()?.removeAllRanges?.();
 }
 
 function getReasoningStreaming(message: ClawmeUIMessage, index: number) {
@@ -590,35 +579,10 @@ function getQuotedPreview(quoted: QuotedMessageSummary) {
 }
 
 function handleSelectQuote(message: ClawmeUIMessage, excerpt: string) {
-  selectedQuoteCandidate.value = {
-    messageId: message.id,
+  quotedMessage.value = {
+    ...toQuotedMessageSummary(message),
     excerpt,
   };
-}
-
-function applyQuoteSelection() {
-  if (!selectedQuoteCandidate.value || !chat.value) {
-    return;
-  }
-
-  const targetMessage = chat.value.messages.find(
-    (message) => message.id === selectedQuoteCandidate.value?.messageId,
-  ) as ClawmeUIMessage | undefined;
-
-  if (!targetMessage) {
-    clearSelectionQuote();
-    return;
-  }
-
-  quotedMessage.value = {
-    ...toQuotedMessageSummary(targetMessage),
-    excerpt: selectedQuoteCandidate.value.excerpt,
-  };
-  clearSelectionQuote();
-}
-
-function clearSelectionQuote() {
-  selectedQuoteCandidate.value = null;
   globalThis.getSelection?.()?.removeAllRanges?.();
 }
 

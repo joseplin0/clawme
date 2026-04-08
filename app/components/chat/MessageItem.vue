@@ -87,28 +87,31 @@
           />
         </div>
 
-        <div
-          v-if="isQuoteSelectionActive"
-          class="mt-1 flex justify-end"
+        <UButton
+          v-if="selectionQuote"
+          data-testid="selection-quote-button"
+          icon="i-lucide-reply"
+          variant="soft"
+          color="neutral"
+          size="xs"
+          class="absolute z-10 rounded-full px-2 py-1 text-[11px] shadow-sm"
+          :style="{
+            left: `${selectionQuote.left}px`,
+            top: `${selectionQuote.top}px`,
+            transform: 'translate(-50%, -100%)',
+          }"
+          @mousedown.prevent
+          @click="applySelectionQuote"
         >
-          <UButton
-            icon="i-lucide-reply"
-            variant="soft"
-            color="neutral"
-            size="xs"
-            class="rounded-full px-2 py-1 text-[11px]"
-            @mousedown.prevent
-            @click="emit('apply-quote-selection')"
-          >
-            引用
-          </UButton>
-        </div>
+          引用
+        </UButton>
       </div>
     </template>
   </UChatMessage>
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import {
   getToolName,
   isReasoningUIPart,
@@ -136,16 +139,19 @@ const props = defineProps<{
       alt: string;
     };
   };
-  isQuoteSelectionActive: boolean;
   getReasoningStreaming: (index: number) => boolean;
   resolveUserName: (userId: string) => string | undefined;
 }>();
 
 const emit = defineEmits<{
   "select-quote": [excerpt: string];
-  "clear-quote-selection": [];
-  "apply-quote-selection": [];
 }>();
+
+const selectionQuote = ref<{
+  excerpt: string;
+  left: number;
+  top: number;
+} | null>(null);
 
 function getQuotedPreview(quoted: QuotedMessageSummary) {
   if (quoted.excerpt?.trim()) {
@@ -189,17 +195,50 @@ function handleMouseUp(event: MouseEvent) {
   const text = selection?.toString().trim() ?? "";
 
   if (!container || !selection || !text) {
-    emit("clear-quote-selection");
+    clearSelectionQuote();
     return;
   }
 
   const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
   if (!range || !container.contains(range.commonAncestorContainer)) {
-    emit("clear-quote-selection");
+    clearSelectionQuote();
     return;
   }
 
-  emit("select-quote", clampQuotedExcerpt(text));
+  const rect = range.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+
+  if (!rect.width && !rect.height) {
+    clearSelectionQuote();
+    return;
+  }
+
+  const maxLeft = Math.max(48, containerRect.width - 48);
+  const left = Math.min(
+    maxLeft,
+    Math.max(48, rect.left - containerRect.left + (rect.width / 2)),
+  );
+  const top = Math.max(8, rect.top - containerRect.top - 8);
+
+  selectionQuote.value = {
+    excerpt: clampQuotedExcerpt(text),
+    left,
+    top,
+  };
+}
+
+function applySelectionQuote() {
+  if (!selectionQuote.value) {
+    return;
+  }
+
+  emit("select-quote", selectionQuote.value.excerpt);
+  clearSelectionQuote();
+  globalThis.getSelection?.()?.removeAllRanges?.();
+}
+
+function clearSelectionQuote() {
+  selectionQuote.value = null;
 }
 
 function clampQuotedExcerpt(text: string) {
@@ -218,4 +257,23 @@ function formatFileSize(size: number) {
 
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+function handleSelectionChange() {
+  const text = globalThis.getSelection?.()?.toString().trim() ?? "";
+  if (!text) {
+    clearSelectionQuote();
+  }
+}
+
+onMounted(() => {
+  globalThis.document?.addEventListener("selectionchange", handleSelectionChange);
+  globalThis.addEventListener?.("scroll", clearSelectionQuote, true);
+  globalThis.addEventListener?.("resize", clearSelectionQuote);
+});
+
+onBeforeUnmount(() => {
+  globalThis.document?.removeEventListener("selectionchange", handleSelectionChange);
+  globalThis.removeEventListener?.("scroll", clearSelectionQuote, true);
+  globalThis.removeEventListener?.("resize", clearSelectionQuote);
+});
 </script>
