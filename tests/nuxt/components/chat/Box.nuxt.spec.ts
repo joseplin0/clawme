@@ -408,4 +408,83 @@ describe("ChatBox", () => {
     });
     expect(boxState.toastAdd).not.toHaveBeenCalled();
   });
+
+  it("图片消息会缩小展示并将文字渲染在图片下方", async () => {
+    boxState.fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/chat/room/room-image") {
+        const owner = createUser({
+          id: "owner-1",
+          username: "lin",
+          nickname: "林",
+        });
+        const assistant = createUser({
+          id: "bot-1",
+          type: "bot",
+          username: "clawme",
+          nickname: "虾米",
+          role: "本地助理",
+        });
+
+        return {
+          id: "room-image",
+          title: "图片讨论",
+          members: [owner, assistant],
+          messages: [
+            {
+              id: "message-image-1",
+              role: "user",
+              parts: [
+                {
+                  type: "image",
+                  assetId: "asset-image-1",
+                  url: "https://example.com/demo.png",
+                  mediaType: "image/png",
+                  filename: "demo.png",
+                  size: 2048,
+                },
+                {
+                  type: "text",
+                  text: "这是一张示意图",
+                },
+              ],
+              metadata: {
+                createdAt: Date.now(),
+                userId: owner.id,
+              },
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected fetch in test: ${url}`);
+    });
+
+    const wrapper = await mountSuspended(Box, {
+      global: {
+        stubs: {
+          ChatCreateRoomTrigger: createRoomTriggerStub,
+        },
+      },
+      props: {
+        activeRoomId: "room-image",
+        rooms: [
+          createRoom({
+            id: "room-image",
+            title: "图片讨论",
+            memberIds: ["owner-1", "bot-1"],
+          }),
+        ],
+      },
+    });
+
+    await flushPromises();
+
+    const imageCard = wrapper.get('[data-testid="message-image"]');
+    expect(imageCard.classes()).toContain("max-w-xs");
+    expect(imageCard.classes()).toContain("sm:max-w-sm");
+
+    const textBlock = wrapper.get('[data-testid="message-text"]');
+    expect(textBlock.classes()).toContain("mt-3");
+    expect(textBlock.text()).toContain("这是一张示意图");
+  });
 });

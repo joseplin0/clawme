@@ -39,102 +39,17 @@ variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class=
               </span>
             </div>
             <!-- User/Assistant Message -->
-            <UChatMessage
-v-else :id="message.id" :role="message.role" :parts="message.parts"
-              v-bind="getMessageDisplayProps(message)">
-
-              <template #content>
-                <div
-                  v-if="message.metadata?.quotedMessage"
-                  class="mb-2 rounded-xl border border-default/50 bg-default/15 px-2.5 py-1.5"
-                >
-                  <p class="text-[11px] font-medium text-primary/80">
-                    {{ getQuotedSenderName(message) }}
-                  </p>
-                  <p class="mt-0.5 truncate text-[12px] leading-4 text-muted">
-                    {{ getQuotedPreview(message.metadata.quotedMessage) }}
-                  </p>
-                </div>
-
-                <div class="relative" @mouseup="handleMessageMouseUp(message, $event)">
-                  <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
-                    <UChatReasoning
-                      v-if="isReasoningUIPart(part)"
-                      :text="part.text"
-                      :streaming="getReasoningStreaming(message, index)"
-                      class="mb-2 text-sm opacity-90"
-                    >
-                      <MDC
-                        :value="part.text"
-                        :cache-key="`reasoning-${message.id}-${index}`"
-                        class="*:first:mt-0 *:last:mb-0"
-                      />
-                    </UChatReasoning>
-                    <UChatTool
-                      v-else-if="isToolUIPart(part)"
-                      :text="getToolName(part)"
-                      :streaming="isToolStreaming(part)"
-                      class="mb-2 text-sm opacity-90"
-                    />
-                    <div
-                      v-else-if="isImageMessagePart(part)"
-                      class="mb-2 overflow-hidden rounded-2xl border border-default/60 bg-default/20"
-                    >
-                      <img
-                        :src="part.url"
-                        :alt="part.filename"
-                        class="max-h-80 w-full object-cover"
-                      >
-                      <div class="flex items-center justify-between gap-3 px-3 py-2 text-xs text-muted">
-                        <span class="truncate">{{ part.filename }}</span>
-                        <span>{{ formatFileSize(part.size) }}</span>
-                      </div>
-                    </div>
-                    <a
-                      v-else-if="isFileMessagePart(part)"
-                      :href="part.url"
-                      :download="part.filename"
-                      target="_blank"
-                      rel="noreferrer"
-                      class="mb-2 flex items-center gap-3 rounded-2xl border border-default/60 bg-default/20 px-3 py-3 transition-colors hover:bg-default/30"
-                    >
-                      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <UIcon name="i-lucide-file" class="h-5 w-5" />
-                      </div>
-                      <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-medium text-default">{{ part.filename }}</p>
-                        <p class="text-xs text-muted">{{ formatFileSize(part.size) }}</p>
-                      </div>
-                      <UIcon name="i-lucide-download" class="h-4 w-4 text-muted" />
-                    </a>
-                    <MDCCached
-                      v-else-if="isTextUIPart(part)"
-                      :value="part.text"
-                      :cache-key="`${message.id}-${index}`"
-                      class="*:first:mt-0 *:last:mb-0"
-                    />
-                  </template>
-
-                  <div
-                    v-if="selectedQuoteCandidate?.messageId === message.id"
-                    class="mt-1 flex justify-end"
-                  >
-                    <UButton
-                      icon="i-lucide-reply"
-                      variant="soft"
-                      color="neutral"
-                      size="xs"
-                      class="rounded-full px-2 py-1 text-[11px]"
-                      @mousedown.prevent
-                      @click="applyQuoteSelection"
-                    >
-                      引用
-                    </UButton>
-                  </div>
-                </div>
-
-              </template>
-            </UChatMessage>
+            <ChatMessageItem
+              v-else
+              :message="message"
+              :display-props="getMessageDisplayProps(message)"
+              :is-quote-selection-active="selectedQuoteCandidate?.messageId === message.id"
+              :get-reasoning-streaming="(index) => getReasoningStreaming(message, index)"
+              :resolve-user-name="resolveUserName"
+              @select-quote="handleSelectQuote(message, $event)"
+              @clear-quote-selection="clearSelectionQuote"
+              @apply-quote-selection="applyQuoteSelection"
+            />
           </template>
         </UChatMessages>
       </UContainer>
@@ -180,10 +95,8 @@ import {
 } from "vue";
 import { Chat } from "@ai-sdk/vue";
 import {
-  getToolName,
   isReasoningUIPart,
   isTextUIPart,
-  isToolUIPart,
   readUIMessageStream,
   type UIMessageChunk,
   type ChatStatus,
@@ -203,10 +116,7 @@ import {
   isFileMessagePart,
   isImageMessagePart,
 } from "~~/shared/types/clawme";
-import {
-  isReasoningStreaming as getNuxtReasoningStreaming,
-  isToolStreaming,
-} from "@nuxt/ui/utils/ai";
+import { isReasoningStreaming as getNuxtReasoningStreaming } from "@nuxt/ui/utils/ai";
 import type { EditorMentionMenuItem } from "@nuxt/ui";
 
 const toast = useToast();
@@ -501,6 +411,10 @@ function getMessageDisplayProps(message: ClawmeUIMessage) {
   return getMessageUserProps(message.metadata?.userId ?? "");
 }
 
+function resolveUserName(userId: string) {
+  return getUserById(userId)?.nickname;
+}
+
 function setQuotedMessage(message: ClawmeUIMessage) {
   quotedMessage.value = toQuotedMessageSummary(message);
 }
@@ -675,30 +589,10 @@ function getQuotedPreview(quoted: QuotedMessageSummary) {
   return "引用了一条消息";
 }
 
-function getQuotedSenderName(message: ClawmeUIMessage) {
-  const senderId = message.metadata?.quotedMessage?.senderId;
-  return senderId ? getUserById(senderId)?.nickname ?? "引用消息" : "引用消息";
-}
-
-function handleMessageMouseUp(message: ClawmeUIMessage, event: MouseEvent) {
-  const container = event.currentTarget as HTMLElement | null;
-  const selection = globalThis.getSelection?.();
-  const text = selection?.toString().trim() ?? "";
-
-  if (!container || !selection || !text) {
-    clearSelectionQuote();
-    return;
-  }
-
-  const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-  if (!range || !container.contains(range.commonAncestorContainer)) {
-    clearSelectionQuote();
-    return;
-  }
-
+function handleSelectQuote(message: ClawmeUIMessage, excerpt: string) {
   selectedQuoteCandidate.value = {
     messageId: message.id,
-    excerpt: clampQuotedExcerpt(text),
+    excerpt,
   };
 }
 
@@ -728,11 +622,6 @@ function clearSelectionQuote() {
   globalThis.getSelection?.()?.removeAllRanges?.();
 }
 
-function clampQuotedExcerpt(text: string) {
-  const normalized = text.replace(/\s+/g, " ").trim();
-  return normalized.length > 140 ? `${normalized.slice(0, 140)}...` : normalized;
-}
-
 function hasRenderableParts(message: ClawmeUIMessage) {
   if (message.role === "system") {
     return message.parts.some((part) => isTextUIPart(part) && part.text.trim());
@@ -743,19 +632,7 @@ function hasRenderableParts(message: ClawmeUIMessage) {
       return part.text.trim().length > 0;
     }
 
-    return isToolUIPart(part) || isImageMessagePart(part) || isFileMessagePart(part);
+    return part.type === "tool-call" || part.type === "tool-result" || isImageMessagePart(part) || isFileMessagePart(part);
   });
-}
-
-function formatFileSize(size: number) {
-  if (size < 1024) {
-    return `${size} B`;
-  }
-
-  if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1)} KB`;
-  }
-
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 </script>
