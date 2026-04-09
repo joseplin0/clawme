@@ -68,9 +68,13 @@ mockComponent("UButton", {
       type: String,
       default: "",
     },
+    title: {
+      type: String,
+      default: "",
+    },
   },
   template:
-    "<a data-testid=\"brand-link\" :href=\"to\"><slot>{{ label }}</slot></a>",
+    "<button :title=\"title\" data-testid=\"u-button\"><slot>{{ label }}</slot></button>",
 });
 
 mockComponent("UAvatar", {
@@ -79,6 +83,32 @@ mockComponent("UAvatar", {
 
 mockComponent("UserAvatar", {
   template: "<div data-testid=\"avatar\" />",
+});
+
+mockComponent("UDropdownMenu", {
+  props: {
+    items: {
+      type: Array,
+      default: () => [],
+    },
+  },
+  template: `
+    <div data-testid="dropdown-menu">
+      <slot />
+      <div data-testid="dropdown-content">
+        <template v-for="(group, groupIndex) in items" :key="groupIndex">
+          <template v-for="(item, itemIndex) in group" :key="itemIndex">
+            <slot v-if="item.slot" :name="item.slot" :item="item" />
+            <div v-else>{{ item.label }}</div>
+          </template>
+        </template>
+      </div>
+    </div>
+  `,
+});
+
+mockComponent("UColorModeSwitch", {
+  template: "<div data-testid=\"color-mode-switch\" />",
 });
 
 describe("AppSidebar", () => {
@@ -125,5 +155,24 @@ describe("AppSidebar", () => {
 
     await wrapper.get('[title="刷新"]').trigger("click");
     expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("显示底部更多菜单并支持主题切换", async () => {
+    const wrapper = await mountSuspended(AppSidebar, {
+      props: {
+        links: [
+          {
+            label: "消息",
+            to: "/chat",
+            icon: "i-ph-chat-circle",
+          },
+        ],
+      },
+    });
+
+    expect(wrapper.text()).toContain("主题切换");
+    expect(wrapper.text()).toContain("设置");
+    expect(wrapper.find('[data-testid="color-mode-switch"]').exists()).toBe(true);
+    expect(wrapper.get('[title="更多"]').exists()).toBe(true);
   });
 });

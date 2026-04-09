@@ -1,8 +1,16 @@
 <template>
-  <span
-    class="relative inline-flex"
-    @mouseenter="handleEnter"
-    @mouseleave="handleLeave"
+  <UPopover
+    v-if="shouldShowPopover && resolvedUser"
+    v-model:open="isCardOpen"
+    mode="hover"
+    :open-delay="60"
+    :close-delay="120"
+    :content="{
+      side: profileCardSide,
+      align: profileCardAlign,
+      sideOffset: profileCardSideOffset,
+      collisionPadding: 12,
+    }"
   >
     <component
       :is="linkComponent"
@@ -21,15 +29,8 @@
       />
     </component>
 
-    <div
-      v-if="showProfileCard && isCardOpen && resolvedUser"
-      class="absolute left-1/2 top-full z-50 hidden w-72 -translate-x-1/2 pt-3 md:block"
-    >
-      <div
-        class="overflow-hidden rounded-2xl border border-default/60 bg-default/95 shadow-2xl backdrop-blur-xl"
-        @mouseenter="handleEnter"
-        @mouseleave="handleLeave"
-      >
+    <template #content>
+      <div class="w-72 overflow-hidden rounded-2xl border border-default/60 bg-default/95 shadow-2xl backdrop-blur-xl">
         <div class="bg-gradient-to-br from-primary/12 via-transparent to-secondary/10 px-4 py-4">
           <div class="flex items-start gap-3">
             <UserAvatar
@@ -94,8 +95,26 @@
           </NuxtLink>
         </div>
       </div>
-    </div>
-  </span>
+    </template>
+  </UPopover>
+
+  <component
+    :is="linkComponent"
+    v-else
+    v-bind="linkProps"
+    class="inline-flex rounded-full"
+    :class="interactive ? 'cursor-pointer' : undefined"
+  >
+    <UAvatar
+      :src="resolvedUser?.avatar ?? undefined"
+      :alt="avatarAlt"
+      :text="avatarText"
+      :size="size"
+      :ui="ui"
+      :class="avatarClass"
+      :style="avatarStyle"
+    />
+  </component>
 </template>
 
 <script setup lang="ts">
@@ -112,6 +131,9 @@ const props = withDefaults(defineProps<{
   clickable?: boolean;
   refreshOnMount?: boolean;
   showProfileCard?: boolean;
+  profileCardSide?: "top" | "right" | "bottom" | "left";
+  profileCardAlign?: "start" | "center" | "end";
+  profileCardSideOffset?: number;
   ui?: Record<string, unknown>;
   avatarClass?: string;
   avatarStyle?: CSSProperties;
@@ -125,13 +147,15 @@ const props = withDefaults(defineProps<{
   clickable: true,
   refreshOnMount: false,
   showProfileCard: true,
+  profileCardSide: "bottom",
+  profileCardAlign: "center",
+  profileCardSideOffset: 12,
   ui: undefined,
   avatarClass: undefined,
   avatarStyle: undefined,
 });
 
 const { getUser, ensureUser, refreshUser } = useUsers();
-const closeTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 const isCardOpen = ref(false);
 
 const resolvedUserId = computed(() => props.user?.id ?? props.userId ?? null);
@@ -166,6 +190,7 @@ const supportsHoverCard = computed(() => {
 
   return globalThis.matchMedia?.("(hover: hover) and (pointer: fine)")?.matches ?? false;
 });
+const shouldShowPopover = computed(() => supportsHoverCard.value && Boolean(resolvedUser.value));
 
 const avatarAlt = computed(() =>
   props.alt ?? resolvedUser.value?.nickname ?? resolvedUser.value?.username ?? "用户头像",
@@ -197,38 +222,11 @@ onMounted(() => {
   }
 });
 
-onBeforeUnmount(() => {
-  clearCloseTimer();
+watch(isCardOpen, (open) => {
+  if (open && resolvedUserId.value) {
+    void refreshUser(resolvedUserId.value);
+  }
 });
-
-function handleEnter() {
-  if (!supportsHoverCard.value || !resolvedUserId.value) {
-    return;
-  }
-
-  clearCloseTimer();
-  isCardOpen.value = true;
-  void refreshUser(resolvedUserId.value);
-}
-
-function handleLeave() {
-  if (!supportsHoverCard.value) {
-    return;
-  }
-
-  clearCloseTimer();
-  closeTimer.value = setTimeout(() => {
-    isCardOpen.value = false;
-    closeTimer.value = null;
-  }, 120);
-}
-
-function clearCloseTimer() {
-  if (closeTimer.value) {
-    clearTimeout(closeTimer.value);
-    closeTimer.value = null;
-  }
-}
 
 function formatDateLabel(value?: string | null) {
   if (!value) {

@@ -22,6 +22,7 @@
 - [`CYBER_ECOSYSTEM.md`](./CYBER_ECOSYSTEM.md)
 - [`CLAWME_AGENT.md`](./CLAWME_AGENT.md)
 - [`FUTURE_VISIONS.md`](./FUTURE_VISIONS.md)
+- [`UI_RULES.md`](./UI_RULES.md)
 
 历史设计稿索引：
 

@@ -2,36 +2,43 @@
 @import "@nuxt/ui";
 
 /*
- * Design System: The Precision Editorial
- * Theme: Technical Warmth - Zinc & Fire Palette
- */
-
-/*
- * Design System: The Precision Editorial
- * Theme: Technical Warmth - Zinc & Fire Palette
+ * Design System: Airbnb Inspiration
+ * Theme: Rausch Red & Warmth
  */
 
 @theme static {
-  /* --color-primary: var(--color-violet-500); */
-  /* --color-primary: var(--color-Purple-500); */
-  /* --color-primary: #fa7070; */
-  --color-primary: #ff5a5f;
-  /* --color-primary: var(--color-teal-600); */
-  /* --color-primary: var(--color-sky-500); */
-  --color-error: #ff2323;
+  --color-primary-50: #fff1f2;
+  --color-primary-100: #ffe4e6;
+  --color-primary-200: #fecdd3;
+  --color-primary-300: #fda4af;
+  --color-primary-400: #fb7185;
+  --color-primary-500: #f43f5e;
+  --color-primary-600: #e11d48;
+  --color-primary-700: #be123c;
+  --color-primary-800: #9f1239;
+  --color-primary-900: #881337;
+
+  --color-primary: var(--color-primary-600);
+  --color-primary-dark: var(--color-primary-700);
+  
+  --color-error: #c13515;
+  --color-error-hover: #b32505;
   --color-success: #67c23a;
   --color-warning: #ffbf11;
-  --color-danger: #ff4545;
+  --color-danger: #c13515;
 
   /* 字体配置 */
   --font-sans: "Public Sans", "Circular", -apple-system, system-ui, Roboto, "Helvetica Neue", sans-serif;
 
-
-
   /* Surface 背景色 */
-  --color-surface-50: #fbf8ff;
-  --color-surface-950: #12131a;
+  --color-white: #ffffff;
+  --color-near-black: #222222;
+  --color-surface-50: #ffffff;
+  --color-surface-950: #222222;
   --color-surface: #f2f2f2;
+  --color-focused: #3f3f3f;
+  --color-disabled: rgba(0,0,0,0.24);
+  --color-border: #c1c1c1;
 }
 
 /* ================================
@@ -41,18 +48,18 @@
   color-scheme: light;
 
   /* Background layers */
-  --ui-bg: var(--color-surface-50);
-  --ui-bg-muted: var(--ui-color-neutral-50);
-  --ui-bg-elevated: white;
-  --ui-bg-accented: var(--ui-color-neutral-200);
-  --ui-bg-inverted: var(--ui-color-neutral-900);
+  --ui-bg: var(--color-white);
+  --ui-bg-muted: var(--color-surface);
+  --ui-bg-elevated: var(--color-white);
+  --ui-bg-accented: #e5e5e5;
+  --ui-bg-inverted: var(--color-near-black);
   --ui-bg-surface: var(--color-surface);
+  
   /* Error */
   --ui-error: var(--color-error);
 
   /* Container */
   --ui-container: 100rem;
-  color-scheme: light;
 }
 
 /* ================================
@@ -62,17 +69,24 @@
   color-scheme: dark;
 
   /* Background layers */
-  --ui-bg: var(--color-surface-950);
-  --ui-bg-muted: var(--ui-color-neutral-800);
-  --ui-bg-elevated: var(--ui-color-neutral-900);
-  --ui-bg-accented: var(--ui-color-neutral-700);
-  --ui-bg-inverted: white;
+  --ui-bg: var(--color-near-black);
+  --ui-bg-muted: #3f3f3f;
+  --ui-bg-elevated: #3f3f3f;
+  --ui-bg-accented: #6a6a6a;
+  --ui-bg-inverted: var(--color-white);
   --color-surface: #121212;
   --ui-bg-surface: var(--color-surface);
 }
 
 body {
   min-height: 100vh;
+  color: var(--color-near-black);
+  background-color: var(--color-white);
+}
+
+.dark body {
+  color: var(--color-white);
+  background-color: var(--color-near-black);
 }
 
 #__nuxt {

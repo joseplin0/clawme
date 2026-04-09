@@ -7,7 +7,7 @@ export default defineAppConfig({
       // danger: "#ff4545",
       // error: "#ff2323",
       // info: "#10cf80",
-      // neutral: "zinc",
+      neutral: "zinc",
     },
   },
 });

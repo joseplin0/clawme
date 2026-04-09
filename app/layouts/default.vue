@@ -6,7 +6,7 @@
     ]"
   >
     <!-- Desktop Sidebar -->
-    <AppSidebar :links="navLinks" />
+    <AppSidebar :links="sidebarLinks" />
 
     <!-- Main Content -->
     <main
@@ -20,11 +20,11 @@
 
     <!-- Mobile Bottom Navigation (WeChat/Telegram Style) -->
     <nav
-      v-if="navLinks"
+      v-if="mobileNavLinks.length"
       class="flex h-14 shrink-0 items-center justify-around border-t border-default/50 bg-default/85 md:hidden z-50 fixed bottom-0 left-0 right-0 backdrop-blur-xl transition-all duration-300 pb-safe"
     >
       <NuxtLink
-        v-for="link in navLinks"
+        v-for="link in mobileNavLinks"
         :key="link.to"
         :to="link.to"
         class="relative flex flex-col items-center justify-center w-full h-full gap-0.5 group"
@@ -60,9 +60,12 @@
 
 <script setup lang="ts">
 const route = useRoute();
-const isChatRoute = computed(() => route.path === "/chat" || route.path.startsWith("/chat/"));
+const { user } = useUserSession();
 
-const navLinks = [
+const isChatRoute = computed(() => route.path === "/chat" || route.path.startsWith("/chat/"));
+const profileLink = computed(() => user.value?.id ? `/user/${user.value.id}` : "/login");
+
+const sidebarLinks = [
   {
     label: "消息",
     to: "/chat",
@@ -76,13 +79,17 @@ const navLinks = [
     icon: "i-ph-compass", // "cm-waterfalls-h" or other outline version if not standard
     activeIcon: "i-ph-compass-fill",
   },
+];
+
+const mobileNavLinks = computed(() => [
+  ...sidebarLinks,
   {
-    label: "我的",
-    to: "/settings",
+    label: "我",
+    to: profileLink.value,
     icon: "i-ph-user",
     activeIcon: "i-ph-user-fill",
   },
-];
+]);
 
 function isActiveLink(link: { to: string }) {
   return route.path === link.to || (link.to !== "/" && route.path.startsWith(`${link.to}/`));
