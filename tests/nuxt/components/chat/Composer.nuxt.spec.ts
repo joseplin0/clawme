@@ -218,4 +218,28 @@ describe("ChatComposer", () => {
       "",
     );
   });
+
+  it("以弱提示条展示引用消息并支持清除", async () => {
+    const wrapper = await mountSuspended(Composer, {
+      props: {
+        ready: true,
+        status: "ready",
+        placeholder: "发送消息...",
+        mentionItems: [],
+        quotedMessage: {
+          id: "message-1",
+          senderName: "小林",
+          previewText: "这是被引用的一小段内容",
+        },
+      },
+    });
+
+    const banner = wrapper.get('[data-testid="quoted-message-banner"]');
+    expect(banner.text()).toContain("小林");
+    expect(banner.text()).toContain("这是被引用的一小段内容");
+
+    await wrapper.get('button[aria-label="清除引用"]').trigger("click");
+
+    expect(wrapper.emitted("clear-quote")).toEqual([[]]);
+  });
 });
