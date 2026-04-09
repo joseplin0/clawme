@@ -47,9 +47,11 @@
 
     <!-- 底部：用户头像 -->
     <div class="flex items-center justify-center p-3 shrink-0">
-      <UAvatar
+      <UserAvatar
+        :user-id="sessionUserId"
         size="sm"
-        :ui="{ root: 'cursor-pointer ring-2 ring-transparent hover:ring-primary transition-all duration-200' }"
+        refresh-on-mount
+        :ui="{ root: 'ring-2 ring-transparent hover:ring-primary transition-all duration-200' }"
       />
     </div>
   </aside>
@@ -70,7 +72,9 @@ defineProps<{
 }>();
 
 const route = useRoute();
+const { user } = useUserSession();
 const NuxtLink = resolveComponent("NuxtLink");
+const sessionUserId = computed(() => user.value?.id ?? null);
 
 function isActiveLink(link: MenuItem) {
   if (!link.to) {

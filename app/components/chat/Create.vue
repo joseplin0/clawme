@@ -31,7 +31,7 @@ v-for="member in filteredUsers" :key="member.id" type="button"
               :class="{
                 'border-primary bg-primary/5': selectedMemberIds.includes(member.id),
               }" @click="toggleUser(member.id)">
-              <UAvatar :src="member.avatar ?? undefined" :alt="member.nickname" size="sm" />
+              <UserAvatar :user="member" size="sm" />
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
                   <span class="truncate font-medium text-default">

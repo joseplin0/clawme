@@ -14,7 +14,7 @@
         class="hover:border-primary/50 transition-colors"
       >
         <div class="flex items-start gap-4">
-          <UAvatar size="lg" />
+          <UserAvatar :user="user" size="lg" refresh-on-mount />
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-3">
               <p class="text-base font-semibold text-highlighted">
@@ -164,6 +164,7 @@ import {
 } from "~~/shared/utils/model-config-catalog";
 
 const toast = useToast();
+const { setUser } = useUsers();
 
 const { data: users, refresh } = await useFetch<UserProfile[]>("/api/users", {
   lazy: true,
@@ -296,10 +297,18 @@ async function saveUser(userId: string) {
       body.modelConfigId = editForm.modelConfigId;
     }
 
-    await $fetch(`/api/users/${userId}`, {
+    const response = await $fetch<{ user: Partial<UserProfile> }>(`/api/users/${userId}`, {
       method: "PUT",
       body,
     });
+
+    const existingUser = users.value.find((candidate) => candidate.id === userId);
+    if (existingUser) {
+      setUser({
+        ...existingUser,
+        ...response.user,
+      });
+    }
 
     toast.add({
       title: "保存成功",

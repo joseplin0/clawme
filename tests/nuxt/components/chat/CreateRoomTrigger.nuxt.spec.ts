@@ -58,6 +58,10 @@ mockComponent("UAvatar", {
   template: '<span data-testid="avatar" />',
 });
 
+mockComponent("UserAvatar", {
+  template: '<span data-testid="avatar" />',
+});
+
 mockComponent("UBadge", {
   template: "<span><slot /></span>",
 });

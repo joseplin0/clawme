@@ -9,6 +9,13 @@ const sidebarState = vi.hoisted(() => ({
 }));
 
 mockNuxtImport("useRoute", () => () => sidebarState.route);
+mockNuxtImport("useUserSession", () => () => ({
+  user: {
+    value: {
+      id: "owner-1",
+    },
+  },
+}));
 
 mockComponent("NuxtLink", {
   props: {
@@ -67,6 +74,10 @@ mockComponent("UButton", {
 });
 
 mockComponent("UAvatar", {
+  template: "<div data-testid=\"avatar\" />",
+});
+
+mockComponent("UserAvatar", {
   template: "<div data-testid=\"avatar\" />",
 });
 

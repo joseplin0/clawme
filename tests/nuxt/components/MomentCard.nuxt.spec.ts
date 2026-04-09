@@ -45,6 +45,10 @@ mockComponent("UBlogPost", {
   `,
 });
 
+mockComponent("UserAvatar", {
+  template: "<div data-testid=\"user-avatar\" />",
+});
+
 describe("MomentCard", () => {
   it("把作者、徽标和首图映射给卡片组件", async () => {
     const primaryAuthor = createUser({

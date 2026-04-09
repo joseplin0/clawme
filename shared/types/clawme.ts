@@ -288,6 +288,7 @@ export interface UpdateModelConfigRequest {
 
 export interface UpdateUserRequest {
   nickname?: string;
+  avatar?: string | null;
   intro?: string;
   role?: string;
   modelConfigId?: string | null;

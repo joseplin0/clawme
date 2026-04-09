@@ -85,7 +85,7 @@ variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class=
       <template #body>
         <div class="p-4 space-y-4">
           <div v-for="user in roomMembers" :key="user.id" class="flex items-center gap-3">
-            <UAvatar :src="user.avatar ?? undefined" :alt="user.nickname" size="md" />
+            <UserAvatar :user="user" size="md" refresh-on-mount />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">

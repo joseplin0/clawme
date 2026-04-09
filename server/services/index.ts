@@ -8,4 +8,5 @@ export {
 // Moment service - timeline and pagination
 export {
   getPaginatedMoments,
+  getPaginatedMomentsByUserId,
 } from "./moment.service";

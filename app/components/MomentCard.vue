@@ -35,11 +35,12 @@
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-1.5 min-w-0">
           <!-- 头像 -->
-          <UAvatar
+          <UserAvatar
+            :user="primaryAuthor"
             :text="avatarText"
             size="xs"
             :ui="{ root: 'shrink-0', fallback: 'text-[10px] font-semibold' }"
-            :style="{ background: cardColor + '33', color: cardColor }"
+            :avatar-style="{ background: cardColor + '33', color: cardColor }"
           />
           <span class="text-xs text-muted truncate">{{ primaryAuthor?.nickname || '匿名' }}</span>
         </div>

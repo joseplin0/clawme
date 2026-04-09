@@ -24,7 +24,9 @@
   --color-danger: #ff4545;
 
   /* 字体配置 */
-  --font-sans: "Public Sans", sans-serif;
+  --font-sans: "Public Sans", "Circular", -apple-system, system-ui, Roboto, "Helvetica Neue", sans-serif;
+
+
 
   /* Surface 背景色 */
   --color-surface-50: #fbf8ff;

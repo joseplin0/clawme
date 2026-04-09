@@ -102,6 +102,10 @@ mockComponent("UButton", {
   template: "<button><slot /></button>",
 });
 
+mockComponent("UserAvatar", {
+  template: '<div data-testid="user-avatar" />',
+});
+
 mockComponent("UContainer", {
   template: '<div data-testid="container"><slot /></div>',
 });

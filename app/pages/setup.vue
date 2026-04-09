@@ -1,16 +1,16 @@
 <template>
   <div class="flex flex-col items-center">
     <!-- Header -->
-    <div class="w-full text-center space-y-2 mb-8">
+    <div class="w-full text-center space-y-2 mb-10">
       <div
-        class="size-14 mx-auto bg-primary rounded-[1.25rem] flex items-center justify-center text-white text-2xl font-black shadow-[0_8px_20px_-6px_rgba(255,90,95,0.4)] mb-4"
+        class="size-[64px] mx-auto bg-[#ff385c] rounded-full flex items-center justify-center text-white text-3xl font-black shadow-[rgba(0,0,0,0.02)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_6px,rgba(0,0,0,0.1)_0px_4px_8px] mb-6"
       >
-        <UIcon name="i-lucide-rocket" class="size-6" />
+        <UIcon name="i-lucide-rocket" class="size-[28px]" />
       </div>
-      <h1 class="text-[22px] font-bold text-default tracking-tight">
+      <h1 class="text-[28px] font-bold text-[#222222] tracking-[-0.32px]">
         初始化系统
       </h1>
-      <p class="text-xs text-muted font-medium px-4">
+      <p class="text-[16px] text-[#6a6a6a] font-medium px-4">
         {{ statusMessage }}
       </p>
     </div>
@@ -21,24 +21,24 @@
         ref="stepper"
         v-model="currentStep"
         :items="stepItems"
-        class="mb-6"
+        class="mb-8"
         :ui="{
-          header: 'mb-4',
-          title: 'text-[13px] font-medium',
+          header: 'mb-6',
+          title: 'text-[14px] font-semibold text-[#222222]',
           description: 'hidden',
-          indicator: 'size-7'
+          indicator: 'size-8 text-[14px]',
         }"
       >
         <!-- Step 1: Owner -->
         <template #owner>
-          <div class="space-y-4 py-2">
+          <div class="space-y-5 py-2">
             <UFormField name="ownerNickname">
               <UInput
                 v-model="form.ownerNickname"
                 class="w-full"
                 placeholder="管理员昵称 (如: 林)"
                 icon="i-lucide-contact"
-                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                :ui="{ base: 'h-14 px-4 rounded-lg text-[16px] bg-[#ffffff] border border-[#c1c1c1] focus:border-[#222222] focus:ring-1 focus:ring-[#222222] shadow-[rgba(0,0,0,0.02)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_6px,rgba(0,0,0,0.1)_0px_4px_8px] placeholder-[#6a6a6a]' }"
                 required
               />
             </UFormField>
@@ -49,7 +49,7 @@
                 class="w-full"
                 placeholder="登录账号 (如: lin)"
                 icon="i-lucide-user"
-                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                :ui="{ base: 'h-14 px-4 rounded-lg text-[16px] bg-[#ffffff] border border-[#c1c1c1] focus:border-[#222222] focus:ring-1 focus:ring-[#222222] shadow-[rgba(0,0,0,0.02)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_6px,rgba(0,0,0,0.1)_0px_4px_8px] placeholder-[#6a6a6a]' }"
                 required
               />
             </UFormField>
@@ -61,7 +61,7 @@
                 type="password"
                 placeholder="至少 6 位密码"
                 icon="i-lucide-lock-keyhole"
-                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                :ui="{ base: 'h-14 px-4 rounded-lg text-[16px] bg-[#ffffff] border border-[#c1c1c1] focus:border-[#222222] focus:ring-1 focus:ring-[#222222] shadow-[rgba(0,0,0,0.02)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_6px,rgba(0,0,0,0.1)_0px_4px_8px] placeholder-[#6a6a6a]' }"
                 required
               />
             </UFormField>
@@ -70,14 +70,14 @@
 
         <!-- Step 2: Assistant -->
         <template #assistant>
-          <div class="space-y-4 py-2">
+          <div class="space-y-5 py-2">
             <UFormField name="assistantNickname">
               <UInput
                 v-model="form.assistantNickname"
                 class="w-full"
                 placeholder="助理昵称 (如: 虾米)"
                 icon="i-lucide-bot"
-                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                :ui="{ base: 'h-14 px-4 rounded-lg text-[16px] bg-[#ffffff] border border-[#c1c1c1] focus:border-[#222222] focus:ring-1 focus:ring-[#222222] shadow-[rgba(0,0,0,0.02)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_6px,rgba(0,0,0,0.1)_0px_4px_8px] placeholder-[#6a6a6a]' }"
                 required
               />
             </UFormField>
@@ -88,7 +88,7 @@
                 class="w-full"
                 placeholder="助理角色定位 (如: 本地助手)"
                 icon="i-lucide-graduation-cap"
-                :ui="{ base: 'h-11 px-4 rounded-full text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40' }"
+                :ui="{ base: 'h-14 px-4 rounded-lg text-[16px] bg-[#ffffff] border border-[#c1c1c1] focus:border-[#222222] focus:ring-1 focus:ring-[#222222] shadow-[rgba(0,0,0,0.02)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_6px,rgba(0,0,0,0.1)_0px_4px_8px] placeholder-[#6a6a6a]' }"
                 required
               />
             </UFormField>
@@ -101,7 +101,7 @@
                 :maxrows="5"
                 autoresize
                 placeholder="我是用来干嘛的 System Prompt..."
-                :ui="{ base: 'rounded-2xl text-[14px] bg-surface/80 border-none focus:bg-white focus:ring-2 focus:ring-primary/40 py-3 px-4' }"
+                :ui="{ base: 'rounded-lg text-[16px] bg-[#ffffff] border border-[#c1c1c1] focus:border-[#222222] focus:ring-1 focus:ring-[#222222] shadow-[rgba(0,0,0,0.02)_0px_0px_0px_1px,rgba(0,0,0,0.04)_0px_2px_6px,rgba(0,0,0,0.1)_0px_4px_8px] py-3 px-4 placeholder-[#6a6a6a]' }"
                 required
               />
             </UFormField>
@@ -121,14 +121,13 @@
       </UStepper>
 
       <!-- Buttons -->
-      <div class="flex items-center justify-between gap-3 pt-6 border-t border-default/30 mt-4">
+      <div class="flex items-center justify-between gap-4 pt-8 mt-4">
         <UButton
           type="button"
           icon="i-lucide-arrow-left"
           variant="soft"
-          color="neutral"
           :disabled="stepIndex === 0 || submitting"
-          class="rounded-full h-11 px-5 font-semibold active:scale-[0.98] transition-all"
+          class="rounded-lg h-12 px-5 font-medium text-[#222222] bg-[#f2f2f2] hover:bg-[#e4e4e4] active:scale-[0.98] transition-all"
           @click="prevStep"
         >
           返回
@@ -138,9 +137,8 @@
           v-if="!isLastStep"
           type="button"
           trailing-icon="i-lucide-arrow-right"
-          color="primary"
           :disabled="submitting"
-          class="rounded-full h-11 px-6 font-semibold shadow-[0_6px_14px_-4px_rgba(255,90,95,0.3)] active:scale-[0.98] transition-all ml-auto"
+          class="rounded-lg h-12 px-6 font-semibold bg-[#222222] hover:bg-[#000000] text-white active:scale-[0.98] transition-all ml-auto"
           @click="nextStep"
         >
           下一步
@@ -150,9 +148,8 @@
           v-else
           type="submit"
           icon="i-lucide-sparkles"
-          color="primary"
           :loading="submitting"
-          class="rounded-full h-11 px-6 font-semibold shadow-[0_6px_14px_-4px_rgba(255,90,95,0.3)] active:scale-[0.98] transition-all ml-auto"
+          class="rounded-lg h-12 px-6 font-semibold bg-[#ff385c] hover:bg-[#e00b41] text-white active:scale-[0.98] transition-all ml-auto"
         >
           启动
         </UButton>

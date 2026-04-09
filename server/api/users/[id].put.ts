@@ -15,6 +15,7 @@ const bodySchema = z.object({
   nickname: z.string().min(1).max(100).optional(),
   intro: z.string().max(2000).optional(),
   role: z.string().max(100).optional(),
+  avatar: z.union([z.string().max(2000), z.null()]).optional(),
   modelConfigId: z.union([z.uuid(), z.null()]).optional(),
 });
 
@@ -47,6 +48,9 @@ export default defineEventHandler(async (event) => {
   }
   if (validatedBody.role !== undefined) {
     updateData.role = validatedBody.role;
+  }
+  if (validatedBody.avatar !== undefined) {
+    updateData.avatar = validatedBody.avatar;
   }
   if (validatedBody.modelConfigId !== undefined) {
     if (validatedBody.modelConfigId) {
@@ -87,6 +91,7 @@ export default defineEventHandler(async (event) => {
     user: {
       id: updatedUser.id,
       nickname: updatedUser.nickname,
+      avatar: updatedUser.avatar,
       intro: updatedUser.intro,
       role: updatedUser.role,
       modelConfigId: updatedUser.modelConfigId,
