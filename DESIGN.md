@@ -41,10 +41,13 @@ What distinguishes Airbnb is its palette-based token system (`var(--color-*) / v
 ### Interactive
 - **Legal Blue** (`#428bff`): `var(--color-info)`, legal links, informational
 - **Border Gray** (`#c1c1c1`): Border color for cards and dividers
-- **Light Surface** (`#f2f2f2`): Circular navigation buttons, secondary surfaces
+- **Light Surface** (`rgb(249 250 251)`): Circular navigation buttons, secondary surfaces
 
 ### Surface & Shadows
 - **Pure White** (`#ffffff`): Page background, card surfaces
+- **Dark Canvas** (`#121212`): `var(--ui-bg)`, default page background in dark mode
+- **Dark Surface** (`#181818`): `var(--ui-bg-surface)`, chat canvas and secondary panels in dark mode
+- **Dark Elevated** (`#242424`): `var(--ui-bg-elevated)`, selected or lifted surfaces in dark mode
 - **Card Shadow** (`rgba(0,0,0,0.02) 0px 0px 0px 1px, rgba(0,0,0,0.04) 0px 2px 6px, rgba(0,0,0,0.1) 0px 4px 8px`): Three-layer warm lift
 - **Hover Shadow** (`rgba(0,0,0,0.08) 0px 4px 12px`): Button hover elevation
 
@@ -165,6 +168,7 @@ What distinguishes Airbnb is its palette-based token system (`var(--color-*) / v
 
 ### Do
 - Use `#222222` (warm near-black) for text — never pure `#000000`
+- Use `#121212` as the default dark-mode canvas, with `#181818` / `#242424` for layered surfaces
 - Apply Rose Red (`#e11d48`) only for primary CTAs and brand moments — it's the singular accent
 - Use Public Sans at weight 500–700 — the warm weight range is intentional
 - Apply the three-layer card shadow for all elevated surfaces
@@ -175,6 +179,7 @@ What distinguishes Airbnb is its palette-based token system (`var(--color-*) / v
 
 ### Don't
 - Don't use pure black (`#000000`) for text — always `#222222` (warm)
+- Don't use `#222222` as the full-page dark-mode background — reserve it for light-theme text and near-black controls
 - Don't apply Rose Red to backgrounds or large surfaces — it's an accent only
 - Don't use thin font weights (300, 400) for headings — 500 minimum
 - Don't use heavy shadows (>0.1 opacity as primary layer) — keep them warm and graduated

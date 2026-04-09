@@ -2,7 +2,7 @@
   <UDashboardGroup
     storage-key="chat-layout"
     :ui="{
-      base: '!relative !inset-auto min-h-0 flex-1 bg-[#ffffff]',
+      base: '!relative !inset-auto min-h-0 flex-1 bg-default',
     }"
   >
     <LazyChatList v-model:open="sidebarOpen" />

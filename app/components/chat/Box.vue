@@ -1,5 +1,5 @@
 <template>
-  <section class="relative flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-white dark:bg-gray-900">
+  <section class="relative flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-default">
     <!-- Chat Header -->
     <header
       class="flex items-center justify-between h-14 px-4 bg-default/80 backdrop-blur-xl border-b border-default/50 shrink-0 z-10">
@@ -19,7 +19,7 @@ variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class=
     </header>
 
     <!-- Chat Messages -->
-    <div class="flex min-h-0 flex-1 relative bg-gray-50/80 dark:bg-black/20 shadow-[inset_0_4px_16px_rgba(0,0,0,0.04)]">
+    <div class="relative flex min-h-0 flex-1 bg-surface">
       <UContainer class="flex min-h-0 flex-1 w-full mx-auto overflow-y-auto px-4 pt-4 pb-10 sm:px-8 lg:px-12">
         <UChatMessages
           v-if="isMessagesReady"
@@ -36,7 +36,7 @@ variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class=
           <template v-for="message in displayMessages" :key="message.id">
             <!-- System Message -->
             <div v-if="message.role === 'system'" class="flex justify-center w-full my-2">
-              <span class="text-xs text-gray-400 dark:text-gray-500 px-3 py-1">
+              <span class="px-3 py-1 text-xs text-muted">
                 <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
                   <span v-if="isTextUIPart(part)">{{ part.text }}</span>
                 </template>
@@ -88,12 +88,12 @@ variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class=
             <UserAvatar :user="user" size="md" refresh-on-mount />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                <p class="truncate text-sm font-medium text-default">
                   {{ user.nickname }}
                 </p>
                 <UBadge v-if="isBotUserType(user.type)" size="xs" color="neutral" variant="subtle">BOT</UBadge>
               </div>
-              <p class="text-xs text-gray-500 truncate">@{{ user.username }}</p>
+              <p class="truncate text-xs text-muted">@{{ user.username }}</p>
             </div>
           </div>
         </div>

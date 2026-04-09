@@ -2,7 +2,7 @@
   <UDashboardSidebar
 v-model:open="sidebarOpen" side="left" mode="slideover" :toggle="false" :auto-close="true"
     resizable :collapsed-size="0" :default-size="24" :min-size="20" :max-size="70" units="px" :ui="{
-      root: '!min-h-0 bg-white dark:bg-gray-900 border-r border-default/50',
+      root: '!min-h-0 border-r border-default/50 bg-default',
       header: 'h-16 px-4',
       body: '!min-h-0 !overflow-hidden p-2',
     }">
@@ -56,7 +56,7 @@ v-model="searchQuery" icon="i-lucide-search" placeholder="搜索房间..." varia
       <div
         data-testid="room-item"
         class="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors duration-200"
-        :class="item.id === activeRoomId ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'"
+        :class="item.id === activeRoomId ? 'bg-elevated shadow-[0_0_0_1px_rgba(0,0,0,0.04)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.05)]' : 'hover:bg-elevated/70'"
         @click="handleSelectRoom(item.id)"
       >
         <!-- Avatar Placeholder (can be customized using room participants logic) -->

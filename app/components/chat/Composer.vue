@@ -1,6 +1,6 @@
 <template>
   <div
-class="shrink-0 w-full border-t border-default/50 bg-white py-4 dark:bg-gray-900"
+class="shrink-0 w-full border-t border-default/50 bg-default py-4"
     :style="{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }">
     <div class="flex flex-col">
       <input
