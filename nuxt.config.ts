@@ -1,5 +1,14 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  app: {
+    head: {
+      title: 'Clawme',
+      link: [
+        { rel: 'icon', type: 'image/png', href: '/favicon.png' },
+        { rel: 'apple-touch-icon', href: '/logo.png' }
+      ]
+    }
+  },
   css: ["~/assets/css/main.css"],
   modules: ["@nuxt/ui", "@nuxt/image", "@nuxtjs/mdc", "nuxt-auth-utils", "@nuxt/eslint"],
   compatibilityDate: "2025-07-15",
