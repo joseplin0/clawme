@@ -18,100 +18,83 @@
         </p>
       </div>
 
-      <div class="relative" @mouseup="handleMouseUp">
-        <template
-          v-for="(part, index) in getLeadingMessageParts(message)"
-          :key="`${message.id}-${part.type}-${index}`"
-        >
-          <UChatReasoning
-            v-if="isReasoningUIPart(part)"
-            :text="part.text"
-            :streaming="getReasoningStreaming(index)"
-            class="mb-2 text-sm opacity-90"
+      <ActionMenuShell :items="messageActions" title="消息操作">
+        <div class="relative" @mouseup="handleMouseUp">
+          <template
+            v-for="(part, index) in getLeadingMessageParts(message)"
+            :key="`${message.id}-${part.type}-${index}`"
           >
-            <MDC
-              :value="part.text"
-              :cache-key="`reasoning-${message.id}-${index}`"
+            <UChatReasoning
+              v-if="isReasoningUIPart(part)"
+              :text="part.text"
+              :streaming="getReasoningStreaming(index)"
+              class="mb-2 text-sm opacity-90"
+            >
+              <MDC
+                :value="part.text"
+                :cache-key="`reasoning-${message.id}-${index}`"
+                class="*:first:mt-0 *:last:mb-0"
+              />
+            </UChatReasoning>
+            <UChatTool
+              v-else-if="isToolUIPart(part)"
+              :text="getToolName(part)"
+              :streaming="isToolStreaming(part)"
+              class="mb-2 text-sm opacity-90"
+            />
+            <div
+              v-else-if="isImageMessagePart(part)"
+              data-testid="message-image"
+              class="mb-2 w-full max-w-xs overflow-hidden rounded-2xl border border-default/60 bg-default/20 sm:max-w-sm"
+            >
+              <img
+                :src="getImagePart(part).url"
+                :alt="getImagePart(part).filename"
+                class="max-h-56 w-full object-cover"
+              >
+              <div class="flex items-center justify-between gap-3 px-3 py-2 text-xs text-muted">
+                <span class="truncate">{{ getImagePart(part).filename }}</span>
+                <span>{{ formatFileSize(getImagePart(part).size) }}</span>
+              </div>
+            </div>
+            <a
+              v-else-if="isFileMessagePart(part)"
+              :href="getFilePart(part).url"
+              :download="getFilePart(part).filename"
+              target="_blank"
+              rel="noreferrer"
+              class="mb-2 flex items-center gap-3 rounded-2xl border border-default/60 bg-default/20 px-3 py-3 transition-colors hover:bg-default/30"
+            >
+              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <UIcon name="i-lucide-file" class="h-5 w-5" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-medium text-default">{{ getFilePart(part).filename }}</p>
+                <p class="text-xs text-muted">{{ formatFileSize(getFilePart(part).size) }}</p>
+              </div>
+              <UIcon name="i-lucide-download" class="h-4 w-4 text-muted" />
+            </a>
+          </template>
+
+          <div
+            v-if="messageTextContent"
+            data-testid="message-text"
+            class="mt-3"
+          >
+            <MDCCached
+              :value="messageTextContent"
+              :cache-key="`${message.id}-text-content`"
               class="*:first:mt-0 *:last:mb-0"
             />
-          </UChatReasoning>
-          <UChatTool
-            v-else-if="isToolUIPart(part)"
-            :text="getToolName(part)"
-            :streaming="isToolStreaming(part)"
-            class="mb-2 text-sm opacity-90"
-          />
-          <div
-            v-else-if="isImageMessagePart(part)"
-            data-testid="message-image"
-            class="mb-2 w-full max-w-xs overflow-hidden rounded-2xl border border-default/60 bg-default/20 sm:max-w-sm"
-          >
-            <img
-              :src="getImagePart(part).url"
-              :alt="getImagePart(part).filename"
-              class="max-h-56 w-full object-cover"
-            >
-            <div class="flex items-center justify-between gap-3 px-3 py-2 text-xs text-muted">
-              <span class="truncate">{{ getImagePart(part).filename }}</span>
-              <span>{{ formatFileSize(getImagePart(part).size) }}</span>
-            </div>
           </div>
-          <a
-            v-else-if="isFileMessagePart(part)"
-            :href="getFilePart(part).url"
-            :download="getFilePart(part).filename"
-            target="_blank"
-            rel="noreferrer"
-            class="mb-2 flex items-center gap-3 rounded-2xl border border-default/60 bg-default/20 px-3 py-3 transition-colors hover:bg-default/30"
-          >
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <UIcon name="i-lucide-file" class="h-5 w-5" />
-            </div>
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-default">{{ getFilePart(part).filename }}</p>
-              <p class="text-xs text-muted">{{ formatFileSize(getFilePart(part).size) }}</p>
-            </div>
-            <UIcon name="i-lucide-download" class="h-4 w-4 text-muted" />
-          </a>
-        </template>
-
-        <div
-          v-if="getMessageTextContent(message)"
-          data-testid="message-text"
-          class="mt-3"
-        >
-          <MDCCached
-            :value="getMessageTextContent(message)"
-            :cache-key="`${message.id}-text-content`"
-            class="*:first:mt-0 *:last:mb-0"
-          />
         </div>
-
-        <UButton
-          v-if="selectionQuote"
-          data-testid="selection-quote-button"
-          icon="i-lucide-reply"
-          variant="soft"
-          color="neutral"
-          size="xs"
-          class="absolute z-10 rounded-full px-2 py-1 text-[11px] shadow-sm"
-          :style="{
-            left: `${selectionQuote.left}px`,
-            top: `${selectionQuote.top}px`,
-            transform: 'translate(-50%, -100%)',
-          }"
-          @mousedown.prevent
-          @click="applySelectionQuote"
-        >
-          引用
-        </UButton>
-      </div>
+      </ActionMenuShell>
     </template>
   </UChatMessage>
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   getToolName,
   isReasoningUIPart,
@@ -119,6 +102,8 @@ import {
   isToolUIPart,
 } from "ai";
 import { isToolStreaming } from "@nuxt/ui/utils/ai";
+import { copyText } from "~~/app/utils/copy";
+import type { ActionMenuItem } from "~~/shared/types/action-menu";
 import type {
   ClawmeUIMessage,
   FilePart,
@@ -150,10 +135,36 @@ const emit = defineEmits<{
 }>();
 
 const selectionQuote = ref<{
+  text: string;
   excerpt: string;
-  left: number;
-  top: number;
 } | null>(null);
+const toast = useToast();
+
+const messageTextContent = computed(() => getMessageTextContent(props.message));
+const activeSelectionText = computed(() => selectionQuote.value?.text ?? "");
+const activeQuoteExcerpt = computed(() => selectionQuote.value?.excerpt ?? "");
+const activeCopyText = computed(() => activeSelectionText.value || messageTextContent.value.trim());
+const messageQuoteExcerpt = computed(() => getMessageQuoteExcerpt(props.message));
+const activeQuoteTarget = computed(() => activeQuoteExcerpt.value || messageQuoteExcerpt.value);
+
+const messageActions = computed<ActionMenuItem[]>(() => [
+  {
+    key: "quote",
+    label: "引用",
+    disabled: !activeQuoteTarget.value,
+    onSelect: () => {
+      applyQuote(activeQuoteTarget.value);
+    },
+  },
+  {
+    key: "copy",
+    label: "复制",
+    disabled: !activeCopyText.value,
+    onSelect: async () => {
+      await handleCopy();
+    },
+  },
+]);
 
 function getQuotedPreview(quoted: QuotedMessageSummary) {
   if (quoted.excerpt?.trim()) {
@@ -199,6 +210,24 @@ function getMessageTextContent(message: ClawmeUIMessage) {
     .join("\n\n");
 }
 
+function getMessageQuoteExcerpt(message: ClawmeUIMessage) {
+  const text = getMessageTextContent(message).trim();
+  if (text) {
+    return clampQuotedExcerpt(text);
+  }
+
+  const attachmentPart = message.parts.find((part) => isImageMessagePart(part) || isFileMessagePart(part));
+  if (attachmentPart && isImageMessagePart(attachmentPart)) {
+    return `[图片] ${getImagePart(attachmentPart).filename}`;
+  }
+
+  if (attachmentPart && isFileMessagePart(attachmentPart)) {
+    return `[附件] ${getFilePart(attachmentPart).filename}`;
+  }
+
+  return "";
+}
+
 function handleMouseUp(event: MouseEvent) {
   const container = event.currentTarget as HTMLElement | null;
   const selection = globalThis.getSelection?.();
@@ -215,36 +244,43 @@ function handleMouseUp(event: MouseEvent) {
     return;
   }
 
-  const rect = range.getBoundingClientRect();
-  const containerRect = container.getBoundingClientRect();
-
-  if (!rect.width && !rect.height) {
-    clearSelectionQuote();
-    return;
-  }
-
-  const maxLeft = Math.max(48, containerRect.width - 48);
-  const left = Math.min(
-    maxLeft,
-    Math.max(48, rect.left - containerRect.left + (rect.width / 2)),
-  );
-  const top = Math.max(8, rect.top - containerRect.top - 8);
-
   selectionQuote.value = {
+    text,
     excerpt: clampQuotedExcerpt(text),
-    left,
-    top,
   };
 }
 
-function applySelectionQuote() {
-  if (!selectionQuote.value) {
+function applyQuote(excerpt: string) {
+  if (!excerpt) {
     return;
   }
 
-  emit("select-quote", selectionQuote.value.excerpt);
+  emit("select-quote", excerpt);
   clearSelectionQuote();
   globalThis.getSelection?.()?.removeAllRanges?.();
+}
+
+async function handleCopy() {
+  if (!activeCopyText.value) {
+    return;
+  }
+
+  const copied = await copyText(activeCopyText.value);
+  toast.add({
+    title: copied ? "已复制" : "复制失败",
+    description: copied
+      ? activeSelectionText.value
+        ? "选中的内容已复制到剪贴板"
+        : "消息内容已复制到剪贴板"
+      : "当前环境暂不支持复制，请稍后重试",
+    color: copied ? "success" : "error",
+    icon: copied ? "i-lucide-copy-check" : "i-lucide-copy-x",
+  });
+
+  if (copied) {
+    clearSelectionQuote();
+    globalThis.getSelection?.()?.removeAllRanges?.();
+  }
 }
 
 function clearSelectionQuote() {
