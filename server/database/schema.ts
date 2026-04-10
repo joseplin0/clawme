@@ -7,6 +7,7 @@ import {
   foreignKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -348,6 +349,60 @@ export const messageAssets = pgTable(
   ],
 );
 
+/**
+ * 外部内容采集相关
+ */
+
+/** 外部采集内容表。 */
+export const pins = pgTable(
+  "pins",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sourceUrl: text("source_url").notNull(),
+    normalizedUrl: text("normalized_url").notNull(),
+    siteName: text("site_name").notNull().default(""),
+    title: text("title").notNull().default(""),
+    description: text("description").notNull().default(""),
+    note: text("note").notNull().default(""),
+    remoteCoverUrl: text("remote_cover_url"),
+    previewAssetId: uuid("preview_asset_id")
+      .notNull()
+      .references(() => assets.id, { onDelete: "restrict" }),
+    previewMode: varchar("preview_mode", {
+      enum: ["fetched", "generated"],
+    }).notNull(),
+    sourceRoomId: uuid("source_room_id")
+      .notNull()
+      .references(() => rooms.id, { onDelete: "cascade" }),
+    sourceMessageId: uuid("source_message_id")
+      .notNull()
+      .references(() => roomMessages.id, { onDelete: "cascade" }),
+    sourceType: varchar("source_type", {
+      enum: ["chat_intent"],
+    }).notNull(),
+    status: varchar("status", {
+      enum: ["ready", "failed"],
+    }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("pins_owner_id_idx").on(table.ownerId),
+    index("pins_created_at_idx").on(table.createdAt),
+    index("pins_source_room_id_idx").on(table.sourceRoomId),
+    uniqueIndex("pins_owner_normalized_url_uidx").on(
+      table.ownerId,
+      table.normalizedUrl,
+    ),
+  ],
+);
+
 /** 工作流定义表。 */
 export const workflows = pgTable("workflows", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -431,6 +486,7 @@ export type NewMomentLike = NewLike;
 export type MomentCollection = typeof momentCollections.$inferSelect;
 export type NewMomentCollection = typeof momentCollections.$inferInsert;
 export type Comment = typeof comments.$inferSelect;
+export type Pin = typeof pins.$inferSelect;
 export type Room = typeof rooms.$inferSelect;
 export type NewRoom = typeof rooms.$inferInsert;
 export type RoomMember = typeof roomMembers.$inferSelect;

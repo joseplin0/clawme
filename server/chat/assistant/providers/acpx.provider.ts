@@ -1,11 +1,10 @@
 import { spawn } from "node:child_process";
 import readline from "node:readline";
 import type { ModelMessage, UIMessageChunk } from "ai";
-import { db, schema } from "~~/server/utils/db";
 import type { UserWithModelConfig } from "../../chat-command.service";
 import type { BotStreamProvider, AssistantStreamResult } from "../types";
-
-const { roomMessages } = schema;
+import { persistAssistantMessage } from "../persist-assistant-message";
+import type { MessagePart } from "~~/shared/types/clawme";
 
 export class AcpxBotProvider implements BotStreamProvider {
   // 只处理 coding 工具类型的 bot
@@ -34,7 +33,7 @@ export class AcpxBotProvider implements BotStreamProvider {
     const projectCwd = "/tmp/your-project-path"; // 绑定的项目路径
 
     const generateStream = async function* (): AsyncGenerator<UIMessageChunk, void, unknown> {
-      const finalParts: unknown[] = [];
+      const finalParts: MessagePart[] = [];
       let currentTextBuffer = "";
 
       try {
@@ -63,7 +62,12 @@ export class AcpxBotProvider implements BotStreamProvider {
             // 2. 处理工具调用开始
             else if (event.type === "tool_use") {
               // 存入稍后入库的结构化数组
-              finalParts.push({ type: "tool_call", tool: event.name, args: event.input });
+              finalParts.push({
+                type: "tool-call",
+                toolCallId: event.id || `call_${Date.now()}`,
+                toolName: event.name,
+                args: event.input ?? {},
+              });
               
               // 发送给前端渲染工具卡片
               yield {
@@ -92,11 +96,9 @@ export class AcpxBotProvider implements BotStreamProvider {
           messageMetadata: { promptTokens: 0, completionTokens: 0 },
         } satisfies UIMessageChunk;
 
-        // 统一入库
-        await db.insert(roomMessages).values({
+        await persistAssistantMessage({
           roomId: input.roomId,
-          senderId: input.assistantUser.id,
-          role: "assistant",
+          assistantUserId: input.assistantUser.id,
           parts: finalParts,
           status: "done",
         });
@@ -105,10 +107,9 @@ export class AcpxBotProvider implements BotStreamProvider {
       } catch (error) {
         yield { type: "error", errorText: String(error) } satisfies UIMessageChunk;
         
-        await db.insert(roomMessages).values({
+        await persistAssistantMessage({
           roomId: input.roomId,
-          senderId: input.assistantUser.id,
-          role: "assistant",
+          assistantUserId: input.assistantUser.id,
           parts: [{ type: "text", text: "工具执行异常: " + String(error) }],
           status: "error",
         });

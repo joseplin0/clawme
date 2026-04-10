@@ -110,13 +110,13 @@
           </div>
 
           <UButton
-            v-if="hasMore && activeTab === 'moments'"
+            v-if="activeHasMore"
             variant="ghost"
             color="neutral"
             icon="i-lucide-chevrons-down"
-            :loading="loadingMore"
+            :loading="activeLoadingMore"
             class="rounded-full px-3 text-stone-500 hover:bg-stone-100 hover:text-stone-900"
-            @click="loadMoreMoments"
+            @click="activeTab === 'moments' ? loadMoreMoments() : loadMorePins()"
           >
             加载更多
           </UButton>
@@ -133,6 +133,18 @@
         </div>
 
         <div
+          v-else-if="activeTab === 'pins' && pins.length > 0"
+          class="columns-2 gap-3 md:columns-3 xl:columns-4"
+        >
+          <PinCard
+            v-for="pin in pins"
+            :key="pin.id"
+            :pin="pin"
+            class="mb-3 break-inside-avoid"
+          />
+        </div>
+
+        <div
           v-else-if="activeTab === 'moments'"
           class="flex min-h-64 flex-col items-center justify-center rounded-[1.5rem] border border-stone-200/80 bg-stone-50/70 px-6 text-center"
         >
@@ -140,6 +152,17 @@
           <p class="mt-4 text-base font-medium text-stone-800">还没有动态</p>
           <p class="mt-2 max-w-sm text-sm leading-6 text-stone-500">
             等这个用户发出第一条内容，这里就会变成一面完整的个人动态墙。
+          </p>
+        </div>
+
+        <div
+          v-else-if="activeTab === 'pins'"
+          class="flex min-h-64 flex-col items-center justify-center rounded-[1.5rem] border border-stone-200/80 bg-stone-50/70 px-6 text-center"
+        >
+          <UIcon name="i-lucide-bookmark-plus" class="size-8 text-stone-300" />
+          <p class="mt-4 text-base font-medium text-stone-800">还没有采集内容</p>
+          <p class="mt-2 max-w-sm text-sm leading-6 text-stone-500">
+            这个用户发给收藏入口的链接会出现在这里，后面也可以继续扩展为内容中心。
           </p>
         </div>
 
@@ -248,7 +271,13 @@
 </template>
 
 <script setup lang="ts">
-import type { MomentRecord, UpdateUserRequest, UserProfile } from "~~/shared/types/clawme";
+import type {
+  MomentRecord,
+  PaginatedListResponse,
+  PinRecord,
+  UpdateUserRequest,
+  UserProfile,
+} from "~~/shared/types/clawme";
 
 const route = useRoute();
 const toast = useToast();
@@ -259,18 +288,23 @@ const pageSize = 12;
 const tabs = [
   { label: "动态", value: "moments" },
   { label: "喜欢", value: "likes" },
-];
+  { label: "采集", value: "pins" },
+] as const;
 
-const activeTab = ref("moments");
+const activeTab = ref<(typeof tabs)[number]["value"]>("moments");
 const isEditing = ref(false);
 const savingProfile = ref(false);
 const refreshingProfile = ref(false);
 const uploadingAvatar = ref(false);
-const loadingMore = ref(false);
+const loadingMoreMoments = ref(false);
+const loadingMorePins = ref(false);
 const fileInputRef = useTemplateRef<HTMLInputElement>("fileInputRef");
 const currentPage = ref(1);
 const moments = ref<MomentRecord[]>([]);
 const hasMore = ref(false);
+const currentPinsPage = ref(1);
+const pins = ref<PinRecord[]>([]);
+const pinsHasMore = ref(false);
 
 const editForm = reactive<{
   nickname: string;
@@ -297,6 +331,19 @@ const { data: initialMoments, refresh: refreshMomentsData } = await useFetch<{
 }>(
   () => `/api/users/${userId.value}/moments`,
   {
+    query: computed(() => ({
+      page: 1,
+      limit: pageSize,
+    })),
+    watch: [userId],
+  },
+);
+
+const { data: initialPins, refresh: refreshPinsData } = await useFetch<PaginatedListResponse<PinRecord>>(
+  () => `/api/users/${userId.value}/pins`,
+  {
+    server: false,
+    default: () => ({ list: [], total: 0, pageNum: 1, pageSize }),
     query: computed(() => ({
       page: 1,
       limit: pageSize,
@@ -335,6 +382,16 @@ watch(
   { immediate: true },
 );
 
+watch(
+  initialPins,
+  (value) => {
+    pins.value = value?.list ?? [];
+    pinsHasMore.value = (value?.total ?? 0) > pins.value.length;
+    currentPinsPage.value = 1;
+  },
+  { immediate: true },
+);
+
 const previewUser = computed<UserProfile | null>(() => {
   if (!profile.value) {
     return null;
@@ -359,6 +416,30 @@ const usersById = computed<Record<string, UserProfile>>(() => {
   };
 });
 
+const activeHasMore = computed(() => {
+  if (activeTab.value === "moments") {
+    return hasMore.value;
+  }
+
+  if (activeTab.value === "pins") {
+    return pinsHasMore.value;
+  }
+
+  return false;
+});
+
+const activeLoadingMore = computed(() => {
+  if (activeTab.value === "moments") {
+    return loadingMoreMoments.value;
+  }
+
+  if (activeTab.value === "pins") {
+    return loadingMorePins.value;
+  }
+
+  return false;
+});
+
 async function refreshProfile() {
   refreshingProfile.value = true;
   try {
@@ -366,6 +447,7 @@ async function refreshProfile() {
       refreshProfileData(),
       refreshUser(userId.value),
       refreshMomentsData(),
+      refreshPinsData(),
     ]);
   } finally {
     refreshingProfile.value = false;
@@ -373,11 +455,11 @@ async function refreshProfile() {
 }
 
 async function loadMoreMoments() {
-  if (loadingMore.value || !hasMore.value) {
+  if (loadingMoreMoments.value || !hasMore.value) {
     return;
   }
 
-  loadingMore.value = true;
+  loadingMoreMoments.value = true;
   const nextPage = currentPage.value + 1;
 
   try {
@@ -397,7 +479,39 @@ async function loadMoreMoments() {
     currentPage.value = nextPage;
     hasMore.value = response.total > moments.value.length;
   } finally {
-    loadingMore.value = false;
+    loadingMoreMoments.value = false;
+  }
+}
+
+async function loadMorePins() {
+  if (loadingMorePins.value || !pinsHasMore.value) {
+    return;
+  }
+
+  loadingMorePins.value = true;
+  const nextPage = currentPinsPage.value + 1;
+
+  try {
+    const response = await $fetch<PaginatedListResponse<PinRecord>>(
+      `/api/users/${userId.value}/pins`,
+      {
+        query: {
+          page: nextPage,
+          limit: pageSize,
+        },
+      },
+    );
+
+    const existingIds = new Set(pins.value.map((pin) => pin.id));
+    const nextPins = (response.list ?? []).filter((pin) => !existingIds.has(pin.id));
+    pins.value.push(...nextPins);
+    currentPinsPage.value = nextPage;
+    pinsHasMore.value = response.total > pins.value.length;
+  } catch (error) {
+    console.error("Failed to load more pins", error);
+    pinsHasMore.value = false;
+  } finally {
+    loadingMorePins.value = false;
   }
 }
 

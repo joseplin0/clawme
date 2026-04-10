@@ -12,6 +12,7 @@ import type { UserWithModelConfig } from "../chat-command.service";
 import type { BotStreamProvider } from "./types";
 import { LlmBotProvider } from "./providers/llm.provider";
 import { AcpxBotProvider } from "./providers/acpx.provider";
+import { routeAssistantIntent } from "./intent-router";
 
 const { roomMessages } = schema;
 
@@ -29,7 +30,21 @@ const providers: BotStreamProvider[] = [
 export async function createAssistantMessageStreamFromRoom(input: {
   roomId: string;
   assistantUser: UserWithModelConfig;
+  triggerMessageId: string;
 }) {
+  const routed = await routeAssistantIntent({
+    roomId: input.roomId,
+    assistantUser: {
+      id: input.assistantUser.id,
+      username: input.assistantUser.username,
+    },
+    triggerMessageId: input.triggerMessageId,
+  });
+
+  if (routed.kind === "handled") {
+    return routed.streamResult;
+  }
+
   const modelMessages = await buildRoomModelMessages(input.roomId);
   const botType = input.assistantUser.type || "bot";
 

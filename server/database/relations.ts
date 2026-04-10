@@ -11,6 +11,7 @@ import {
   momentCollections,
   momentTags,
   moments,
+  pins,
   roomMembers,
   roomMessages,
   rooms,
@@ -47,6 +48,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   comments: many(comments, {
     relationName: "CommentAuthor",
   }),
+  pins: many(pins),
   // 👇 大白话：我关注的人 / Bot
   myFollows: many(userFollows, { relationName: "fromUser" }),
   // 👇 大白话：关注我的人 / 粉丝
@@ -164,6 +166,7 @@ export const assetsRelations = relations(assets, ({ one, many }) => ({
   }),
   moments: many(momentAssets),
   messageAssets: many(messageAssets),
+  pins: many(pins),
 }));
 
 // MomentAsset relations
@@ -265,5 +268,24 @@ export const messageAssetsRelations = relations(messageAssets, ({ one }) => ({
   asset: one(assets, {
     fields: [messageAssets.assetId],
     references: [assets.id],
+  }),
+}));
+
+export const pinsRelations = relations(pins, ({ one }) => ({
+  owner: one(users, {
+    fields: [pins.ownerId],
+    references: [users.id],
+  }),
+  previewAsset: one(assets, {
+    fields: [pins.previewAssetId],
+    references: [assets.id],
+  }),
+  sourceRoom: one(rooms, {
+    fields: [pins.sourceRoomId],
+    references: [rooms.id],
+  }),
+  sourceMessage: one(roomMessages, {
+    fields: [pins.sourceMessageId],
+    references: [roomMessages.id],
   }),
 }));

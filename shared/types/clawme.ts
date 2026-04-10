@@ -6,6 +6,8 @@ export type DbMessageRole = "user" | "assistant" | "system";
 export type MessageRole = DbMessageRole;
 export type MessageStatus = "generating" | "done" | "error";
 export type MomentAttachmentKind = "DOCUMENT" | "IMAGE" | "LINK";
+export type PinPreviewMode = "fetched" | "generated";
+export type PinStatus = "ready" | "failed";
 
 // AI SDK message metadata
 export interface MessageMetadata {
@@ -224,6 +226,23 @@ export interface MomentRecord {
   updatedAt: string;
 }
 
+export interface PinRecord {
+  id: string;
+  sourceUrl: string;
+  title: string;
+  description: string;
+  note: string;
+  siteName: string;
+  domain: string;
+  previewUrl: string;
+  previewWidth?: number;
+  previewHeight?: number;
+  previewMode: PinPreviewMode;
+  status: PinStatus;
+  sourceType: "chat_intent";
+  createdAt: string;
+}
+
 export interface ClawmeAppState {
   system: SystemConfigRecord;
   owner: UserProfile | null;
@@ -324,3 +343,12 @@ export interface ChatStreamRequest {
   }>;
   model?: string;
 }
+
+export interface PaginatedListResponse<T> {
+  list: T[];
+  pageNum: number;
+  pageSize: number;
+  total: number;
+}
+
+export type PinListResponse = PaginatedListResponse<PinRecord>;

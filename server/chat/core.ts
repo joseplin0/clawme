@@ -96,6 +96,7 @@ export async function sendRoomMessage(input: {
     streamAssistantReply({
       roomId: prepared.activeRoomId,
       requestId: input.requestId,
+      triggerMessageId: prepared.userMessage.id,
       senderUserId: input.senderId,
       spectatorUserIds: prepared.recipientUserIds,
       assistantUser: prepared.assistantTargetUser,
@@ -129,6 +130,7 @@ export async function sendRoomMessage(input: {
 async function streamAssistantReply(input: {
   roomId: string;
   requestId?: string;
+  triggerMessageId: string;
   senderUserId: string;
   spectatorUserIds?: string[];
   assistantUser: UserWithModelConfig;
@@ -143,6 +145,7 @@ async function streamAssistantReply(input: {
     const assistantReply = await createAssistantMessageStreamFromRoom({
       roomId: input.roomId,
       assistantUser: input.assistantUser,
+      triggerMessageId: input.triggerMessageId,
     });
     console.log("[Core] Assistant stream created, consuming...");
 

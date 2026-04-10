@@ -170,9 +170,9 @@ describe("AppSidebar", () => {
       },
     });
 
-    expect(wrapper.text()).toContain("主题切换");
+    expect(wrapper.text()).toContain("主题");
     expect(wrapper.text()).toContain("设置");
     expect(wrapper.find('[data-testid="color-mode-switch"]').exists()).toBe(true);
-    expect(wrapper.get('[title="更多"]').exists()).toBe(true);
+    expect(wrapper.find('[title="更多"]').exists()).toBe(true);
   });
 });

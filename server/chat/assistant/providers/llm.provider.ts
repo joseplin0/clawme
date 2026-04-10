@@ -1,10 +1,8 @@
 import { streamText, type ModelMessage } from "ai";
-import { db, schema } from "~~/server/utils/db";
 import { ChatCommandError, type UserWithModelConfig } from "../../chat-command.service";
 import { createModelFromConfig, resolveUserModelConfig } from "~~/server/utils/llm";
 import type { BotStreamProvider, AssistantStreamResult } from "../types";
-
-const { roomMessages } = schema;
+import { persistAssistantMessage } from "../persist-assistant-message";
 
 export class LlmBotProvider implements BotStreamProvider {
   // 处理普通的聊天大模型
@@ -53,12 +51,10 @@ export class LlmBotProvider implements BotStreamProvider {
           console.log("[LLM Provider] Stream finished for room:", input.roomId);
           console.log("[LLM Provider] Response parts:", responseMessage.parts?.length ?? 0);
           try {
-            await db.insert(roomMessages).values({
+            await persistAssistantMessage({
               roomId: input.roomId,
-              senderId: input.assistantUser.id,
-              role: "assistant",
-              parts: responseMessage.parts,
-              status: "done",
+              assistantUserId: input.assistantUser.id,
+              parts: responseMessage.parts as any,
             });
             console.log("[LLM Provider] Message saved to database");
             resolveCompleted?.();

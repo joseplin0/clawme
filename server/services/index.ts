@@ -10,3 +10,8 @@ export {
   getPaginatedMoments,
   getPaginatedMomentsByUserId,
 } from "./moment.service";
+
+export {
+  getPaginatedPins,
+  getPaginatedPinsByUserId,
+} from "./pin.service";

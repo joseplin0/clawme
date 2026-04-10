@@ -1,13 +1,10 @@
 <template>
   <div class="min-h-screen w-full bg-default">
-    <!-- 顶栏 -->
     <header
-      class="sticky top-0 z-30 flex h-14 items-center gap-3 px-4 backdrop-blur-xl bg-default/80 border-b border-default/50"
+      class="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-default/50 bg-default/80 px-4 backdrop-blur-xl"
     >
-      <!-- 移动端侧栏按钮占位（桌面侧栏已有） -->
-      <div class="flex-1 flex items-center gap-2">
-        <!-- 搜索框 -->
-        <div class="flex-1 max-w-72">
+      <div class="flex flex-1 items-center gap-2">
+        <div class="w-full max-w-72 flex-1">
           <UInput
             v-model="searchQuery"
             icon="i-lucide-search"
@@ -20,7 +17,6 @@
         </div>
       </div>
 
-      <!-- 右侧操作 -->
       <div class="flex items-center gap-1.5">
         <UColorModeButton size="sm" variant="ghost" color="neutral" />
         <UButton
@@ -33,9 +29,8 @@
       </div>
     </header>
 
-    <!-- 分类 Tab -->
-    <div class="sticky top-14 z-20 bg-default/80 backdrop-blur-xl border-b border-default/30">
-      <div class="flex gap-0.5 px-4 py-2 overflow-x-auto scrollbar-hide">
+    <div class="sticky top-14 z-20 border-b border-default/30 bg-default/80 backdrop-blur-xl">
+      <div class="flex gap-0.5 overflow-x-auto px-4 py-2 scrollbar-hide">
         <UButton
           v-for="tab in tabs"
           :key="tab.value"
@@ -43,91 +38,138 @@
           size="sm"
           :variant="activeTab === tab.value ? 'solid' : 'ghost'"
           :color="activeTab === tab.value ? 'primary' : 'neutral'"
-          class="rounded-full shrink-0 text-xs px-3"
-          @click="activeTab = tab.value"
+          class="shrink-0 rounded-full px-3 text-xs"
+          @click="selectTab(tab.value)"
         />
       </div>
     </div>
 
-    <!-- 瀑布流主体 -->
     <main ref="mainRef" class="px-2 py-3 pb-24 md:pb-6">
-      <!-- 瀑布流容器 - CSS columns 方案 -->
-      <div
-        class="masonry-grid"
-        :style="masonryStyle"
-      >
-        <MomentCard
-          v-for="item in moments"
-          :key="item.id"
-          :moment="item"
-          :users-by-id="usersById"
-          class="masonry-item mb-2"
-        />
+      <div class="masonry-grid" :style="masonryStyle">
+        <template v-if="activeTab === 'moments'">
+          <MomentCard
+            v-for="item in moments.items"
+            :key="item.id"
+            :moment="item"
+            :users-by-id="usersById"
+            class="masonry-item mb-2"
+          />
+        </template>
+
+        <template v-else>
+          <PinCard
+            v-for="item in pins.items"
+            :key="item.id"
+            :pin="item"
+            class="masonry-item mb-2"
+          />
+        </template>
       </div>
 
-      <!-- 加载中 -->
-      <div v-if="isLoading" class="flex justify-center py-8">
-        <div class="flex items-center gap-2 text-muted text-sm">
+      <div v-if="activeFeed.isLoading" class="flex justify-center py-8">
+        <div class="flex items-center gap-2 text-sm text-muted">
           <UIcon name="i-lucide-loader-2" class="size-4 animate-spin" />
           <span>加载中...</span>
         </div>
       </div>
 
-      <!-- 没有更多 -->
       <div
-        v-if="!hasMore && moments.length > 0 && !isLoading"
-        class="flex items-center gap-3 py-8 px-6"
+        v-if="!activeFeed.hasMore && activeFeed.items.length > 0 && !activeFeed.isLoading"
+        class="flex items-center gap-3 px-6 py-8"
       >
         <div class="h-px flex-1 bg-default/60" />
-        <span class="text-xs text-muted shrink-0">没有更多了</span>
+        <span class="shrink-0 text-xs text-muted">没有更多了</span>
         <div class="h-px flex-1 bg-default/60" />
       </div>
 
-      <!-- 空状态 -->
       <div
-        v-if="!isLoading && moments.length === 0"
-        class="flex flex-col items-center justify-center py-24 gap-4"
+        v-if="!activeFeed.isLoading && activeFeed.items.length === 0"
+        class="flex flex-col items-center justify-center gap-4 py-24"
       >
-        <UIcon name="i-lucide-wind" class="size-12 text-muted opacity-40" />
-        <p class="text-sm text-muted">暂无内容</p>
+        <UIcon
+          :name="activeTab === 'moments' ? 'i-lucide-wind' : 'i-lucide-bookmark-plus'"
+          class="size-12 text-muted opacity-40"
+        />
+        <p class="text-sm text-muted">
+          {{ activeTab === "moments" ? "暂无内容" : "还没有采集内容" }}
+        </p>
       </div>
     </main>
 
-    <!-- 无限滚动触发器 -->
     <div ref="infiniteRef" class="h-4" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { useInfiniteScroll, useElementSize } from "@vueuse/core";
-import type { UserProfile, MomentRecord } from "~~/shared/types/clawme";
+import { useElementSize, useInfiniteScroll } from "@vueuse/core";
+import type {
+  MomentRecord,
+  PaginatedListResponse,
+  PinRecord,
+  UserProfile,
+} from "~~/shared/types/clawme";
 
-const page = ref(0);
-const limit = 20;
-const moments = ref<MomentRecord[]>([]);
-const users = ref<UserProfile[]>([]);
-const hasMore = ref(true);
-const isLoading = ref(false);
+type FeedTab = "moments" | "pins";
+
+interface PaginatedResponse<T> {
+  list?: T[];
+  total?: number;
+  pageNum?: number;
+  pageSize?: number;
+  users?: UserProfile[];
+}
+
+interface FeedState<T> {
+  items: T[];
+  page: number;
+  hasMore: boolean;
+  isLoading: boolean;
+  initialized: boolean;
+}
+
+const route = useRoute();
+const router = useRouter();
+
+const pageSize = 20;
 const searchQuery = ref("");
-const activeTab = ref("recommend");
 const mainRef = useTemplateRef("mainRef");
 const infiniteRef = useTemplateRef("infiniteRef");
 
-const tabs = [
-  { label: "推荐", value: "recommend" },
-  { label: "关注", value: "follow" },
-  { label: "附近", value: "nearby" },
-  { label: "AI", value: "ai" },
-  { label: "生活", value: "life" },
-  { label: "美食", value: "food" },
+const tabs: Array<{ label: string; value: FeedTab }> = [
+  { label: "动态", value: "moments" },
+  { label: "采集", value: "pins" },
 ];
 
-// usersById 用于 MomentCard
-const usersById = computed<Record<string, UserProfile>>(() => {
-  return Object.fromEntries(users.value.map((u) => [u.id, u]));
+const moments = reactive<FeedState<MomentRecord>>({
+  items: [],
+  page: 0,
+  hasMore: true,
+  isLoading: false,
+  initialized: false,
 });
 
-// 响应式列数计算
+const pins = reactive<FeedState<PinRecord>>({
+  items: [],
+  page: 0,
+  hasMore: true,
+  isLoading: false,
+  initialized: false,
+});
+
+const users = ref<UserProfile[]>([]);
+
+const activeTab = computed<FeedTab>(() => {
+  return route.query.tab === "pins" ? "pins" : "moments";
+});
+
+const activeFeed = computed(() => {
+  return activeTab.value === "moments" ? moments : pins;
+});
+
+const usersById = computed<Record<string, UserProfile>>(() => {
+  return Object.fromEntries(users.value.map((user) => [user.id, user]));
+});
+
 const { width } = useElementSize(mainRef);
 const columns = computed(() => {
   if (width.value < 400) return 2;
@@ -142,48 +184,138 @@ const masonryStyle = computed(() => ({
   columnGap: "8px",
 }));
 
-const loadMore = async () => {
-  if (isLoading.value || !hasMore.value) return;
-  isLoading.value = true;
-  page.value++;
+function selectTab(tab: FeedTab) {
+  if (tab === activeTab.value) {
+    return;
+  }
+
+  router.push({
+    query: {
+      ...route.query,
+      tab,
+    },
+  });
+}
+
+function getFeedState(tab: FeedTab) {
+  return tab === "moments" ? moments : pins;
+}
+
+async function loadMoreMoments() {
+  if (moments.isLoading || !moments.hasMore) {
+    return;
+  }
+
+  moments.isLoading = true;
+  const nextPage = moments.page + 1;
 
   try {
-    const response = (await $fetch("/api/moment", {
-      query: { page: page.value, limit },
-    })) as any;
+    const response = await $fetch<PaginatedResponse<MomentRecord>>("/api/moment", {
+      query: {
+        page: nextPage,
+        limit: pageSize,
+      },
+    });
 
-    const newMoments = response.list || [];
+    const nextItems = response.list ?? [];
+    const existingIds = new Set(moments.items.map((item) => item.id));
+    const uniqueNextItems = nextItems.filter((item) => !existingIds.has(item.id));
+
+    moments.items.push(...uniqueNextItems);
+    moments.page = nextPage;
+    moments.initialized = true;
+    moments.hasMore =
+      typeof response.total === "number"
+        ? response.total > moments.items.length
+        : nextItems.length >= pageSize;
 
     if (response.users) {
       users.value = [...users.value, ...response.users].filter(
-        (u, i, arr) => arr.findIndex((x) => x.id === u.id) === i,
+        (user, index, array) => array.findIndex((item) => item.id === user.id) === index,
       );
     }
-
-    const existingIds = new Set(moments.value.map((p) => p.id));
-    const uniqueNewMoments = newMoments.filter(
-      (p: MomentRecord) => !existingIds.has(p.id),
-    );
-
-    moments.value.push(...uniqueNewMoments);
-    hasMore.value = newMoments.length >= limit;
-  } catch (err) {
-    console.error("Failed to load more moments", err);
-    page.value--;
+  } catch (error) {
+    console.error("Failed to load more moments", error);
+    moments.page = Math.max(0, moments.page - 1);
   } finally {
-    isLoading.value = false;
+    moments.isLoading = false;
   }
-};
+}
+
+async function loadMorePins() {
+  if (pins.isLoading || !pins.hasMore) {
+    return;
+  }
+
+  pins.isLoading = true;
+  const nextPage = pins.page + 1;
+
+  try {
+    const response = await $fetch<PaginatedListResponse<PinRecord>>("/api/pins", {
+      query: {
+        page: nextPage,
+        limit: pageSize,
+      },
+    });
+
+    const nextItems = response.list ?? [];
+    const existingIds = new Set(pins.items.map((item) => item.id));
+    const uniqueNextItems = nextItems.filter((item) => !existingIds.has(item.id));
+
+    pins.items.push(...uniqueNextItems);
+    pins.page = nextPage;
+    pins.initialized = true;
+    pins.hasMore =
+      typeof response.total === "number"
+        ? response.total > pins.items.length
+        : nextItems.length >= pageSize;
+  } catch (error) {
+    console.error("Failed to load more pins", error);
+    pins.page = Math.max(0, pins.page - 1);
+    pins.initialized = true;
+    pins.hasMore = false;
+  } finally {
+    pins.isLoading = false;
+  }
+}
+
+async function ensureActiveFeedLoaded(tab: FeedTab) {
+  const feed = getFeedState(tab);
+  if (feed.initialized || feed.isLoading) {
+    return;
+  }
+
+  if (tab === "moments") {
+    await loadMoreMoments();
+  } else {
+    await loadMorePins();
+  }
+}
+
+async function loadMoreActiveFeed() {
+  if (activeTab.value === "moments") {
+    await loadMoreMoments();
+    return;
+  }
+
+  await loadMorePins();
+}
+
+watch(
+  activeTab,
+  async (tab) => {
+    await ensureActiveFeedLoaded(tab);
+  },
+  { immediate: true },
+);
 
 onMounted(() => {
-  loadMore();
-
   useInfiniteScroll(
     window,
-    () => loadMore(),
+    () => loadMoreActiveFeed(),
     {
       distance: 300,
-      canLoadMore: () => !isLoading.value && hasMore.value,
+      canLoadMore: () => !activeFeed.value.isLoading && activeFeed.value.hasMore,
     },
   );
 });
@@ -202,6 +334,7 @@ onMounted(() => {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
