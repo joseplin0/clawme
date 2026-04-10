@@ -80,25 +80,13 @@ variant="ghost" color="neutral" icon="i-lucide-more-horizontal" size="sm" class=
       :placeholder="composerPlaceholder" :mention-items="mentionItems" :quoted-message="quotedComposerMessage"
       @submit="handleSubmit" @stop="handleStop" @reload="handleReload" @clear-quote="clearQuotedMessage" />
 
-    <!-- Right Drawer for User List -->
-    <USlideover v-model:open="isDrawerOpen" title="房间成员" side="right">
-      <template #body>
-        <div class="p-4 space-y-4">
-          <div v-for="user in roomMembers" :key="user.id" class="flex items-center gap-3">
-            <UserAvatar :user="user" size="md" refresh-on-mount />
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <p class="truncate text-sm font-medium text-default">
-                  {{ user.nickname }}
-                </p>
-                <UBadge v-if="isBotUserType(user.type)" size="xs" color="neutral" variant="subtle">BOT</UBadge>
-              </div>
-              <p class="truncate text-xs text-muted">@{{ user.username }}</p>
-            </div>
-          </div>
-        </div>
-      </template>
-    </USlideover>
+    <ChatInfoPanel
+      v-model:open="isDrawerOpen"
+      :room-id="activeRoomId"
+      :room-title="selectedRoom?.title"
+      :room-type="selectedRoom?.type ?? null"
+      :members="roomMembers"
+    />
   </section>
 </template>
 
@@ -113,6 +101,7 @@ import {
   markRaw,
 } from "vue";
 import { Chat } from "@ai-sdk/vue";
+import ChatInfoPanel from "./InfoPanel.vue";
 import {
   isReasoningUIPart,
   isTextUIPart,
